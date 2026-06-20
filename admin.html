@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Talha Web Platform - Yönetim Paneli</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
+</head>
+<body>
+
+    <div class="top-navigation-bar">
+        <div class="nav-links-left">
+            <a href="feed.html" class="nav-icon-link"><i class="fa-solid fa-house"></i></a>
+            <a href="messages.html" class="nav-icon-link"><i class="fa-solid fa-paper-plane"></i></a>
+            <a href="profile.html" class="nav-icon-link"><i class="fa-solid fa-user"></i></a>
+            <a href="admin.html" id="navAdminLink" class="nav-icon-link" style="color: var(--btn-primary);"><i class="fa-solid fa-lock"></i></a>
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <button class="theme-toggle-corner" onclick="toggleThemeOnly()" style="position: static;">🌙</button>
+            <button onclick="handleLogout()" style="background: none; border: none; color: var(--btn-danger); cursor: pointer; font-size: 1.1rem;"><i class="fa-solid fa-right-from-bracket"></i></button>
+        </div>
+    </div>
+
+    <div class="container" style="max-width: 500px; padding: 30px 20px;">
+        <h1 style="font-size: 1.4rem; margin-bottom: 5px;"><i class="fa-solid fa-shield-halved"></i> Admin Yönetim Paneli</h1>
+        <p style="font-size: 0.8rem; color: var(--text-sub); margin-bottom: 25px;">Platform üyelerini ve içeriklerini buradan yönetebilirsiniz.</p>
+
+        <div style="text-align: left; margin-bottom: 25px;">
+            <h2 style="font-size: 1rem; font-weight: 600; margin-bottom: 10px; border-bottom: 1px solid var(--border-subcard); padding-bottom: 5px;">Kayıtlı Üyeler Listesi</h2>
+            <div class="admin-list-container" id="adminUserList">
+                </div>
+        </div>
+
+        <div style="text-align: left; margin-bottom: 10px;">
+            <h2 style="font-size: 1rem; font-weight: 600; margin-bottom: 12px; border-bottom: 1px solid var(--border-subcard); padding-bottom: 5px;">Gelişmiş Denetim Araçları</h2>
+            
+            <button class="btn btn-web" onclick="toggleDenetimArea('feed')" style="margin-bottom: 10px; text-align: left; justify-content: space-between; font-size: 0.9rem; border-radius: 15px;">
+                <span><i class="fa-solid fa-images"></i> Genel Akış Gönderilerini İncele</span>
+                <i class="fa-solid fa-chevron-down"></i>
+            </button>
+            <div id="denetimFeedArea" style="display:none; max-height: 250px; overflow-y: auto; background: var(--comment-box-bg); padding: 10px; border-radius: 15px; margin-bottom: 15px;">
+                </div>
+
+            <button class="btn btn-web" onclick="toggleDenetimArea('chats')" style="text-align: left; justify-content: space-between; font-size: 0.9rem; border-radius: 15px;">
+                <span><i class="fa-solid fa-comments"></i> Özel Mesajlaşmaları (DM) Denetle</span>
+                <i class="fa-solid fa-chevron-down"></i>
+            </button>
+            <div id="denetimChatsArea" style="display:none; max-height: 250px; overflow-y: auto; background: var(--comment-box-bg); padding: 10px; border-radius: 15px; margin-top: 5px;">
+                </div>
+        </div>
+    </div>
+
+    <script>
+        // Firebase Config
+        const firebaseConfig = {
+            databaseURL: "https://chat-ee35e-default-rtdb.europe-west1.firebasedatabase.app/",
+            storageBucket: "chat-ee35e.appspot.com"
+        };
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+
+        const database = firebase.database();
+        const storage = firebase.storage();
+
+        const currentUserEmail = sessionStorage.getItem('active_user_email');
+        const currentUserName = sessionStorage.getItem('active_user_name');
+        const cleanUserEmail = currentUserEmail ? currentUserEmail.toLowerCase().replace('.', '_') : null;
+
+        if(!currentUserEmail) window.location.href = 'index.html';
+
+        // GÜVENLİK DUVARI: Sadece ismi veya rolü 'admin' olanlar kalabilir
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedTheme = localStorage.getItem('site_theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+
+            if(currentUserName.toLowerCase() !== 'admin') {
+                alert("Bu sayfaya erişim yetkiniz bulunmuyor!");
+                window.location.href = 'feed.html';
+                return;
+            }
+
+            loadUsersForAdmin();
+            loadFeedForAdmin();
+            loadChatsForAdmin();
+        });
+
+        function toggleThemeOnly() {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            let newTheme = (currentTheme === 'light') ? 'dark' : 'light';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('site_theme', newTheme);
+            document.querySelector('.theme-toggle-corner').textContent = (newTheme === 'light') ? '☀️' : '🌙';
+        }
+
+        function handleLogout() { sessionStorage.clear(); window.location.href = 'index.html'; }
+
+        function toggleDenetimArea(type) {
+            const el = type === 'feed' ? document.getElementById('denetimFeedArea') : document.getElementById('denetimChatsArea');
+            el.style.display = el.style.display === 'none' ? 'block' : 'none';
+        }
+
+        // 1. TÜM ÜYELERİ LİSTELEME VE HESAP SİLME FONKSİYONU
+        function loadUsersForAdmin() {
+            database.ref('users').on('value', snapshot => {
+                const list = document.getElementById('adminUserList');
+                list.innerHTML = "";
+
+                if(!snapshot.exists()) return;
+
+                snapshot.forEach(child => {
+                    const user = child.val();
+                    const userKey = child.key;
+
+                    const row = document.createElement('div');
+                    row.className = 'admin-user-row';
+
+                    // Admin hesabı kendini silemesin diye kontrol ekliyoruz
+                    let actionHtml = `<span style="color:var(--btn-secondary); font-size:11px; font-weight:600;">Sistem Sahibi</span>`;
+                    if(user.role !== 'admin') {
+                        actionHtml = `<button class="btn btn-danger" onclick="deleteUserByAdmin('${userKey}', '${user.email}')" style="padding: 6px 12px; font-size: 11px; border-radius: 8px; width: auto;">Hesabı Sil</button>`;
+                    }
+
+                    row.innerHTML = `
+                        <div class="admin-user-details">
+                            <strong>${user.username}</strong>
+                            <div class="admin-user-email">E-P: ${user.email}</div>
+                            <div class="admin-user-email" style="color:var(--btn-primary);">Şifre: ${user.password}</div>
+                        </div>
+                        ${actionHtml}
+                    `;
+                    list.appendChild(row);
+                });
+            });
+        }
+
+        function deleteUserByAdmin(userKey, userEmail) {
+            if(confirm(`${userEmail} isimli hesabı ve tüm erişim yetkilerini tamamen silmek istediğinize emin misiniz?`)) {
+                // Kullanıcının profil resmini depodan silmeye çalış
+                storage.ref(`avatars/${userKey}_avatar`).delete().catch(e => console.log("Profil resmi yok veya temizlendi."));
+                
+                // Kullanıcı kaydını veritabanından tamamen siler
+                database.ref(`users/${userKey}`).remove().then(() => {
+                    alert("Kullanıcı başarıyla sistemden ihraç edildi.");
+                });
+            }
+        }
+
+        // 2. GENEL AKIŞ DENETİM MOTORU
+        function loadFeedForAdmin() {
+            database.ref('posts').on('value', snapshot => {
+                const area = document.getElementById('denetimFeedArea');
+                area.innerHTML = "";
+
+                if(!snapshot.exists()) {
+                    area.innerHTML = "<div style='font-size:12px; color:var(--text-sub);'>Akış temiz.</div>";
+                    return;
+                }
+
+                snapshot.forEach(child => {
+                    const post = child.val();
+                    const key = child.key;
+
+                    const item = document.createElement('div');
+                    item.style.cssText = "font-size:12px; padding:8px; border-bottom:1px solid var(--border-subcard); display:flex; justify-content:space-between; align-items:center;";
+                    item.innerHTML = `
+                        <div>
+                            <strong>${post.authorName}:</strong> ${post.caption || '[Medya Paylaşımı]'}
+                        </div>
+                        <button onclick="deletePostFromAdmin('${key}', '${post.mediaUrl}')" style="background:none; border:none; color:var(--btn-danger); cursor:pointer;"><i class="fa-solid fa-trash"></i></button>
+                    `;
+                    area.appendChild(item);
+                });
+            });
+        }
+
+        function deletePostFromAdmin(key, mediaUrl) {
+            if(confirm("Bu gönderiyi uygunsuz içerik nedeniyle silmek istiyor musunuz?")) {
+                if(mediaUrl) storage.refFromURL(mediaUrl).delete().catch(e => {});
+                database.ref(`posts/${key}`).remove();
+            }
+        }
+
+        // 3. ÖZEL MESAJLAŞMA (DM) DENETİM MOTORU
+        function loadChatsForAdmin() {
+            database.ref('messages').on('value', snapshot => {
+                const area = document.getElementById('denetimChatsArea');
+                area.innerHTML = "";
+
+                if(!snapshot.exists()) {
+                    area.innerHTML = "<div style='font-size:12px; color:var(--text-sub);'>Özel sohbet kaydı bulunamadı.</div>";
+                    return;
+                }
+
+                snapshot.forEach(roomChild => {
+                    const roomKey = roomChild.key;
+                    
+                    roomChild.forEach(msgChild => {
+                        const msg = msgChild.val();
+                        const msgKey = msgChild.key;
+
+                        const item = document.createElement('div');
+                        item.style.cssText = "font-size:11px; padding:6px; border-bottom:1px solid var(--border-subcard); display:flex; justify-content:space-between; align-items:center;";
+                        
+                        let msgContent = msg.text ? msg.text : `[${msg.type.toUpperCase()} MEDYA]`;
+                        
+                        item.innerHTML = `
+                            <div style="max-width:85%;">
+                                <span style="color:var(--btn-primary); font-weight:600;">${msg.sender.split('@')[0]}:</span> ${msgContent}
+                            </div>
+                            <button onclick="deleteChatMsgFromAdmin('${roomKey}', '${msgKey}', '${msg.mediaUrl}')" style="background:none; border:none; color:var(--btn-danger); cursor:pointer; font-size:10px;"><i class="fa-solid fa-eraser"></i></button>
+                        `;
+                        area.appendChild(item);
+                    });
+                });
+            });
+        }
+
+        function deleteChatMsgFromAdmin(roomKey, msgKey, mediaUrl) {
+            if(confirm("Bu özel mesajı platform kuralları gereği sansürlemek istiyor musunuz?")) {
+                if(mediaUrl) storage.refFromURL(mediaUrl).delete().catch(e => {});
+                database.ref(`messages/${roomKey}/${msgKey}`).remove();
+            }
+        }
+    </script>
+</body>
+</html>
