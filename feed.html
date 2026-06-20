@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Talha Web Platform - Ana Akış</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
+</head>
+<body>
+
+    <div class="top-navigation-bar">
+        <div class="nav-links-left">
+            <a href="feed.html" class="nav-icon-link" style="color: var(--btn-primary);"><i class="fa-solid fa-house"></i></a>
+            <a href="messages.html" class="nav-icon-link"><i class="fa-solid fa-paper-plane"></i></a>
+            <a href="profile.html" class="nav-icon-link"><i class="fa-solid fa-user"></i></a>
+            <a href="admin.html" id="navAdminLink" class="nav-icon-link" style="display: none;"><i class="fa-solid fa-lock"></i></a>
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <button class="theme-toggle-corner" onclick="toggleThemeOnly()" style="position: static;">🌙</button>
+            <button class="nav-icon-link" onclick="openInfoModal()" style="background:none; border:none; cursor:pointer;"><i class="fa-solid fa-circle-info"></i></button>
+            <button onclick="handleLogout()" style="background: none; border: none; color: var(--btn-danger); cursor: pointer; font-size: 1.1rem;"><i class="fa-solid fa-right-from-bracket"></i></button>
+        </div>
+    </div>
+
+    <div class="container" style="padding: 25px 20px; margin-bottom: 20px; border-radius: 25px;">
+        <h1 style="font-size: 1.2rem; text-align: left; margin-bottom: 15px;">Bir şeyler paylaş...</h1>
+        
+        <div class="input-group" style="margin-bottom: 12px;">
+            <input type="text" id="postCaption" placeholder="Neler düşünüyorsun?" style="border-radius: 15px; padding: 12px 20px;">
+        </div>
+
+        <div style="display: flex; gap: 10px; align-items: center;">
+            <input type="file" id="postMediaInput" accept="image/*,video/*" style="display: none;" onchange="updateUploadButtonLabel()">
+            <button class="btn btn-web" onclick="document.getElementById('postMediaInput').click()" style="padding: 10px 15px; font-size: 0.85rem; border-radius: 15px; flex: 1;">
+                <i class="fa-solid fa-paperclip"></i> <span id="lblMediaSelect">Fotoğraf/Video Ekle</span>
+            </button>
+            <button class="btn btn-primary" id="btnSharePost" onclick="uploadAndSharePost()" style="padding: 10px 20px; font-size: 0.85rem; border-radius: 15px; width: auto;">
+                Paylaş
+            </button>
+        </div>
+        <div id="uploadProgressMsg" style="font-size: 12px; margin-top: 8px; text-align: left; color: var(--btn-secondary);"></div>
+    </div>
+
+    <div id="feedStream" style="width: 100%; max-width: 420px;">
+        </div>
+
+    <div class="info-modal-overlay" id="infoModal">
+        <div class="info-modal-card">
+            <button class="info-modal-close" onclick="closeInfoModal()"><i class="fa-solid fa-xmark"></i></button>
+            <h1 style="font-size: 1.3rem; margin-bottom: 20px;">Talha Web Design</h1>
+            
+            <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px;">
+                <a href="https://www.instagram.com/t4lha7_?utm_source=qr" target="_blank" class="btn btn-web" style="background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%); color: #fff; border: none;">
+                    <i class="fa-brands fa-instagram" style="font-size: 1.2rem;"></i> Instagram Takip Et
+                </a>
+                <a href="https://www.tiktok.com/@t4lha7" target="_blank" class="btn btn-web" style="background: #000; color: #fff; border: none;">
+                    <i class="fa-brands fa-tiktok" style="font-size: 1.2rem;"></i> TikTok Takip Et
+                </a>
+            </div>
+
+            <div class="hero-description" style="font-size: 0.8rem; padding: 0; text-align: center; margin: 0;">
+                Sürüm v2.5.0 - Tüm Hakları Saklıdır.<br>© 2026 Talha Web Platform.
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Firebase Config (app.js ile aynı olmalı)
+        const firebaseConfig = {
+            databaseURL: "https://chat-ee35e-default-rtdb.europe-west1.firebasedatabase.app/",
+            storageBucket: "chat-ee35e.appspot.com"
+        };
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+
+        const database = firebase.database();
+        const storage = firebase.storage();
+
+        const currentUserEmail = sessionStorage.getItem('active_user_email');
+        const currentUserName = sessionStorage.getItem('active_user_name');
+        const cleanUserEmail = currentUserEmail ? currentUserEmail.toLowerCase().replace('.', '_') : null;
+
+        if(!currentUserEmail) window.location.href = 'index.html';
+
+        // Sayfa yüklendiğinde ayarları ve yetkileri kontrol et
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedTheme = localStorage.getItem('site_theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+            
+            // Admin kontrolü (Eğer giriş yapan admin ise kilitli ikonlu menüyü aç)
+            if(cleanUserEmail) {
+                database.ref(`users/${cleanEmail}`).once('value', snap => {
+                    if(snap.exists() && snap.val().role === 'admin') {
+                        document.getElementById('navAdminLink').style.display = 'block';
+                    }
+                });
+            }
+            
+            loadFeedStream();
+        });
+
+        function toggleThemeOnly() {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            let newTheme = (currentTheme === 'light') ? 'dark' : 'light';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('site_theme', newTheme);
+            document.querySelector('.theme-toggle-corner').textContent = (newTheme === 'light') ? '☀️' : '🌙';
+        }
+
+        function openInfoModal() { document.getElementById('infoModal').style.display = 'flex'; }
+        function closeInfoModal() { document.getElementById('infoModal').style.display = 'none'; }
+        function handleLogout() { sessionStorage.clear(); window.location.href = 'index.html'; }
+
+        function updateUploadButtonLabel() {
+            const file = document.getElementById('postMediaInput').files[0];
+            if(file) {
+                document.getElementById('lblMediaSelect').textContent = file.name.substring(0, 15) + "...";
+            }
+        }
+
+        // GÖNDERİ YÜKLEME VE PAYLAŞMA SİSTEMİ
+        function uploadAndSharePost() {
+            const caption = document.getElementById('postCaption').value.trim();
+            const mediaFile = document.getElementById('postMediaInput').files[0];
+            const prgMsg = document.getElementById('uploadProgressMsg');
+
+            if(!caption && !mediaFile) return;
+
+            prgMsg.textContent = "Yükleniyor, lütfen bekleyin...";
+
+            if(mediaFile) {
+                // Firebase Storage'a benzersiz isimle yükleme yapıyoruz
+                const fileRef = storage.ref('posts/' + Date.now() + '_' + mediaFile.name);
+                fileRef.put(mediaFile).then(snapshot => {
+                    snapshot.ref.getDownloadURL().then(downloadURL => {
+                        savePostToDatabase(caption, downloadURL, mediaFile.type.startsWith('video') ? 'video' : 'image');
+                    });
+                }).catch(err => {
+                    prgMsg.textContent = "Hata oluştu: " + err.message;
+                });
+            } else {
+                savePostToDatabase(caption, "", "text");
+            }
+        }
+
+        function savePostToDatabase(caption, mediaUrl, mediaType) {
+            // Kullanıcının güncel avatarını çekerek gönderiye bağla
+            database.ref(`users/${cleanUserEmail}`).once('value', snap => {
+                const userAvatar = (snap.exists() && snap.val().avatar) ? snap.val().avatar : "";
+                
+                const postData = {
+                    authorEmail: currentUserEmail,
+                    authorName: currentUserName,
+                    authorAvatar: userAvatar,
+                    caption: caption,
+                    mediaUrl: mediaUrl,
+                    mediaType: mediaType,
+                    timestamp: Date.now()
+                };
+
+                database.ref('posts').push(postData).then(() => {
+                    document.getElementById('postCaption').value = "";
+                    document.getElementById('postMediaInput').value = "";
+                    document.getElementById('lblMediaSelect').textContent = "Fotoğraf/Video Ekle";
+                    document.getElementById('uploadProgressMsg').textContent = "";
+                });
+            });
+        }
+
+        // AKIŞI ANLIK VE CANLI DİNLEME SİSTEMİ (REALTIME STREAM)
+        function loadFeedStream() {
+            database.ref('posts').on('value', snapshot => {
+                const streamBox = document.getElementById('feedStream');
+                streamBox.innerHTML = "";
+
+                if(!snapshot.exists()) {
+                    streamBox.innerHTML = `<div class="sub-card" style="text-align:center; color:var(--text-sub);">Henüz bir gönderi paylaşılmamış.</div>`;
+                    return;
+                }
+
+                let postsArray = [];
+                snapshot.forEach(child => {
+                    postsArray.push({ id: child.key, ...child.val() });
+                });
+
+                // En yeni gönderiyi en üstte göstermek için ters çeviriyoruz
+                postsArray.reverse().forEach(post => {
+                    const card = document.createElement('div');
+                    card.className = 'sub-card';
+
+                    // Kullanıcı sadece kendi paylaştığı gönderide "Sil" butonu görür (Veya admin görür)
+                    let deleteBtnHtml = "";
+                    if(post.authorEmail === currentUserEmail || currentUserName.toLowerCase() === 'admin') {
+                        deleteBtnHtml = `<button class="post-delete-btn" onclick="deletePost('${post.id}', '${post.mediaUrl}')"><i class="fa-solid fa-trash-can"></i></button>`;
+                    }
+
+                    let mediaHtml = "";
+                    if(post.mediaUrl) {
+                        if(post.mediaType === 'video') {
+                            mediaHtml = `<div class="feed-media-container"><video src="${post.mediaUrl}" controls playsinline></video></div>`;
+                        } else {
+                            mediaHtml = `<div class="feed-media-container"><img src="${post.mediaUrl}" alt="Media"></div>`;
+                        }
+                    }
+
+                    // Gönderi sahibi için varsayılan avatar kontrolü
+                    const avatarSrc = post.authorAvatar ? post.authorAvatar : '58873-milkbear.gif';
+
+                    card.innerHTML = `
+                        <div class="post-header">
+                            <div class="post-author-info">
+                                <img src="${avatarSrc}" class="post-author-avatar" alt="User">
+                                <div class="post-author-name">${post.authorName}</div>
+                            </div>
+                            ${deleteBtnHtml}
+                        </div>
+                        <div style="text-align: left; font-size: 0.95rem; margin: 10px 0; word-wrap: break-word;">${post.caption}</div>
+                        ${mediaHtml}
+                        <div style="font-size: 0.75rem; color: var(--text-sub); text-align: left; margin-top: 5px;">
+                            ${new Date(post.timestamp).toLocaleString('tr-TR')}
+                        </div>
+                    `;
+                    streamBox.appendChild(card);
+                });
+            });
+        }
+
+        // GÖNDERİ SİLME MOTORU
+        function deletePost(postId, mediaUrl) {
+            if(confirm("Bu gönderiyi tamamen silmek istediğinize emin misiniz?")) {
+                // Eğer medya dosyası varsa önce Storage'dan silerek hafıza temizliği yapıyoruz
+                if(mediaUrl) {
+                    storage.refFromURL(mediaUrl).delete().catch(err => console.log("Dosya depodan zaten silinmiş veya bulunamadı."));
+                }
+                database.ref(`posts/${postId}`).remove();
+            }
+        }
+    </script>
+</body>
+</html>
