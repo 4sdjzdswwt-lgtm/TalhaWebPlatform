@@ -143,6 +143,21 @@ input:focus{border-color:var(--accent);}
 .step-sub{font-size:13px;color:var(--muted);margin:0 0 20px;line-height:1.5;}
 label{display:block;font-size:12px;color:var(--muted);margin:0 0 6px;font-weight:500;}
 .field{margin-bottom:16px;}
+.pwd-wrap{position:relative;}
+.pwd-wrap input{padding-right:42px;}
+.pwd-toggle{
+  position:absolute;right:4px;top:50%;transform:translateY(-50%);
+  width:32px;height:32px;border-radius:50%;border:none;background:transparent;
+  color:var(--muted);display:flex;align-items:center;justify-content:center;cursor:pointer;
+}
+.pwd-toggle svg{width:18px;height:18px;}
+.pwd-toggle.showing{color:var(--accent);}
+
+.spam-warning{
+  background:rgba(242,179,61,.1);border:1px solid var(--warn);color:var(--text);
+  border-radius:12px;padding:11px 14px;font-size:12px;line-height:1.5;margin-bottom:16px;
+}
+.symbolic-code-note{font-size:11px;color:var(--muted);margin-top:8px;font-family:'JetBrains Mono',monospace;}
 .hint{font-size:11.5px;color:var(--muted);margin-top:6px;}
 
 /* ŞİFRE GÜÇLÜLÜK GÖSTERGESİ */
@@ -601,7 +616,16 @@ tbody tr:hover{background:var(--surface-2);}
             <div class="step-title">Tekrar Hoş Geldin</div>
             <p class="step-sub">NeXT'e tekrar hoş geldin. Giriş yap, akışına geri dön.</p>
             <div class="field"><label>E-posta</label><input type="email" id="loginEmail" placeholder="ornek@mail.com"></div>
-            <div class="field"><label>Şifre</label><input type="password" id="loginPassword" placeholder="••••••••"></div>
+            <div class="field">
+              <label>Şifre</label>
+              <div class="pwd-wrap">
+                <input type="password" id="loginPassword" placeholder="••••••••">
+                <button type="button" class="pwd-toggle" onclick="togglePwdVisibility('loginPassword', this)">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
+              </div>
+              <div class="auth-switch-link" style="margin-top:8px;text-align:right;" onclick="forgotPassword()">Şifremi Unuttum</div>
+            </div>
             <button class="btn btn-primary" style="width:100%" onclick="loginReturning()">Giriş Yap</button>
             <div class="auth-switch-link" onclick="switchAuthTab('signup')">Hesabın yok mu? <b>Kayıt Ol</b></div>
           </div>
@@ -625,7 +649,13 @@ tbody tr:hover{background:var(--surface-2);}
             <div class="regstep" id="reg2">
               <div class="step-title">Şifre & Kullanıcı Adı</div>
               <p class="step-sub">Bir şifre belirle ve kendine özel bir <b>@kullaniciadi</b> oluştur.</p>
-              <div class="field"><label>Şifre</label><input type="password" id="password" placeholder="••••••••" oninput="updatePasswordStrength(this.value)">
+              <div class="field"><label>Şifre</label>
+                <div class="pwd-wrap">
+                  <input type="password" id="password" placeholder="••••••••" oninput="updatePasswordStrength(this.value)">
+                  <button type="button" class="pwd-toggle" onclick="togglePwdVisibility('password', this)">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
+                  </button>
+                </div>
                 <div class="strength-row">
                   <div class="strength-bar"><div class="strength-fill" id="strengthFill"></div></div>
                   <span class="strength-label" id="strengthLabel">Şifre yaz</span>
@@ -643,7 +673,10 @@ tbody tr:hover{background:var(--surface-2);}
 
             <div class="regstep" id="reg3">
               <div class="step-title">E-postanı Doğrula</div>
-              <p class="step-sub"><span id="emailEcho">e-posta adresine</span> gerçek bir doğrulama linki gönderdik. Gelen kutunu (ve spam klasörünü) kontrol et, linke tıkla, sonra buraya dönüp aşağıdaki butona bas.</p>
+              <p class="step-sub"><span id="emailEcho">e-posta adresine</span> gerçek bir doğrulama linki gönderdik.</p>
+              <div class="spam-warning">
+                ⚠️ E-posta gelmediyse <b>spam / gereksiz klasörünü</b> kontrol et. Linke tıkladığında açılan sayfada <b>"Siteye Geri Dön"</b> butonu olacak — ona basıp buraya dönüp aşağıdaki butona bas.
+              </div>
               <div class="field">
                 <div class="codeRow">
                   <input class="digit" readonly tabindex="-1">
@@ -653,6 +686,7 @@ tbody tr:hover{background:var(--surface-2);}
                   <input class="digit" readonly tabindex="-1">
                   <input class="digit" readonly tabindex="-1">
                 </div>
+                <div class="symbolic-code-note">Referans kodun: <b id="symbolicCode">——————</b> <span style="opacity:.7">(sembolik, bilgi amaçlı)</span></div>
                 <div class="err" id="err-code">Henüz doğrulanmadı — linke tıkladıktan sonra tekrar dene.</div>
                 <div class="verify-check" id="verifyCheck">
                   <span class="ring"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span>
@@ -686,7 +720,7 @@ tbody tr:hover{background:var(--surface-2);}
       <div class="topbar screen-header">
         <h1>Ana Akış</h1>
         <div class="icons">
-          <img class="avatar-sm" id="feedAvatar" src="https://i.pravatar.cc/60?img=68">
+          <img class="avatar-sm" id="feedAvatar" src="https://i.pravatar.cc/60?img=68" style="cursor:pointer;" onclick="goNav('profile', document.getElementById('navBio'))" title="Profilim">
         </div>
       </div>
 
@@ -847,21 +881,7 @@ tbody tr:hover{background:var(--surface-2);}
             <table>
               <thead><tr><th>Kullanıcı Adı</th><th>E-posta</th><th>Durum</th><th>İşlemler</th></tr></thead>
               <tbody id="memberTable">
-                <tr data-name="kullaniciA" data-email="kullaniciA@mail.com">
-                  <td><div class="user-cell"><img src="https://i.pravatar.cc/60?img=32">KullanıcıA</div></td>
-                  <td class="email">kullaniciA@mail.com</td><td><span class="badge active">● Aktif</span></td>
-                  <td><div class="actions-cell"><button class="actbtn" onclick="toggleBlock(this)">Engelle</button><button class="actbtn danger" onclick="removeRow(this)">Sil</button></div></td>
-                </tr>
-                <tr data-name="userşanan" data-email="usersanan@mail.com">
-                  <td><div class="user-cell"><img src="https://i.pravatar.cc/60?img=15">User Şanan</div></td>
-                  <td class="email">usersanan@mail.com</td><td><span class="badge blocked">● Engelli</span></td>
-                  <td><div class="actions-cell"><button class="actbtn success" onclick="toggleBlock(this)">Kaldır</button><button class="actbtn danger" onclick="removeRow(this)">Sil</button></div></td>
-                </tr>
-                <tr data-name="neme" data-email="neme@mail.com">
-                  <td><div class="user-cell"><img src="https://i.pravatar.cc/60?img=22">Neme</div></td>
-                  <td class="email">neme@mail.com</td><td><span class="badge pending">● Doğrulama Bekliyor</span></td>
-                  <td><div class="actions-cell"><button class="actbtn" onclick="toggleBlock(this)">Engelle</button><button class="actbtn danger" onclick="removeRow(this)">Sil</button></div></td>
-                </tr>
+                <tr id="memberTableEmpty"><td colspan="4" style="text-align:center;color:var(--muted);padding:24px 16px;">Yükleniyor...</td></tr>
               </tbody>
             </table>
           </div>
@@ -1011,6 +1031,32 @@ tbody tr:hover{background:var(--surface-2);}
       <div class="screen-body">
         <div id="likedEmpty" style="text-align:center;color:var(--muted);font-size:13px;padding:40px 20px;">Henüz beğendiğin bir gönderi yok. Ana Akış'ta bir gönderiyi beğenince buraya eklenir.</div>
         <div id="likedGrid" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;padding:16px;"></div>
+      </div>
+    </div>
+
+    <!-- ================= EKRAN: BAŞKA KULLANICI PROFİLİ ================= -->
+    <div class="screen" id="screenOtherProfile">
+      <div class="topbar screen-header">
+        <button class="back-btn" style="display:inline-flex;" onclick="closeOtherProfile()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 19l-7-7 7-7"/></svg></button>
+        <h1 id="otherProfileTitle">Profil</h1>
+      </div>
+      <div class="screen-body">
+        <div class="profileWrap">
+          <img class="avatarBig" id="otherProfileAvatar" src="https://i.pravatar.cc/120?img=68">
+          <h2 id="otherProfileName">@kullanici</h2>
+          <div class="uemail" id="otherProfileEmail">—</div>
+
+          <div class="statsRow">
+            <div class="statItem"><div class="statNum" id="otherStatPosts">0</div><div class="statLbl">Gönderi</div></div>
+            <div class="statItem"><div class="statNum" id="otherStatFollowers">0</div><div class="statLbl">Takipçi</div></div>
+            <div class="statItem"><div class="statNum" id="otherStatFollowing">0</div><div class="statLbl">Takip</div></div>
+          </div>
+
+          <div class="row">
+            <button class="btn btn-primary" id="otherFollowBtn" style="flex:1;" onclick="toggleFollowOther()">Takip Et</button>
+            <button class="btn btn-ghost" style="flex:1;" onclick="messageOtherUser()">Mesaj Gönder</button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -1326,6 +1372,23 @@ function requireFirebase(){
   return true;
 }
 
+/* E-postadaki linke tıklayınca Firebase'in açtığı sayfada "Siteye Geri Dön"
+   butonu çıkması için devam URL'i (continue URL) veriyoruz — bu, kullanıcının
+   doğruladıktan sonra kendi sitesine dönebilmesini sağlar. */
+function getVerificationActionSettings(){
+  return { url: window.location.href.split('#')[0] };
+}
+
+/* Doğrulama ekranında gösterilen, her kullanıcıya özel rastgele kod —
+   gerçek doğrulama bu koda bağlı DEĞİL (gerçek doğrulama e-postadaki linkle
+   yapılıyor), bu sadece sembolik/bilgi amaçlı bir referans numarasıdır. */
+function generateSymbolicCode(){
+  const code = String(Math.floor(100000 + Math.random()*900000));
+  const el = document.getElementById('symbolicCode');
+  if(el) el.textContent = code;
+  return code;
+}
+
 function createAccountAndSendVerification(){
   if(!requireFirebase()) return;
   const p = document.getElementById('password'), u = document.getElementById('username');
@@ -1357,7 +1420,8 @@ function createAccountAndSendVerification(){
       savedUsername = '@' + userVal;
       savedIsAdmin = (savedEmail.toLowerCase() === ADMIN_EMAIL.toLowerCase() && passVal === ADMIN_PASSWORD);
       document.getElementById('emailEcho').textContent = savedEmail + ' adresine';
-      return cred.user.sendEmailVerification();
+      generateSymbolicCode();
+      return cred.user.sendEmailVerification(getVerificationActionSettings());
     }).then(()=>{
       btn.disabled = false; btn.textContent = 'Hesabı Oluştur';
       goReg(3);
@@ -1376,9 +1440,32 @@ function createAccountAndSendVerification(){
 function resendVerificationLink(){
   if(!requireFirebase()) return;
   if(!fbAuth.currentUser){ showToast('Önce hesap oluşturman gerekiyor.'); return; }
-  fbAuth.currentUser.sendEmailVerification()
+  generateSymbolicCode();
+  fbAuth.currentUser.sendEmailVerification(getVerificationActionSettings())
     .then(()=> showToast('Doğrulama linki tekrar gönderildi 📩'))
     .catch(()=> showToast('Gönderilemedi, az sonra tekrar dene.'));
+}
+
+/* ===== ŞİFRE GÖSTER/GİZLE ===== */
+function togglePwdVisibility(inputId, btn){
+  const input = document.getElementById(inputId);
+  const showing = input.type === 'text';
+  input.type = showing ? 'password' : 'text';
+  btn.classList.toggle('showing', !showing);
+}
+
+/* ===== ŞİFREMİ UNUTTUM (gerçek Firebase şifre sıfırlama e-postası) ===== */
+function forgotPassword(){
+  const emailInput = document.getElementById('loginEmail');
+  const email = emailInput.value.trim();
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
+    showToast('Önce e-posta kutusuna geçerli bir adres yaz');
+    return;
+  }
+  if(!requireFirebase()) return;
+  fbAuth.sendPasswordResetEmail(email, getVerificationActionSettings())
+    .then(()=> showToast('Şifre sıfırlama linki e-postana gönderildi 📩'))
+    .catch((err)=> showToast(firebaseErrorMessage(err)));
 }
 
 function manualCheckVerified(){
@@ -1718,18 +1805,142 @@ function finishRegistration(){
   }
 }
 
-function addMemberToAdminTable(){
+/* Artık admin tablosuna sahte/yerel satır eklemiyoruz — bu fonksiyon geriye
+   dönük uyumluluk için boş bırakıldı, gerçek liste loadAdminUsers() ile gelir. */
+function addMemberToAdminTable(){ /* no-op: gerçek liste Firebase'den geliyor */ }
+
+/* ===== ADMIN PANELİ: GERÇEK KULLANICI LİSTESİ =====
+   Realtime Database'deki users/ düğümünden TÜM gerçek kayıtlı kullanıcıları
+   çeker ve tabloyu onunla doldurur. */
+/* ===== BAŞKA KULLANICI PROFİLİ — GERÇEK TAKİP ET / MESAJ GÖNDER =====
+   Firebase veri modeli:
+     follows/{benimUid}/{onlarınUid}   = true   (kimi takip ediyorum)
+     followers/{onlarınUid}/{benimUid} = true   (kimler beni takip ediyor)
+   Takipçi/takip sayıları bu düğümlerin GERÇEK çocuk sayısından hesaplanır. */
+let viewingOtherUid = null;
+
+function viewOtherProfile(uid){
+  if(!requireFirebase()) return;
+  viewingOtherUid = uid;
+  showScreen('otherProfile');
+
+  fbDb.ref('users/' + uid).once('value').then((snap)=>{
+    const u = snap.val() || {};
+    document.getElementById('otherProfileTitle').textContent = u.username || 'Profil';
+    document.getElementById('otherProfileName').textContent = u.username || '@kullanici';
+    document.getElementById('otherProfileEmail').textContent = u.email || '—';
+    document.getElementById('otherProfileAvatar').src = u.photo || 'https://i.pravatar.cc/120?img=68';
+    document.getElementById('otherStatPosts').textContent = formatStatNumber(u.postsCount || 0);
+    refreshOtherFollowCounts(uid);
+    refreshFollowButtonState(uid);
+  });
+}
+
+function closeOtherProfile(){
+  viewingOtherUid = null;
+  showScreen('admin');
+}
+
+function refreshOtherFollowCounts(uid){
+  fbDb.ref('followers/' + uid).once('value').then(snap=>{
+    document.getElementById('otherStatFollowers').textContent = formatStatNumber(snap.numChildren());
+  });
+  fbDb.ref('follows/' + uid).once('value').then(snap=>{
+    document.getElementById('otherStatFollowing').textContent = formatStatNumber(snap.numChildren());
+  });
+}
+
+function refreshFollowButtonState(uid){
+  const me = fbAuth.currentUser;
+  const btn = document.getElementById('otherFollowBtn');
+  if(!me || me.uid === uid){ btn.style.display = 'none'; return; }
+  btn.style.display = '';
+  fbDb.ref('follows/' + me.uid + '/' + uid).once('value').then(snap=>{
+    const following = snap.exists();
+    btn.textContent = following ? 'Takip Ediliyor ✓' : 'Takip Et';
+    btn.className = following ? 'btn btn-ghost' : 'btn btn-primary';
+    btn.style.flex = '1';
+  });
+}
+
+function toggleFollowOther(){
+  if(!requireFirebase() || !viewingOtherUid) return;
+  const me = fbAuth.currentUser;
+  if(!me) return;
+  const targetUid = viewingOtherUid;
+  const followRef = fbDb.ref('follows/' + me.uid + '/' + targetUid);
+  const followerRef = fbDb.ref('followers/' + targetUid + '/' + me.uid);
+
+  followRef.once('value').then(snap=>{
+    const alreadyFollowing = snap.exists();
+    const writes = alreadyFollowing
+      ? [followRef.remove(), followerRef.remove()]
+      : [followRef.set(true), followerRef.set(true)];
+    Promise.all(writes).then(()=>{
+      refreshFollowButtonState(targetUid);
+      refreshOtherFollowCounts(targetUid);
+      if(me.uid) refreshOwnFollowCounts(me.uid);
+      showToast(alreadyFollowing ? 'Takibi bıraktın' : 'Takip ediyorsun ✓');
+    });
+  });
+}
+
+function messageOtherUser(){
+  showToast('Mesajlar ekranına yönlendiriliyorsun');
+  goNav('messages', document.getElementById('navMsg'));
+}
+
+/* Kendi profilimin (Bio) takipçi/takip sayılarını GERÇEK verilerle güncelle */
+function refreshOwnFollowCounts(uid){
+  if(!uid || !fbDb) return;
+  fbDb.ref('followers/' + uid).once('value').then(snap=>{
+    followersCount = snap.numChildren();
+    const el = document.getElementById('statFollowers');
+    if(el) el.textContent = formatStatNumber(followersCount);
+  });
+  fbDb.ref('follows/' + uid).once('value').then(snap=>{
+    followingCount = snap.numChildren();
+    const el = document.getElementById('statFollowing');
+    if(el) el.textContent = formatStatNumber(followingCount);
+  });
+}
+
+function loadAdminUsers(){
   const tbody = document.getElementById('memberTable');
-  const tr = document.createElement('tr');
-  tr.dataset.name = savedUsername.toLowerCase();
-  tr.dataset.email = savedEmail.toLowerCase();
-  tr.innerHTML = `
-    <td><div class="user-cell"><img src="${savedProfilePhoto}">${savedUsername}</div></td>
-    <td class="email">${savedEmail}</td>
-    <td><span class="badge active">● Aktif</span></td>
-    <td><div class="actions-cell"><button class="actbtn" onclick="toggleBlock(this)">Engelle</button><button class="actbtn danger" onclick="removeRow(this)">Sil</button></div></td>`;
-  tbody.appendChild(tr);
-  document.getElementById('statTotal').textContent = (parseInt(document.getElementById('statTotal').textContent)+1);
+  if(!requireFirebase()){
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:24px 16px;">Bağlantı yok, liste yüklenemedi.</td></tr>';
+    return;
+  }
+  fbDb.ref('users').once('value').then((snap)=>{
+    const data = snap.val() || {};
+    const uids = Object.keys(data);
+    document.getElementById('statTotal').textContent = uids.length;
+
+    if(!uids.length){
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:24px 16px;">Henüz kayıtlı kullanıcı yok.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = uids.map((uid)=>{
+      const u = data[uid] || {};
+      const name = u.username || '@kullanici';
+      const email = u.email || '—';
+      const blocked = !!u.blocked;
+      const photo = u.photo || 'https://i.pravatar.cc/60?img=68';
+      return `
+        <tr data-uid="${uid}" data-name="${name.toLowerCase()}" data-email="${email.toLowerCase()}">
+          <td><div class="user-cell" style="cursor:pointer;" onclick="viewOtherProfile('${uid}')"><img src="${photo}">${name}</div></td>
+          <td class="email">${email}</td>
+          <td><span class="badge ${blocked ? 'blocked' : 'active'}">${blocked ? '● Engelli' : '● Aktif'}</span></td>
+          <td><div class="actions-cell">
+            <button class="actbtn ${blocked ? 'success' : ''}" onclick="toggleBlock(this)">${blocked ? 'Kaldır' : 'Engelle'}</button>
+            <button class="actbtn danger" onclick="removeRow(this)">Sil</button>
+          </div></td>
+        </tr>`;
+    }).join('');
+  }).catch(()=>{
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:24px 16px;">Liste yüklenirken hata oluştu.</td></tr>';
+  });
 }
 
 function showToast(msg){
@@ -1784,14 +1995,15 @@ function enterApp(){
   document.getElementById('island').classList.remove('hidden');
   goNav('feed', document.getElementById('navFeed'));
   saveSession();
+  if(fbAuth && fbAuth.currentUser) refreshOwnFollowCounts(fbAuth.currentUser.uid);
 }
 
-/* Profil istatistikleri — ileride backend'den beslenecek dinamik değerler.
-   Şimdilik demo amaçlı sabit/örnek sayılar; gönderi sayısı paylaşılan post
-   sayısına göre güncellenebilir. */
-let postsCount = 2;
-let followersCount = 1240;
-let followingCount = 186;
+/* Profil istatistikleri — gönderi sayısı kayıt sırasında belirlenir,
+   takipçi/takip sayıları GERÇEK verilerle refreshOwnFollowCounts() tarafından
+   Firebase'den çekilip üzerine yazılır (bkz. loadUserProfileAndEnter). */
+let postsCount = 0;
+let followersCount = 0;
+let followingCount = 0;
 
 function formatStatNumber(n){
   if(n >= 1000) return (n/1000).toFixed(1).replace('.0','') + 'K';
@@ -1865,14 +2077,24 @@ function loginReturning(){
 function loadUserProfileAndEnter(user){
   fbDb.ref('users/' + user.uid).once('value').then((snap)=>{
     const data = snap.val() || {};
+
+    if(data.blocked){
+      fbAuth.signOut();
+      document.querySelectorAll('#main .screen').forEach(s=>s.classList.remove('active'));
+      document.getElementById('screenRegister').classList.add('active');
+      switchAuthTab('login');
+      document.getElementById('island').classList.add('hidden');
+      showToast('Bu hesap admin tarafından engellenmiş.');
+      return;
+    }
+
     savedUsername = data.username || '@kullanici';
     savedEmail = user.email;
     savedProfilePhoto = data.photo || 'https://i.pravatar.cc/120?img=68';
     savedIsAdmin = !!data.isAdmin;
     if(data.postsCount != null) postsCount = data.postsCount;
-    if(data.followersCount != null) followersCount = data.followersCount;
-    if(data.followingCount != null) followingCount = data.followingCount;
     enterAppFromAuth();
+    refreshOwnFollowCounts(user.uid);
   }).catch(()=>{
     savedEmail = user.email;
     enterAppFromAuth();
@@ -1976,6 +2198,8 @@ function goNav(name, btnEl){
   // sohbetin İÇİNE girdiğinde (dmWrap.view-chat) gizlenir — bunu ayrı
   // bir yerde (chat-item tıklama / geri butonu) yönetiyoruz.
   document.getElementById('island').classList.remove('chat-fullscreen-hide');
+
+  if(name === 'admin') loadAdminUsers();
 }
 
 function exitChatToFeed(){
@@ -2171,11 +2395,36 @@ function exitChatThread(){
 /* ===== ADMIN ===== */
 function toggleBlock(btn){
   const row = btn.closest('tr'); const badge = row.querySelector('.badge');
+  const uid = row.dataset.uid;
   const blocking = btn.textContent.trim() === 'Engelle';
+
   if(blocking){ badge.className='badge blocked'; badge.textContent='● Engelli'; btn.className='actbtn success'; btn.textContent='Kaldır'; }
   else { badge.className='badge active'; badge.textContent='● Aktif'; btn.className='actbtn'; btn.textContent='Engelle'; }
+
+  if(uid && requireFirebase()){
+    fbDb.ref('users/' + uid + '/blocked').set(blocking).catch(()=>{
+      showToast('Durum veritabanına kaydedilemedi');
+    });
+  }
 }
-function removeRow(btn){ if(confirm('Bu üyeyi silmek istediğine emin misin?')) btn.closest('tr').remove(); }
+function removeRow(btn){
+  if(!confirm('Bu üyeyi silmek istediğine emin misin? Bu işlem geri alınamaz.')) return;
+  const row = btn.closest('tr');
+  const uid = row.dataset.uid;
+  const name = row.dataset.name;
+  row.remove();
+  document.getElementById('statTotal').textContent = Math.max(0, parseInt(document.getElementById('statTotal').textContent) - 1);
+
+  if(uid && requireFirebase()){
+    fbDb.ref('users/' + uid).remove();
+    if(name) fbDb.ref('usernames/' + name).remove();
+    // Not: Firebase Authentication kaydı (gerçek giriş hesabı) sadece sunucu
+    // tarafından (Admin SDK / Cloud Functions) silinebilir; bu, istemci
+    // tarafından (bu site) güvenlik nedeniyle yapılamaz. Bu yüzden kullanıcı
+    // burada "silinmiş" görünür ama login hesabı Firebase Authentication'da
+    // kalır — tamamen silmek istersen Firebase konsolünden manuel silebilirsin.
+  }
+}
 function resolveReport(btn){ btn.closest('.flagged-item').remove(); }
 function filterMembers(){
   const q = document.getElementById('memberSearch').value.toLowerCase();
