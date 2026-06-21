@@ -25,6 +25,7 @@ const googleProvider = new firebase.auth.GoogleAuthProvider();
 // ==========================================
 // 2. GLOBAL DEĞİŞKENLER VE DİL MOTORU
 // ==========================================
+let isLampOn = false; // Orijinal lamba değişkeniniz
 let currentLanguage = localStorage.getItem('site_lang') || 'tr';
 
 const translations = {
@@ -44,7 +45,7 @@ const translations = {
     }
 };
 
-// TEMA GİFLERİ LİSTESİ
+// Orijinal Tema GIF Listesi
 const themeGifs = [
     'https://i.pinimg.com/originals/ba/8e/3c/ba8e3c15b991da0733cb17f699042b4d.gif',
     'https://i.pinimg.com/originals/5d/43/6e/5d436e2fbd6d0ef0413009fa3e764491.gif',
@@ -67,23 +68,12 @@ window.addEventListener('load', () => {
 });
 
 // ==========================================
-// 3. TEMA VE DİL FONKSİYONLARI
+// 3. TEMA VE DİL FONKSİYONLARI (ORİJİNAL)
 // ==========================================
 function toggleLanguage() {
     currentLanguage = currentLanguage === 'tr' ? 'en' : 'tr';
     localStorage.setItem('site_lang', currentLanguage);
     applyLanguage(currentLanguage);
-}
-
-// Global scope'a ekliyoruz ki HTML butonları okuyabilsin
-window.toggleLanguage = toggleLanguage;
-window.nextTheme = nextTheme;
-
-function applyLanguage(lang) {
-    const btn = document.getElementById('langToggleBtn');
-    if(btn) btn.innerText = translations[lang].langLbl;
-    const desc = document.getElementById('heroDescription');
-    if(desc) desc.innerText = translations[lang].txtHeroDesc;
 }
 
 function nextTheme() {
@@ -109,11 +99,15 @@ function showStatus(text, color) {
     }
 }
 
+// Global Erişimler İçin Window Nesnesine Atıyoruz
+window.toggleLanguage = toggleLanguage;
+window.nextTheme = nextTheme;
+window.isLampOn = isLampOn;
+
 // ==========================================
 // 4. GERÇEK FIREBASE AUTHENTICATION SİSTEMİ
 // ==========================================
 
-// GİRİŞ YAPMA FONKSİYONU
 function handleLogin() {
     const email = document.getElementById('loginEmail').value.trim();
     const password = document.getElementById('loginPassword').value.trim();
@@ -143,7 +137,6 @@ function handleLogin() {
 }
 window.handleLogin = handleLogin;
 
-// KAYIT OLMA FONKSİYONU
 function handleRegister() {
     const username = document.getElementById('regUsername').value.trim();
     const email = document.getElementById('regEmail').value.trim();
@@ -187,7 +180,6 @@ function handleRegister() {
 }
 window.handleRegister = handleRegister;
 
-// GOOGLE İLE GİRİŞ FONKSİYONU
 function handleGoogleLogin() {
     auth.signInWithPopup(googleProvider)
         .then((result) => {
