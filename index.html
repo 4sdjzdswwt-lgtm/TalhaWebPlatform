@@ -540,9 +540,15 @@ tbody tr:hover{background:var(--surface-2);}
     appId: "1:286141336960:web:92e80c38865665d6b80565",
     measurementId: "G-T5147XWHL5"
   };
-  firebase.initializeApp(firebaseConfig);
-  const fbAuth = firebase.auth();
-  const fbDb = firebase.database();
+  let fbAuth = null, fbDb = null, fbReady = false;
+  try{
+    firebase.initializeApp(firebaseConfig);
+    fbAuth = firebase.auth();
+    fbDb = firebase.database();
+    fbReady = true;
+  }catch(e){
+    console.error('Firebase başlatılamadı (internet/SDK yüklenemedi):', e);
+  }
 </script>
 <body>
 
@@ -1172,14 +1178,16 @@ function renderAccountList(){
 function switchToAccount(email){
   closeAccountSwitcher();
   showToast('Güvenlik için şifreni tekrar girmen gerekiyor');
-  fbAuth.signOut().finally(()=>{
+  const goToLogin = ()=>{
     document.querySelectorAll('#main .screen').forEach(s=>s.classList.remove('active'));
     document.getElementById('screenRegister').classList.add('active');
     switchAuthTab('login');
     document.getElementById('island').classList.add('hidden');
     const loginEmailInput = document.getElementById('loginEmail');
     if(loginEmailInput) loginEmailInput.value = email;
-  });
+  };
+  if(!fbReady || !fbAuth){ goToLogin(); return; }
+  fbAuth.signOut().finally(goToLogin);
 }
 
 function initAuthState(){
@@ -1189,6 +1197,13 @@ function initAuthState(){
   document.getElementById('screenRegister').classList.add('active');
   document.getElementById('island').classList.add('hidden');
   switchAuthTab('login');
+
+  if(!fbReady || !fbAuth){
+    // Firebase SDK'sı bu ortamda yüklenemedi (genelde internet/ağ kısıtlaması).
+    // Site çökmesin, en azından Giriş/Kayıt ekranı görünsün.
+    showToast('Bağlantı kurulamadı — internetini kontrol et');
+    return;
+  }
 
   fbAuth.onAuthStateChanged((user)=>{
     if(user && user.emailVerified){
@@ -1292,7 +1307,18 @@ function firebaseErrorMessage(err){
 /* ADIM 2: Şifre + kullanıcı adı — burada GERÇEK Firebase hesabı oluşturulur
    ve gerçek doğrulama e-postası gönderilir. Kullanıcı adı, Realtime
    Database'deki "usernames/" listesine karşı GERÇEKTEN kontrol edilir. */
+/* Firebase yüklenememişse (internet/ağ sorunu) kullanıcıyı bilgilendirip
+   fonksiyonun devam etmesini durdurur — sayfa asla çökmez. */
+function requireFirebase(){
+  if(!fbReady || !fbAuth || !fbDb){
+    showToast('Bağlantı kurulamadı — internetini kontrol edip tekrar dene');
+    return false;
+  }
+  return true;
+}
+
 function createAccountAndSendVerification(){
+  if(!requireFirebase()) return;
   const p = document.getElementById('password'), u = document.getElementById('username');
   const passVal = p.value.trim();
   const userVal = u.value.trim().replace(/^@/,'');
@@ -1338,6 +1364,7 @@ function createAccountAndSendVerification(){
 }
 
 function resendVerificationLink(){
+  if(!requireFirebase()) return;
   if(!fbAuth.currentUser){ showToast('Önce hesap oluşturman gerekiyor.'); return; }
   fbAuth.currentUser.sendEmailVerification()
     .then(()=> showToast('Doğrulama linki tekrar gönderildi 📩'))
@@ -1345,6 +1372,7 @@ function resendVerificationLink(){
 }
 
 function manualCheckVerified(){
+  if(!requireFirebase()) return;
   if(!fbAuth.currentUser){
     document.getElementById('err-code').style.display = 'block';
     return;
@@ -1638,6 +1666,16 @@ async function analyzePhoto(dataUrl, mimeType){
 
 function finishRegistration(){
   if(!uploadedImageOk || !savedProfilePhoto) return;
+  if(!fbReady || !fbAuth || !fbDb){
+    // Firebase yoksa en azından kullanıcıyı bekletmeyelim, demo modunda ilerlesin.
+    addMemberToAdminTable();
+    showToast(savedUsername + ', profilin hazır! (bağlantı kısıtlı, demo modu)');
+    setTimeout(()=>{
+      document.getElementById('screenRegister').classList.remove('active');
+      showContractAgree();
+    }, 900);
+    return;
+  }
   const btn = document.getElementById('finishBtn');
   btn.disabled = true; btn.textContent = 'Kaydediliyor...';
 
@@ -1765,6 +1803,14 @@ function goToRegisterScreen(){
 }
 
 function logoutAccount(){
+  if(!fbReady || !fbAuth){
+    clearSession();
+    document.querySelectorAll('#main .screen').forEach(s=>s.classList.remove('active'));
+    document.getElementById('screenRegister').classList.add('active');
+    switchAuthTab('login');
+    document.getElementById('island').classList.add('hidden');
+    return;
+  }
   fbAuth.signOut().finally(()=>{
     clearSession();
     document.querySelectorAll('#main .screen').forEach(s=>s.classList.remove('active'));
@@ -1775,6 +1821,7 @@ function logoutAccount(){
 }
 
 function loginReturning(){
+  if(!requireFirebase()) return;
   const email = document.getElementById('loginEmail').value.trim();
   const pass = document.getElementById('loginPassword').value.trim();
   if(!email || !pass) return;
