@@ -39,7 +39,7 @@
             <p id="heroDescription" class="hero-subtitle">Hoş geldiniz, geleceğin web sitesine. Lütfen abajuru açtıktan sonra hesabınız yoksa kaydolun varsa giriş yapınız.</p>
         </div>
 
-        <div id="loginStep" class="step-card">
+        <div id="loginStep" class="step-card" style="display: none;">
             <h2 class="step-title">Giriş Yap</h2>
             <form class="auth-form" onsubmit="return false;">
                 <div class="input-wrapper">
@@ -48,11 +48,16 @@
                 </div>
                 <div class="input-wrapper">
                     <input type="password" id="loginPassword" placeholder="Şifre" required>
-                    <button type="button" class="toggle-password" onclick="togglePasswordVisibility('loginPassword', this)"><i class="fa-solid fa-eye"></i></button>
+                    <button type="button" class="toggle-password" onclick="togglePasswordVisibility('loginPassword', this)">
+                        <i class="fa-solid fa-eye"></i>
+                    </button>
                 </div>
+                
                 <button type="button" onclick="handleLogin()" class="btn btn-primary">Giriş Yap</button>
                 
-                <button type="button" onclick="handleGoogleLogin()" class="btn btn-secondary" style="background:#fff; color:#000; margin-top:10px; border:1px solid #ddd; border-radius:50px;"><img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" width="16" style="vertical-align:middle; margin-right:8px;"> Google ile Giriş</button>
+                <button type="button" onclick="handleGoogleLogin()" class="btn btn-secondary" style="background: #ffffff; color: #18191a; border: 1px solid #ddd; margin-top: 10px;">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" width="16" style="vertical-align: middle; margin-right: 8px;"> Google ile Giriş Yap
+                </button>
                 
                 <div class="step-footer-links">
                     <span onclick="switchStep('registerStep')">Hesabınız yok mu? <b>Kaydolun</b></span>
@@ -60,7 +65,7 @@
             </form>
         </div>
 
-        <div id="registerStep" class="step-card">
+        <div id="registerStep" class="step-card" style="display: none;">
             <h2 class="step-title">Hesap Oluştur</h2>
             <form class="auth-form" onsubmit="return false;">
                 <div class="input-wrapper">
@@ -72,10 +77,17 @@
                     <i class="fa-solid fa-envelope input-icon"></i>
                 </div>
                 <div class="input-wrapper">
-                    <input type="password" id="regPassword" placeholder="Şifre (Min 6 Karakter)" required>
-                    <button type="button" class="toggle-password" onclick="togglePasswordVisibility('regPassword', this)"><i class="fa-solid fa-eye"></i></button>
+                    <input type="password" id="regPassword" placeholder="Şifre" required>
+                    <button type="button" class="toggle-password" onclick="togglePasswordVisibility('regPassword', this)">
+                        <i class="fa-solid fa-eye"></i>
+                    </button>
                 </div>
+                
                 <button type="button" onclick="handleRegister()" class="btn btn-secondary">Kayıt Ol</button>
+                
+                <button type="button" onclick="handleGoogleLogin()" class="btn btn-secondary" style="background: #ffffff; color: #18191a; border: 1px solid #ddd; margin-top: 10px;">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" width="16" style="vertical-align: middle; margin-right: 8px;"> Google ile Kaydol
+                </button>
                 
                 <div class="step-footer-links">
                     <span onclick="switchStep('loginStep')">Zaten üye misiniz? <b>Giriş Yapın</b></span>
@@ -92,6 +104,7 @@
             const body = document.body;
             const startStep = document.getElementById('startStep');
             const loginStep = document.getElementById('loginStep');
+            const registerStep = document.getElementById('registerStep');
 
             isLampOn = !isLampOn;
 
@@ -103,11 +116,9 @@
                 }
             } else {
                 body.classList.remove('light-on');
-                document.getElementById('registerStep').style.display = 'none';
-                if(startStep && loginStep) {
-                    startStep.style.display = 'block';
-                    loginStep.style.display = 'none';
-                }
+                if(startStep) startStep.style.display = 'block';
+                if(loginStep) loginStep.style.display = 'none';
+                if(registerStep) registerStep.style.display = 'none';
             }
         }
 
