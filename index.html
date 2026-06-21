@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Talha Web Design</title>
+<title>NeXT</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -44,8 +44,6 @@ input:focus{border-color:var(--accent);}
 #sidebar .who span{font-size:12.5px;font-weight:600;}
 
 #main{flex:1;min-width:0;padding-bottom:110px;}
-.screen{display:none;}
-.screen.active{display:block;}
 
 /* ALT ADA (PILL) NAVİGASYON */
 .island{
@@ -131,6 +129,34 @@ label{display:block;font-size:12px;color:var(--muted);margin:0 0 6px;font-weight
 .success h2{font-family:'Space Grotesk',sans-serif;font-size:19px;margin:0 0 6px;}
 .success p{color:var(--muted);font-size:13px;margin:0 0 22px;}
 input[type=file]{display:none;}
+
+/* NeXT LOGO + SEKMELER */
+.auth-logo-wrap{display:flex;flex-direction:column;align-items:center;padding:30px 0 6px;}
+.auth-logo-img{max-width:120px;max-height:60px;object-fit:contain;}
+.auth-logo-fallback{display:none;font-family:'Space Grotesk',sans-serif;font-size:26px;font-weight:700;letter-spacing:-.5px;color:var(--text);}
+.authtabs{display:flex;margin:18px 20px 0;background:var(--surface-2);border-radius:12px;padding:4px;gap:4px;}
+.authtab{flex:1;padding:10px 0;border:none;background:transparent;color:var(--muted);font-size:13px;font-weight:600;border-radius:9px;cursor:pointer;font-family:'Inter',sans-serif;}
+.authtab.active{background:var(--accent);color:#06140d;}
+.authpanel{display:none;}
+.authpanel.active{display:block;}
+
+/* SÖZLEŞME METNİ */
+.contract-text{margin:0 18px 4px;padding:14px 16px;background:var(--surface-2);border:1px solid var(--line);border-radius:12px;font-size:12.5px;line-height:1.6;color:var(--text);max-height:220px;overflow-y:auto;}
+
+/* TOAST (alttan çıkan sistem mesajı) */
+.toast{
+  position:fixed;left:50%;bottom:30px;transform:translateX(-50%) translateY(20px);
+  background:var(--surface-2);border:1px solid var(--accent-dim);color:var(--accent);
+  padding:12px 22px;border-radius:30px;font-size:13.5px;font-weight:600;
+  opacity:0;transition:opacity .35s, transform .35s;z-index:90;pointer-events:none;
+  box-shadow:0 8px 24px rgba(0,0,0,.35);white-space:nowrap;
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* EKRAN GEÇİŞ ANİMASYONU (her sekme kendi sayfası gibi açılsın) */
+.screen{display:none;opacity:0;}
+.screen.active{display:block;animation:screenIn .28s ease both;}
+@keyframes screenIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
 
 /* ===== FEED SCREEN (siteye özgü tasarım) ===== */
 .topbar{padding:18px 22px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;}
@@ -306,68 +332,95 @@ tbody tr:hover{background:var(--surface-2);}
 
   <div id="main">
 
-    <!-- ================= EKRAN 1: KAYIT ================= -->
+    <!-- ================= EKRAN 1: NeXT GİRİŞ / KAYIT ================= -->
     <div class="screen" id="screenRegister">
       <div id="screenRegisterInner">
       <div class="card">
-        <div class="head"><span class="mark">&lt;/&gt;</span><h1>Talha Web Design</h1></div>
-        <div class="rail"><div class="seg on" id="seg1"></div><div class="seg" id="seg2"></div><div class="seg" id="seg3"></div></div>
-        <div class="steplabel" id="stepLabel">ADIM 1 / 3</div>
-        <div class="cardbody">
-
-          <div class="regstep active" id="reg1">
-            <div class="step-title">Temel Bilgiler</div>
-            <p class="step-sub">Hesabını oluşturmak için önce kullanıcı adını ve e-posta adresini gir.</p>
-            <div class="field"><label>Kullanıcı Adı</label><input type="text" id="username" placeholder="ör. talha_web">
-              <div class="err" id="err-username">Kullanıcı adı en az 3 karakter olmalı.</div></div>
-            <div class="field"><label>E-posta</label><input type="email" id="email" placeholder="ornek@mail.com">
-              <div class="err" id="err-email">Geçerli bir e-posta adresi gir.</div></div>
-            <div class="field"><label>Şifre</label><input type="text" id="password" placeholder="••••••••">
-              <div class="err" id="err-password">Şifre en az 4 karakter olmalı.</div></div>
-            <button class="btn btn-primary" style="width:100%" onclick="goReg(2)">İleri</button>
-          </div>
-
-          <div class="regstep" id="reg2">
-            <div class="step-title">Doğrulama</div>
-            <p class="step-sub"><span id="emailEcho">e-posta adresine</span> 6 haneli kod gönderdik (demo kodu: <b id="fakeCodeShow" style="color:var(--accent)"></b>).</p>
-            <div class="field"><label>6 Haneli Kod</label>
-              <div class="codeRow">
-                <input type="text" maxlength="1" class="digit"><input type="text" maxlength="1" class="digit">
-                <input type="text" maxlength="1" class="digit"><input type="text" maxlength="1" class="digit">
-                <input type="text" maxlength="1" class="digit"><input type="text" maxlength="1" class="digit">
-              </div>
-              <div class="err" id="err-code">Kod hatalı. Tekrar dene.</div>
-              <div class="verify-check" id="verifyCheck">
-                <span class="ring"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span>
-                Doğrulandı, harika!
-              </div>
-            </div>
-            <div class="row"><button class="btn btn-ghost" onclick="goReg(1)">Geri</button><button class="btn btn-primary" onclick="verifyCode()">Doğrula</button></div>
-          </div>
-
-          <div class="regstep" id="reg3">
-            <div class="step-title">Profil Fotoğrafı</div>
-            <p class="step-sub">İstediğin fotoğrafı profil fotoğrafı olarak koyabilirsin. Tek kontrol: +18 / uygunsuz içerik olmaması.</p>
-            <div class="upload-zone" id="dropzone" onclick="document.getElementById('fileInput').click()">
-              <div class="icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 16V4M12 4l-4 4M12 4l4 4M4 20h16"/></svg></div>
-              <p>Yüklemek için tıkla <span class="accent-text">veya sürükle bırak</span></p>
-            </div>
-            <input type="file" id="fileInput" accept="image/*" onchange="onFileChosen(event)">
-            <div class="analysis-box" id="analysisBox"></div>
-            <div class="row" style="margin-top:18px;"><button class="btn btn-ghost" onclick="goReg(2)">Geri</button><button class="btn btn-primary" id="finishBtn" disabled onclick="finishRegistration()">Profili Tamamla</button></div>
-          </div>
-
-          <div class="regstep" id="reg4">
-            <div class="success">
-              <img id="finalAvatar" src="" style="width:84px;height:84px;border-radius:50%;object-fit:cover;margin:0 auto 14px;display:block;border:2px solid var(--accent);">
-              <div style="font-size:12px;color:var(--accent);font-weight:600;margin-bottom:14px;">✅ Profil fotoğrafın kaydedildi</div>
-              <h2 id="finalUsername">Profilin hazır!</h2>
-              <p>Şimdi ana akışa geçiyorsun, sözleşme videosunu izlemen gerekecek.</p>
-              <button class="btn btn-primary" style="width:100%" onclick="enterApp()">Ana Akışa Geç →</button>
-            </div>
-          </div>
-
+        <div class="auth-logo-wrap">
+          <img src="NeXT.PNG" alt="NeXT" class="auth-logo-img" onerror="this.style.display='none';document.getElementById('logoFallback').style.display='block';">
+          <div id="logoFallback" class="auth-logo-fallback">NeXT</div>
         </div>
+
+        <div class="authtabs">
+          <button class="authtab active" id="tabLogin" onclick="switchAuthTab('login')">Giriş Yap</button>
+          <button class="authtab" id="tabSignup" onclick="switchAuthTab('signup')">Kayıt Ol</button>
+        </div>
+
+        <!-- ===== GİRİŞ YAP ===== -->
+        <div class="authpanel active" id="authpanelLogin">
+          <div class="cardbody">
+            <div class="step-title">Tekrar Hoş Geldin</div>
+            <p class="step-sub">Giriş yap, direkt Ana Akış'a döneceksin.</p>
+            <div class="field"><label>E-posta</label><input type="email" id="loginEmail" placeholder="ornek@mail.com"></div>
+            <div class="field"><label>Şifre</label><input type="password" id="loginPassword" placeholder="••••••••"></div>
+            <button class="btn btn-primary" style="width:100%" onclick="loginReturning()">Giriş Yap</button>
+          </div>
+        </div>
+
+        <!-- ===== KAYIT OL ===== -->
+        <div class="authpanel" id="authpanelSignup">
+          <div class="rail"><div class="seg on" id="seg1"></div><div class="seg" id="seg2"></div><div class="seg" id="seg3"></div><div class="seg" id="seg4"></div></div>
+          <div class="steplabel" id="stepLabel">ADIM 1 / 4</div>
+          <div class="cardbody">
+
+            <div class="regstep active" id="reg1">
+              <div class="step-title">E-posta Adresin</div>
+              <p class="step-sub">Gerçek e-posta adresini gir, doğrulama kodunu o adrese göndereceğiz.</p>
+              <div class="field"><label>E-posta</label><input type="email" id="email" placeholder="ornek@mail.com">
+                <div class="err" id="err-email">Geçerli bir e-posta adresi gir.</div></div>
+              <button class="btn btn-primary" style="width:100%" onclick="sendCode()">Doğrulama Kodu Gönder</button>
+            </div>
+
+            <div class="regstep" id="reg2">
+              <div class="step-title">Doğrulama</div>
+              <p class="step-sub"><span id="emailEcho">e-posta adresine</span> 6 haneli kod gönderdik (demo kodu: <b id="fakeCodeShow" style="color:var(--accent)"></b>).</p>
+              <div class="field"><label>6 Haneli Kod</label>
+                <div class="codeRow">
+                  <input inputmode="numeric" pattern="[0-9]*" type="tel" autocomplete="one-time-code" maxlength="1" class="digit">
+                  <input inputmode="numeric" pattern="[0-9]*" type="tel" autocomplete="one-time-code" maxlength="1" class="digit">
+                  <input inputmode="numeric" pattern="[0-9]*" type="tel" autocomplete="one-time-code" maxlength="1" class="digit">
+                  <input inputmode="numeric" pattern="[0-9]*" type="tel" autocomplete="one-time-code" maxlength="1" class="digit">
+                  <input inputmode="numeric" pattern="[0-9]*" type="tel" autocomplete="one-time-code" maxlength="1" class="digit">
+                  <input inputmode="numeric" pattern="[0-9]*" type="tel" autocomplete="one-time-code" maxlength="1" class="digit">
+                </div>
+                <div class="err" id="err-code">Kod hatalı. Tekrar dene.</div>
+                <div class="verify-check" id="verifyCheck">
+                  <span class="ring"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span>
+                  Doğrulandı, harika!
+                </div>
+              </div>
+              <div class="row"><button class="btn btn-ghost" onclick="goReg(1)">Geri</button><button class="btn btn-primary" onclick="verifyCode()">Doğrula</button></div>
+            </div>
+
+            <div class="regstep" id="reg3">
+              <div class="step-title">Şifre & Kullanıcı Adı</div>
+              <p class="step-sub">Bir şifre belirle ve kendine özel bir <b>@kullaniciadi</b> oluştur.</p>
+              <div class="field"><label>Şifre</label><input type="password" id="password" placeholder="••••••••">
+                <div class="err" id="err-password">Şifre en az 4 karakter olmalı.</div></div>
+              <div class="field"><label>Kullanıcı Adı</label>
+                <div style="display:flex;align-items:center;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;overflow:hidden;">
+                  <span style="padding:12px 0 12px 13px;color:var(--muted);font-family:'JetBrains Mono',monospace;">@</span>
+                  <input type="text" id="username" placeholder="kullaniciadi" style="border:none;background:transparent;padding-left:2px;">
+                </div>
+                <div class="err" id="err-username">Kullanıcı adı en az 3 karakter olmalı.</div></div>
+              <div class="row"><button class="btn btn-ghost" onclick="goReg(2)">Geri</button><button class="btn btn-primary" onclick="savePasswordNickname()">İleri</button></div>
+            </div>
+
+            <div class="regstep" id="reg4">
+              <div class="step-title">Profil Fotoğrafı</div>
+              <p class="step-sub">İstediğin fotoğrafı profil fotoğrafı olarak koyabilirsin. Tek kontrol: +18 / uygunsuz içerik olmaması.</p>
+              <div class="upload-zone" id="dropzone" onclick="document.getElementById('fileInput').click()">
+                <div class="icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 16V4M12 4l-4 4M12 4l4 4M4 20h16"/></svg></div>
+                <p>Yüklemek için tıkla <span class="accent-text">veya sürükle bırak</span></p>
+              </div>
+              <input type="file" id="fileInput" accept="image/*" onchange="onFileChosen(event)">
+              <div class="analysis-box" id="analysisBox"></div>
+              <div class="row" style="margin-top:18px;"><button class="btn btn-ghost" onclick="goReg(3)">Geri</button><button class="btn btn-primary" id="finishBtn" disabled onclick="finishRegistration()">Profili Tamamla</button></div>
+            </div>
+
+          </div>
+        </div>
+
       </div>
       </div>
     </div>
@@ -472,7 +525,7 @@ tbody tr:hover{background:var(--surface-2);}
         <div class="ahead">
           <div style="display:flex;align-items:center;gap:10px;">
             <span class="mark" style="font-family:'JetBrains Mono',monospace;color:var(--accent);font-size:13px;border:1px solid var(--accent-dim);padding:5px 9px;border-radius:7px;">&lt;/&gt;</span>
-            <div><h1>Admin Yönetim Paneli</h1><div class="sub">Talha Web Design</div></div>
+            <div><h1>Admin Yönetim Paneli</h1><div class="sub">NeXT</div></div>
           </div>
           <div class="pill"><span class="dot"></span> Açık</div>
         </div>
@@ -561,29 +614,33 @@ tbody tr:hover{background:var(--surface-2);}
       </div>
     </div>
 
-    <!-- ================= EKRAN 6: GİRİŞ (geri dönen kullanıcı) ================= -->
-    <div class="screen" id="screenLogin">
-      <div id="screenLoginInner" style="min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 16px;">
-        <div class="card">
-          <div class="head"><span class="mark">&lt;/&gt;</span><h1>Talha Web Design</h1></div>
-          <div class="cardbody">
-            <div class="step-title">Tekrar Hoş Geldin</div>
-            <p class="step-sub">Giriş yap, sözleşme videosunu tekrar izlemene gerek yok — direkt Ana Akış'a döneceksin.</p>
-            <div class="field"><label>E-posta</label><input type="email" id="loginEmail" placeholder="ornek@mail.com"></div>
-            <div class="field"><label>Şifre</label><input type="text" id="loginPassword" placeholder="••••••••"></div>
-            <button class="btn btn-primary" style="width:100%;margin-bottom:10px;" onclick="loginReturning()">Giriş Yap</button>
-            <button class="btn btn-ghost" style="width:100%;" onclick="goToRegisterScreen()">Hesabın yok mu? Kayıt Ol</button>
-          </div>
-        </div>
-      </div>
-    </div>
-
   </div><!-- /main -->
 </div><!-- /appShell -->
 
-<!-- ZORUNLU SÖZLEŞME VİDEOSU -->
+<!-- ALTTAN ÇIKAN SİSTEM MESAJI (TOAST) -->
+<div class="toast" id="toast"></div>
+
+<!-- ZORUNLU SÖZLEŞME + ONAY VİDEOSU -->
 <div class="overlay hidden" id="contractOverlay">
-  <div class="contract-card">
+
+  <!-- AŞAMA 1: SÖZLEŞME METNİ -->
+  <div class="contract-card" id="contractAgreeStage">
+    <div class="contract-head">
+      <div class="eyebrow">İlk Giriş · Zorunlu</div>
+      <h2>Kullanım Sözleşmesi</h2>
+    </div>
+    <div class="contract-text">
+      NeXT'i kullanarak topluluk kurallarına uymayı kabul ediyorsun: başka kullanıcılara saygılı davranmak,
+      +18/uygunsuz içerik paylaşmamak, gerçek bilgilerinle hareket etmek ve admin ekibinin aldığı moderasyon
+      kararlarına uymak. Bu kuralları ihlal eden hesaplar engellenebilir veya silinebilir.
+    </div>
+    <div class="contract-foot">
+      <button class="btn btn-primary" style="width:100%" onclick="agreeToContract()">Okudum, Kabul Ediyorum</button>
+    </div>
+  </div>
+
+  <!-- AŞAMA 2: ONAY VİDEOSU -->
+  <div class="contract-card hidden" id="contractVideoStage">
     <div class="contract-head">
       <div class="eyebrow">İlk Giriş · Zorunlu</div>
       <h2>Sözleşme Onay Videosu</h2>
@@ -625,34 +682,43 @@ function goReg(n){
   document.querySelectorAll('.regstep').forEach(p=>p.classList.remove('active'));
   document.getElementById('reg'+n).classList.add('active');
   document.querySelectorAll('.rail .seg').forEach((s,i)=>s.classList.toggle('on', i < n));
-  if(n<=3) document.getElementById('stepLabel').textContent = 'ADIM '+n+' / 3';
+  document.getElementById('stepLabel').textContent = 'ADIM '+n+' / 4';
 }
 
-function goReg4(){
-  document.querySelectorAll('.regstep').forEach(p=>p.classList.remove('active'));
-  document.getElementById('reg4').classList.add('active');
+function switchAuthTab(which){
+  document.getElementById('tabLogin').classList.toggle('active', which==='login');
+  document.getElementById('tabSignup').classList.toggle('active', which==='signup');
+  document.getElementById('authpanelLogin').classList.toggle('active', which==='login');
+  document.getElementById('authpanelSignup').classList.toggle('active', which==='signup');
 }
 
-function validateGoStep2(){
-  const u = document.getElementById('username'), e = document.getElementById('email'), p = document.getElementById('password');
-  const uOk = u.value.trim().length >= 3;
+/* ADIM 1: E-posta gönder
+   NOT: Gerçek e-posta göndermek için EmailJS gibi bir servis bağlanması gerekir.
+   Şu an demo amaçlı kodu ekranda gösteriyoruz. EmailJS bağlanınca bu fonksiyonun
+   içine gerçek gönderim kodu eklenecek, akışın geri kalanı değişmeyecek. */
+function sendCode(){
+  const e = document.getElementById('email');
   const eOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e.value.trim());
-  const pOk = p.value.trim().length >= 4;
-  document.getElementById('err-username').style.display = uOk ? 'none' : 'block';
   document.getElementById('err-email').style.display = eOk ? 'none' : 'block';
-  document.getElementById('err-password').style.display = pOk ? 'none' : 'block';
-  if(!uOk || !eOk || !pOk) return;
-  savedUsername = u.value.trim(); savedEmail = e.value.trim(); savedPassword = p.value.trim();
-  // Admin tespiti: sadece koddaki ADMIN_EMAIL + ADMIN_PASSWORD ile tam eşleşirse admin olur.
-  savedIsAdmin = (savedEmail.toLowerCase() === ADMIN_EMAIL.toLowerCase() && savedPassword === ADMIN_PASSWORD);
+  if(!eOk) return;
+  savedEmail = e.value.trim();
   document.getElementById('emailEcho').textContent = savedEmail + ' adresine';
   document.getElementById('fakeCodeShow').textContent = fakeCode;
   goReg(2);
 }
-// İleri butonunu üzerine bağla
-document.addEventListener('DOMContentLoaded', ()=>{
-  document.querySelector('#reg1 .btn-primary').onclick = validateGoStep2;
-});
+
+function savePasswordNickname(){
+  const p = document.getElementById('password'), u = document.getElementById('username');
+  const pOk = p.value.trim().length >= 4;
+  const uOk = u.value.trim().length >= 3;
+  document.getElementById('err-password').style.display = pOk ? 'none' : 'block';
+  document.getElementById('err-username').style.display = uOk ? 'none' : 'block';
+  if(!pOk || !uOk) return;
+  savedPassword = p.value.trim();
+  savedUsername = '@' + u.value.trim().replace(/^@/,'');
+  savedIsAdmin = (savedEmail.toLowerCase() === ADMIN_EMAIL.toLowerCase() && savedPassword === ADMIN_PASSWORD);
+  goReg(4);
+}
 
 function verifyCode(){
   const boxes = [...document.querySelectorAll('.digit')];
@@ -738,10 +804,12 @@ async function analyzePhoto(dataUrl, mimeType){
 
 function finishRegistration(){
   if(!uploadedImageOk || !savedProfilePhoto) return;
-  document.getElementById('finalAvatar').src = savedProfilePhoto;
-  document.getElementById('finalUsername').textContent = (savedUsername ? savedUsername + ', ' : '') + 'profilin hazır!';
-  goReg4();
   addMemberToAdminTable();
+  showToast(savedUsername + ', profilin hazır!');
+  setTimeout(()=>{
+    document.getElementById('screenRegister').classList.remove('active');
+    showContractAgree();
+  }, 900);
 }
 
 function addMemberToAdminTable(){
@@ -758,14 +826,29 @@ function addMemberToAdminTable(){
   document.getElementById('statTotal').textContent = (parseInt(document.getElementById('statTotal').textContent)+1);
 }
 
-/* ===== UYGULAMAYA GİRİŞ + SÖZLEŞME VİDEOSU ===== */
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2400);
+}
+
+/* ===== SÖZLEŞME: ÖNCE METİN, SONRA VİDEO ===== */
+function showContractAgree(){
+  document.getElementById('contractOverlay').classList.remove('hidden');
+  document.getElementById('contractAgreeStage').classList.remove('hidden');
+  document.getElementById('contractVideoStage').classList.add('hidden');
+}
+function agreeToContract(){
+  document.getElementById('contractAgreeStage').classList.add('hidden');
+  document.getElementById('contractVideoStage').classList.remove('hidden');
+}
+
+/* ===== UYGULAMAYA GİRİŞ (sözleşme videosu bittikten sonra) ===== */
 function enterApp(){
-  document.getElementById('screenRegister').classList.remove('active');
   applyAccountToUI();
   document.getElementById('island').classList.remove('hidden');
   goNav('feed', document.getElementById('navFeed'));
-  // Doğrulama videosu SADECE ilk kayıt tamamlandığında gösterilir.
-  document.getElementById('contractOverlay').classList.remove('hidden');
 }
 
 function applyAccountToUI(){
@@ -781,12 +864,14 @@ function applyAccountToUI(){
 function goToRegisterScreen(){
   document.querySelectorAll('#main .screen').forEach(s=>s.classList.remove('active'));
   document.getElementById('screenRegister').classList.add('active');
+  switchAuthTab('signup');
   document.getElementById('island').classList.add('hidden');
 }
 
 function logoutAccount(){
   document.querySelectorAll('#main .screen').forEach(s=>s.classList.remove('active'));
-  document.getElementById('screenLogin').classList.add('active');
+  document.getElementById('screenRegister').classList.add('active');
+  switchAuthTab('login');
   document.getElementById('island').classList.add('hidden');
 }
 
@@ -798,17 +883,18 @@ function loginReturning(){
   if(isAdminLogin){
     savedIsAdmin = true;
     savedEmail = email;
-    if(!savedUsername) savedUsername = 'Admin';
+    if(!savedUsername) savedUsername = '@admin';
     if(!savedProfilePhoto) savedProfilePhoto = 'https://i.pravatar.cc/120?img=68';
   } else if(email){
     // Admin değilse normal kullanıcı olarak devam eder (demo: önceki bilgiler varsa onlar kullanılır)
     savedIsAdmin = false;
     savedEmail = email;
-    if(!savedUsername) savedUsername = 'Kullanıcı';
+    if(!savedUsername) savedUsername = '@kullanici';
     if(!savedProfilePhoto) savedProfilePhoto = 'https://i.pravatar.cc/120?img=20';
   }
 
   // Geri dönen kullanıcı: sözleşme videosu TEKRAR gösterilmez, direkt Ana Akış'a girer.
+  document.getElementById('screenRegister').classList.remove('active');
   applyAccountToUI();
   document.getElementById('island').classList.remove('hidden');
   goNav('feed', document.getElementById('navFeed'));
@@ -888,7 +974,10 @@ function playVideo(){
     if(pct>=100){ clearInterval(demoTimer); continueBtn.disabled = false; }
   }, 200);
 }
-function continueToFeed(){ document.getElementById('contractOverlay').classList.add('hidden'); }
+function continueToFeed(){
+  document.getElementById('contractOverlay').classList.add('hidden');
+  enterApp();
+}
 cVideo.addEventListener('timeupdate', ()=>{
   if(!cVideo.duration) return;
   const pct = Math.round((cVideo.currentTime/cVideo.duration)*100);
