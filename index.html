@@ -8,20 +8,34 @@
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root{
-  /* KARANLIK MOD — Instagram OLED gece teması */
+  /* KARANLIK MOD — OLED siyahı + canlı mor-mavi glassmorphism */
   --bg:#000000; --surface:#121212; --surface-2:#1a1a1a; --line:#262626;
-  --accent:#0095f6; --accent-dim:#00375f; --warn:#f2b33d; --danger:#ed4956;
-  --text:#f5f5f5; --muted:#737373; --bubble-me:#0095f6;
+  --accent:#8b5cf6; --accent-dim:#2f1c5c; --warn:#f2b33d; --danger:#ed4956;
+  --text:#f5f5f5; --muted:#9a93b8; --bubble-me:#7c3aed;
   --like-color:#ed4956;
-  --glass-bg:rgba(18,18,18,.62); --glass-border:rgba(255,255,255,.08);
+  /* Mor-mavi-turkuaz gradient — buton/aksan dokusu */
+  --grad-1:#7c3aed; --grad-2:#6366f1; --grad-3:#06b6d4;
+  --gradient-vivid:linear-gradient(135deg, var(--grad-1) 0%, var(--grad-2) 55%, var(--grad-3) 100%);
+  --gradient-vivid-soft:linear-gradient(135deg, rgba(124,58,237,.85) 0%, rgba(99,102,241,.85) 55%, rgba(6,182,212,.85) 100%);
+  /* Ultra saydam, parlayan cam yüzeyler — barlar/paneller/butonlar bunu kullanır */
+  --glass-bg:linear-gradient(135deg, rgba(124,58,237,.22) 0%, rgba(99,102,241,.16) 50%, rgba(6,182,212,.14) 100%);
+  --glass-border:rgba(199,184,255,.35);
+  --glass-shine:rgba(255,255,255,.18);
+  --glass-shadow:0 8px 32px rgba(99,40,255,.28);
 }
 body.light-mode{
-  /* AYDINLIK MOD — Instagram beyaz teması */
+  /* AYDINLIK MOD — opak beyaz + aynı mor-mavi glassmorphism */
   --bg:#ffffff; --surface:#ffffff; --surface-2:#efefef; --line:#dbdbdb;
-  --accent:#0095f6; --accent-dim:#00376b; --warn:#b9790a; --danger:#ed4956;
-  --text:#262626; --muted:#737373; --bubble-me:#0095f6;
+  --accent:#7c3aed; --accent-dim:#ded3fb; --warn:#b9790a; --danger:#ed4956;
+  --text:#262626; --muted:#6b6483; --bubble-me:#7c3aed;
   --like-color:#ed4956;
-  --glass-bg:rgba(255,255,255,.66); --glass-border:rgba(0,0,0,.08);
+  --grad-1:#7c3aed; --grad-2:#6366f1; --grad-3:#06b6d4;
+  --gradient-vivid:linear-gradient(135deg, var(--grad-1) 0%, var(--grad-2) 55%, var(--grad-3) 100%);
+  --gradient-vivid-soft:linear-gradient(135deg, rgba(124,58,237,.85) 0%, rgba(99,102,241,.85) 55%, rgba(6,182,212,.85) 100%);
+  --glass-bg:linear-gradient(135deg, rgba(124,58,237,.14) 0%, rgba(99,102,241,.10) 50%, rgba(6,182,212,.09) 100%);
+  --glass-border:rgba(124,58,237,.28);
+  --glass-shine:rgba(255,255,255,.55);
+  --glass-shadow:0 8px 32px rgba(99,40,255,.14);
 }
 html,body{height:100%;overflow:hidden;}
 html,body{scroll-behavior:smooth;}
@@ -30,8 +44,14 @@ html,body{scroll-behavior:smooth;}
 body{margin:0;background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;transition:background-color .3s ease, color .3s ease;}
 *{transition:background-color .25s ease, border-color .25s ease, color .25s ease;}
 .btn{padding:13px;border-radius:10px;border:none;font-size:14px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;}
-.btn-primary{background:var(--accent);color:#06140d;}
-.btn-primary:disabled{opacity:.35;cursor:not-allowed;}
+.btn-primary{
+  background:var(--gradient-vivid);color:#fff;
+  box-shadow:0 4px 18px rgba(124,58,237,.45), 0 1px 0 rgba(255,255,255,.25) inset;
+  transition:transform .15s ease, box-shadow .15s ease, filter .15s ease;
+}
+.btn-primary:hover{filter:brightness(1.08);box-shadow:0 6px 22px rgba(124,58,237,.55), 0 1px 0 rgba(255,255,255,.25) inset;}
+.btn-primary:active{transform:scale(.97);}
+.btn-primary:disabled{opacity:.35;cursor:not-allowed;filter:none;box-shadow:none;}
 .btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--line);}
 .row{display:flex;gap:10px;}
 .row .btn{flex:1;width:auto;}
@@ -65,8 +85,8 @@ input:focus{border-color:var(--accent);}
   position:absolute;left:50%;bottom:25px;transform:translateX(-50%);
   display:flex;gap:6px;padding:9px;border-radius:38px;
   background:var(--glass-bg);border:1px solid var(--glass-border);
-  backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);
-  box-shadow:0 8px 28px rgba(0,0,0,.25);
+  backdrop-filter:blur(24px) saturate(190%);-webkit-backdrop-filter:blur(24px) saturate(190%);
+  box-shadow:var(--glass-shadow), 0 1px 0 var(--glass-shine) inset;
   z-index:9999;align-self:center;
 }
 .island button{
@@ -75,7 +95,7 @@ input:focus{border-color:var(--accent);}
   transform:scale(.88);transition:transform .25s ease, color .2s ease, background .2s ease;
 }
 .island button svg{width:24px;height:24px;}
-.island button.active{color:var(--accent);background:rgba(0,149,246,.16);transform:scale(1.05);}
+.island button.active{color:#fff;background:var(--gradient-vivid);transform:scale(1.05);box-shadow:0 4px 14px rgba(124,58,237,.5);}
 .island button.pulse{animation:islandPulse .32s ease;}
 .island.chat-fullscreen-hide{display:none;}
 @keyframes islandPulse{0%{transform:scale(1.05);}45%{transform:scale(1.28);}100%{transform:scale(1.05);}}
@@ -173,10 +193,10 @@ label{display:block;font-size:12px;color:var(--muted);margin:0 0 6px;font-weight
   text-align:center;font-family:'JetBrains Mono',monospace;font-size:18px;padding:12px 0;
   transition:border-color .2s, background .2s, transform .15s, box-shadow .2s;
 }
-.codeRow input.filled{border-color:var(--accent-dim);background:rgba(0,149,246,.06);transform:scale(1.06);}
+.codeRow input.filled{border-color:var(--accent-dim);background:rgba(139,92,246,.10);transform:scale(1.06);}
 .codeRow input.success{
-  border-color:var(--accent);background:rgba(0,149,246,.2);color:var(--accent);
-  animation:digitPop .45s ease;box-shadow:0 0 14px rgba(0,149,246,.45);
+  border-color:var(--accent);background:rgba(139,92,246,.22);color:var(--accent);
+  animation:digitPop .45s ease;box-shadow:0 0 14px rgba(139,92,246,.45);
 }
 .codeRow input.shake{border-color:var(--danger);animation:shake .35s;}
 @keyframes shake{0%,100%{transform:translateX(0);}25%{transform:translateX(-4px);}75%{transform:translateX(4px);}}
@@ -188,12 +208,12 @@ label{display:block;font-size:12px;color:var(--muted);margin:0 0 6px;font-weight
 }
 .verify-check.show{opacity:1;transform:translateY(0) scale(1);}
 .verify-check .ring{
-  width:26px;height:26px;border-radius:50%;background:rgba(0,149,246,.18);
-  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  width:26px;height:26px;border-radius:50%;background:var(--gradient-vivid);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#fff;
   animation:ringPulse 1.1s ease infinite;
 }
 .verify-check svg{width:14px;height:14px;}
-@keyframes ringPulse{0%{box-shadow:0 0 0 0 rgba(0,149,246,.45);}70%{box-shadow:0 0 0 8px rgba(0,149,246,0);}100%{box-shadow:0 0 0 0 rgba(0,149,246,0);}}
+@keyframes ringPulse{0%{box-shadow:0 0 0 0 rgba(139,92,246,.45);}70%{box-shadow:0 0 0 8px rgba(139,92,246,0);}100%{box-shadow:0 0 0 0 rgba(139,92,246,0);}}
 .upload-zone{border:1.5px dashed var(--line);border-radius:14px;padding:26px 16px;text-align:center;cursor:pointer;position:relative;}
 .upload-zone:hover{border-color:var(--accent-dim);}
 .upload-zone.has-img{padding:0;border-style:solid;}
@@ -203,7 +223,7 @@ label{display:block;font-size:12px;color:var(--muted);margin:0 0 6px;font-weight
 .accent-text{color:var(--accent);font-weight:600;}
 .analysis-box{margin-top:14px;border-radius:12px;padding:14px;font-size:13px;line-height:1.5;display:none;border:1px solid var(--line);}
 .analysis-box.loading{display:flex;align-items:center;gap:10px;color:var(--muted);background:var(--surface-2);}
-.analysis-box.ok{display:block;background:rgba(0,149,246,.1);border-color:var(--accent);color:var(--accent);}
+.analysis-box.ok{display:block;background:rgba(139,92,246,.12);border-color:var(--accent);color:var(--accent);}
 .analysis-box.bad{display:block;background:rgba(237,73,86,.1);border-color:var(--danger);color:var(--danger);}
 .spinner{width:14px;height:14px;border-radius:50%;border:2px solid var(--line);border-top-color:var(--accent);animation:spin .7s linear infinite;flex-shrink:0;}
 @keyframes spin{to{transform:rotate(360deg);}}
@@ -219,8 +239,10 @@ input[type=file]{display:none;}
 }
 .theme-corner-btn{
   width:38px;height:38px;border-radius:50%;flex-shrink:0;
-  background:var(--surface-2);border:1px solid var(--line);color:var(--muted);
+  background:var(--glass-bg);border:1px solid var(--glass-border);color:var(--text);
+  backdrop-filter:blur(14px) saturate(180%);-webkit-backdrop-filter:blur(14px) saturate(180%);
   display:flex;align-items:center;justify-content:center;cursor:pointer;
+  box-shadow:0 2px 10px rgba(124,58,237,.18);
 }
 .theme-corner-btn svg{width:18px;height:18px;}
 .theme-corner-btn:active{transform:scale(.92);}
@@ -264,9 +286,9 @@ input[type=file]{display:none;}
 .screen-header{
   position:absolute;top:14px;left:14px;right:14px;z-index:40;
   background:var(--glass-bg);
-  backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);
+  backdrop-filter:blur(24px) saturate(190%);-webkit-backdrop-filter:blur(24px) saturate(190%);
   border:1px solid var(--glass-border);border-radius:999px;
-  box-shadow:0 8px 28px rgba(0,0,0,.18);
+  box-shadow:var(--glass-shadow), 0 1px 0 var(--glass-shine) inset;
 }
 .screen-body{position:absolute;inset:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-top:86px;padding-bottom:100px;}
 
@@ -297,7 +319,7 @@ input[type=file]{display:none;}
 .ig-actions .icon-act:active{transform:scale(1.15);}
 .ig-actions .spacer{flex:1;}
 
-.like-count{padding:10px 18px 0;font-size:13.5px;font-weight:600;color:var(--accent);}
+.like-count{padding:10px 18px 0;font-size:13.5px;font-weight:700;background:var(--gradient-vivid);-webkit-background-clip:text;background-clip:text;color:transparent;}
 .caption{padding:6px 18px 0;font-size:13.5px;line-height:1.5;}
 .caption b{font-weight:600;margin-right:6px;}
 .view-comments{padding:6px 18px 0;font-size:12.5px;color:var(--muted);cursor:pointer;}
@@ -311,8 +333,9 @@ input[type=file]{display:none;}
 .comment-compose input{flex:1;background:var(--surface-2);border:1px solid var(--line);color:var(--text);border-radius:20px;padding:9px 14px;font-size:13px;outline:none;}
 .comment-compose input:focus{border-color:var(--accent);}
 .comment-send-btn{
-  background:var(--accent);color:#06140d;border:none;border-radius:50%;
+  background:var(--gradient-vivid);color:#fff;border:none;border-radius:50%;
   width:34px;height:34px;flex-shrink:0;display:flex;align-items:center;justify-content:center;cursor:pointer;
+  box-shadow:0 3px 10px rgba(124,58,237,.4);
 }
 .comment-send-btn svg{width:15px;height:15px;}
 .comment-send-btn:active{transform:scale(.92);}
@@ -400,9 +423,9 @@ input[type=file]{display:none;}
 .messages{flex:1;overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:10px;}
 .msg{max-width:72%;padding:9px 13px;border-radius:14px;font-size:13.5px;line-height:1.4;}
 .msg.them{align-self:flex-start;background:var(--surface-2);border-bottom-left-radius:4px;}
-.msg.me{align-self:flex-end;background:var(--bubble-me);color:#eafff4;border-bottom-right-radius:4px;}
+.msg.me{align-self:flex-end;background:var(--gradient-vivid);color:#fff;border-bottom-right-radius:4px;box-shadow:0 3px 12px rgba(124,58,237,.3);}
 .msg .time{display:block;font-size:10px;color:var(--muted);margin-top:4px;}
-.msg.me .time{color:#bdeed7;}
+.msg.me .time{color:rgba(255,255,255,.8);}
 .msg-media{max-width:72%;border-radius:14px;overflow:hidden;align-self:flex-start;}
 .msg-media img,.msg-media video{width:220px;display:block;}
 .composer{padding:13px 16px;border-top:1px solid var(--line);display:flex;align-items:center;gap:9px;}
@@ -471,8 +494,8 @@ input[type=file]{display:none;}
 .account-row .active-badge{margin-left:auto;color:var(--accent);font-size:11px;font-weight:600;flex-shrink:0;}
 .icon-btn:hover{color:var(--accent);}
 .composer input[type=text]{flex:1;border-radius:20px;}
-.send{width:38px;height:38px;border-radius:50%;background:var(--accent);border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;}
-.send svg{width:16px;height:16px;color:#06140d;}
+.send{width:38px;height:38px;border-radius:50%;background:var(--gradient-vivid);border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;box-shadow:0 3px 10px rgba(124,58,237,.4);}
+.send svg{width:16px;height:16px;color:#fff;}
 .back-btn{display:none;background:none;border:none;color:var(--muted);cursor:pointer;padding:4px;margin-right:2px;}
 .back-btn svg{width:20px;height:20px;}
 @media (max-width:700px){
@@ -489,8 +512,8 @@ input[type=file]{display:none;}
 .ahead{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;flex-wrap:wrap;gap:10px;}
 .ahead h1{font-family:'Space Grotesk',sans-serif;font-size:19px;margin:0;}
 .ahead .sub{font-size:12px;color:var(--muted);margin-top:2px;}
-.pill{font-size:11.5px;font-family:'JetBrains Mono',monospace;color:var(--accent);border:1px solid var(--accent-dim);padding:5px 11px;border-radius:20px;display:flex;align-items:center;gap:6px;}
-.pill .dot{width:6px;height:6px;border-radius:50%;background:var(--accent);}
+.pill{font-size:11.5px;font-family:'JetBrains Mono',monospace;background:var(--gradient-vivid);-webkit-background-clip:text;background-clip:text;color:transparent;border:1px solid var(--glass-border);padding:5px 11px;border-radius:20px;display:flex;align-items:center;gap:6px;}
+.pill .dot{width:6px;height:6px;border-radius:50%;background:var(--gradient-vivid);}
 .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:24px;}
 .stat{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px;}
 .stat .num{font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:600;}
@@ -510,7 +533,7 @@ tbody tr:hover{background:var(--surface-2);}
 .user-cell img{width:28px;height:28px;border-radius:50%;object-fit:cover;}
 .email{color:var(--muted);}
 .badge{font-size:11px;padding:4px 10px;border-radius:20px;font-weight:600;display:inline-flex;align-items:center;gap:5px;}
-.badge.active{background:rgba(0,149,246,.12);color:var(--accent);}
+.badge.active{background:rgba(139,92,246,.14);color:var(--accent);}
 .badge.blocked{background:rgba(242,92,92,.12);color:var(--danger);}
 .badge.pending{background:rgba(242,179,61,.12);color:var(--warn);}
 .actions-cell{display:flex;gap:6px;}
@@ -537,6 +560,210 @@ tbody tr:hover{background:var(--surface-2);}
   .stats{grid-template-columns:1fr 1fr;}
   .report-grid{grid-template-columns:1fr;}
 }
+
+/* ============================================================
+   ANI YAKALA (Capture the Moment) — yeni özellik stilleri
+   ============================================================ */
+
+/* Hikaye şeridi — feed'in en üstünde */
+.momentStrip{display:flex;gap:14px;padding:4px 20px 18px;overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:680px;margin:0 auto;}
+.momentStrip::-webkit-scrollbar{display:none;}
+.momentStartCircle{display:flex;flex-direction:column;align-items:center;gap:6px;flex-shrink:0;cursor:pointer;}
+.momentStartIcon{
+  width:62px;height:62px;border-radius:50%;position:relative;
+  background:var(--surface-2);border:1.5px dashed var(--glass-border);
+  display:flex;align-items:center;justify-content:center;color:var(--accent);
+  transition:transform .15s ease;
+}
+.momentStartCircle:active .momentStartIcon{transform:scale(.93);}
+.momentStartIcon svg{width:24px;height:24px;}
+.momentStartPlus{
+  position:absolute;bottom:-2px;right:-2px;width:20px;height:20px;border-radius:50%;
+  background:var(--gradient-vivid);color:#fff;font-size:13px;font-weight:700;
+  display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(124,58,237,.5);
+  border:2px solid var(--bg);
+}
+.momentStripLabel{font-size:10.5px;color:var(--muted);white-space:nowrap;max-width:64px;text-align:center;overflow:hidden;text-overflow:ellipsis;}
+.momentStripItem{display:flex;flex-direction:column;align-items:center;gap:6px;flex-shrink:0;cursor:pointer;}
+.momentStripItem .momentStripAvatarRing{
+  width:62px;height:62px;border-radius:50%;padding:2.5px;
+  background:var(--gradient-vivid);box-shadow:0 0 0 1px var(--bg);
+}
+.momentStripItem .momentStripAvatarRing img{width:100%;height:100%;border-radius:50%;object-fit:cover;border:2px solid var(--bg);display:block;}
+
+/* Ana akışın ortasındaki büyük Anı Yakala FAB butonu */
+.momentFab{
+  display:flex;align-items:center;gap:10px;justify-content:center;
+  max-width:680px;margin:0 auto 22px;padding:16px 22px;
+  background:var(--gradient-vivid);color:#fff;border:none;border-radius:20px;
+  font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:600;cursor:pointer;
+  box-shadow:0 10px 28px rgba(124,58,237,.4), 0 1px 0 rgba(255,255,255,.25) inset;
+  position:relative;width:calc(100% - 48px);
+  transition:transform .15s ease, box-shadow .15s ease;
+}
+.momentFab:active{transform:scale(.98);}
+.momentFab svg{width:24px;height:24px;}
+.momentFab::after{content:'Anı Yakala';}
+.momentFabPlus{display:none;}
+
+/* ===== ANI YAKALA — başlatma modalı (arkadaş seçimi) ===== */
+.momentModalOverlay{position:fixed;inset:0;background:rgba(5,2,15,.72);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;z-index:200;padding:18px;}
+.momentModalOverlay.hidden{display:none;}
+.momentModalCard{
+  width:100%;max-width:440px;max-height:90vh;overflow-y:auto;border-radius:24px;
+  background:var(--surface);border:1px solid var(--glass-border);
+  box-shadow:var(--glass-shadow);
+}
+.momentModalHead{
+  padding:20px 22px 14px;background:var(--gradient-vivid);color:#fff;border-radius:24px 24px 0 0;
+  position:relative;
+}
+.momentModalHead h2{font-family:'Space Grotesk',sans-serif;font-size:19px;margin:0 0 4px;}
+.momentModalHead p{font-size:12.5px;opacity:.9;margin:0;}
+.momentModalClose{position:absolute;top:16px;right:16px;width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.2);border:none;color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+.momentModalBody{padding:18px 22px 22px;}
+
+.momentModeRow{display:flex;gap:8px;margin-bottom:18px;}
+.momentModeBtn{
+  flex:1;padding:11px 8px;border-radius:12px;border:1.5px solid var(--line);background:var(--surface-2);
+  color:var(--muted);font-size:12.5px;font-weight:600;cursor:pointer;text-align:center;font-family:'Inter',sans-serif;
+  transition:border-color .15s, color .15s, background .15s;
+}
+.momentModeBtn.active{border-color:transparent;background:var(--gradient-vivid);color:#fff;}
+
+.momentFriendSearch{
+  background:var(--surface-2);border:1px solid var(--line);border-radius:12px;
+  padding:10px 14px;font-size:13px;color:var(--text);width:100%;outline:none;margin-bottom:12px;
+}
+.momentFriendSearch:focus{border-color:var(--accent);}
+.momentFriendList{display:flex;flex-direction:column;gap:4px;max-height:220px;overflow-y:auto;margin-bottom:14px;}
+.momentFriendRow{display:flex;align-items:center;gap:11px;padding:9px 8px;border-radius:12px;cursor:pointer;}
+.momentFriendRow:hover{background:var(--surface-2);}
+.momentFriendRow img{width:40px;height:40px;border-radius:50%;object-fit:cover;flex-shrink:0;}
+.momentFriendRow .name{font-size:13.5px;font-weight:600;flex:1;min-width:0;}
+.momentFriendCheck{
+  width:22px;height:22px;border-radius:50%;border:1.5px solid var(--line);flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;color:transparent;transition:all .15s;
+}
+.momentFriendRow.selected .momentFriendCheck{background:var(--gradient-vivid);border-color:transparent;color:#fff;}
+.momentFriendRow.selected .momentFriendCheck svg{width:13px;height:13px;}
+.momentFriendEmpty{text-align:center;color:var(--muted);font-size:12.5px;padding:18px 0;}
+
+.momentLinkRow{
+  display:flex;align-items:center;gap:10px;background:var(--surface-2);border:1px solid var(--line);
+  border-radius:12px;padding:10px 14px;font-size:12.5px;color:var(--muted);margin-bottom:14px;cursor:pointer;
+}
+.momentLinkRow svg{width:16px;height:16px;flex-shrink:0;color:var(--accent);}
+
+.momentChallengeRow{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:18px;}
+.momentChallengeChip{
+  padding:7px 12px;border-radius:20px;border:1px solid var(--line);background:var(--surface-2);
+  font-size:11.5px;color:var(--muted);cursor:pointer;
+}
+.momentChallengeChip.active{border-color:transparent;background:var(--gradient-vivid);color:#fff;}
+
+.momentStartBtn{
+  width:100%;padding:14px;border-radius:14px;border:none;background:var(--gradient-vivid);color:#fff;
+  font-size:14.5px;font-weight:700;cursor:pointer;box-shadow:0 6px 18px rgba(124,58,237,.4);
+}
+.momentStartBtn:disabled{opacity:.4;cursor:not-allowed;box-shadow:none;}
+
+/* ===== ANI YAKALA — bekleme / davet ekranı ===== */
+.momentWaitOverlay{position:fixed;inset:0;background:linear-gradient(160deg,#0a0518 0%,#160b2e 50%,#04141c 100%);z-index:210;display:flex;flex-direction:column;color:#fff;}
+.momentWaitOverlay.hidden{display:none;}
+.momentWaitTop{padding:20px 20px 10px;display:flex;align-items:center;justify-content:space-between;}
+.momentWaitTop button{background:rgba(255,255,255,.12);border:none;color:#fff;width:34px;height:34px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.momentWaitTop button svg{width:18px;height:18px;}
+.momentWaitTitle{font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:600;}
+.momentWaitBody{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;text-align:center;gap:18px;}
+.momentWaitBody h3{font-family:'Space Grotesk',sans-serif;font-size:18px;margin:0;}
+.momentWaitBody p{font-size:13px;opacity:.75;margin:0;max-width:280px;line-height:1.5;}
+.momentAvatarsRow{display:flex;gap:-8px;}
+.momentParticipantPill{
+  display:flex;flex-direction:column;align-items:center;gap:6px;position:relative;
+}
+.momentParticipantPill img{width:54px;height:54px;border-radius:50%;object-fit:cover;border:2.5px solid rgba(255,255,255,.18);transition:border-color .25s;}
+.momentParticipantPill.ready img{border-color:#22d3ee;box-shadow:0 0 14px rgba(34,211,238,.5);}
+.momentParticipantPill .readyDot{position:absolute;bottom:4px;right:4px;width:14px;height:14px;border-radius:50%;background:#22d3ee;border:2px solid #160b2e;display:none;}
+.momentParticipantPill.ready .readyDot{display:block;}
+.momentParticipantPill .pname{font-size:10.5px;opacity:.85;max-width:60px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.momentParticipantsWrap{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;}
+.momentReadyBtn{
+  padding:15px 36px;border-radius:30px;border:none;background:var(--gradient-vivid);color:#fff;
+  font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 8px 24px rgba(124,58,237,.5);
+}
+.momentReadyBtn:disabled{opacity:.5;cursor:default;}
+.momentReadyBtn.isReady{background:linear-gradient(135deg,#22c55e,#16a34a);}
+
+/* ===== ANI YAKALA — senkron çekim ekranı ===== */
+.momentCaptureOverlay{position:fixed;inset:0;background:#000;z-index:220;display:flex;flex-direction:column;}
+.momentCaptureOverlay.hidden{display:none;}
+.momentCamWrap{flex:1;position:relative;overflow:hidden;background:#111;display:flex;align-items:center;justify-content:center;}
+.momentCamWrap video{width:100%;height:100%;object-fit:cover;}
+.momentCamPlaceholder{color:rgba(255,255,255,.5);font-size:13px;text-align:center;padding:24px;}
+.momentCountdown{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-family:'Space Grotesk',sans-serif;font-size:120px;font-weight:700;color:#fff;
+  text-shadow:0 0 40px rgba(124,58,237,.8);pointer-events:none;
+}
+.momentCountdown.flash{animation:momentFlash .5s ease;}
+@keyframes momentFlash{0%{background:rgba(255,255,255,0);}15%{background:rgba(255,255,255,.85);}100%{background:rgba(255,255,255,0);}}
+.momentCamTopBar{position:absolute;top:0;left:0;right:0;padding:16px;display:flex;justify-content:space-between;z-index:5;}
+.momentCamBtn{width:40px;height:40px;border-radius:50%;background:rgba(0,0,0,.4);border:none;color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+.momentCamBtn svg{width:19px;height:19px;}
+.momentParticipantsBottom{position:absolute;bottom:16px;left:0;right:0;display:flex;gap:10px;justify-content:center;z-index:5;flex-wrap:wrap;padding:0 16px;}
+.momentParticipantsBottom img{width:38px;height:38px;border-radius:50%;border:2px solid rgba(34,211,238,.8);object-fit:cover;}
+
+/* ===== ANI YAKALA — birleştirme / önizleme ekranı ===== */
+.momentPreviewOverlay{position:fixed;inset:0;background:linear-gradient(160deg,#0a0518 0%,#160b2e 60%,#04141c 100%);z-index:230;display:flex;flex-direction:column;color:#fff;}
+.momentPreviewOverlay.hidden{display:none;}
+.momentPreviewTop{padding:18px 20px;display:flex;align-items:center;justify-content:space-between;}
+.momentPreviewTop button{background:rgba(255,255,255,.12);border:none;color:#fff;width:34px;height:34px;border-radius:50%;cursor:pointer;}
+.momentPreviewBody{flex:1;overflow-y:auto;padding:0 20px 20px;display:flex;flex-direction:column;align-items:center;gap:16px;}
+.momentCollageWrap{width:100%;max-width:380px;border-radius:18px;overflow:hidden;box-shadow:0 14px 40px rgba(0,0,0,.5);background:#000;}
+.momentCollageWrap canvas{width:100%;display:block;}
+.momentCaptionInput{
+  width:100%;max-width:380px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);
+  border-radius:14px;padding:12px 14px;color:#fff;font-size:13.5px;outline:none;font-family:'Inter',sans-serif;
+}
+.momentCaptionInput::placeholder{color:rgba(255,255,255,.45);}
+.momentPreviewFoot{padding:14px 20px 26px;display:flex;gap:10px;max-width:380px;width:100%;margin:0 auto;}
+.momentPreviewFoot button{flex:1;padding:14px;border-radius:14px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;border:none;}
+.momentRetakeBtn{background:rgba(255,255,255,.12);color:#fff;}
+.momentPublishBtn{background:var(--gradient-vivid);color:#fff;box-shadow:0 8px 22px rgba(124,58,237,.45);}
+.momentPublishBtn:disabled{opacity:.5;cursor:default;box-shadow:none;}
+
+/* ===== ANI YAKALA — feed içindeki kart rozeti ===== */
+.momentBadge{
+  display:inline-flex;align-items:center;gap:5px;padding:3px 10px 3px 4px;border-radius:20px;
+  background:var(--gradient-vivid);color:#fff;font-size:10.5px;font-weight:700;margin-left:8px;
+}
+.momentBadge .ring{width:16px;height:16px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;}
+.momentBadge svg{width:9px;height:9px;}
+.momentPost .post-media{position:relative;}
+.momentParticipantStrip{display:flex;gap:-6px;padding:0 18px;margin-top:-2px;}
+.momentParticipantStrip img{width:24px;height:24px;border-radius:50%;border:2px solid var(--surface);object-fit:cover;margin-left:-8px;}
+.momentParticipantStrip img:first-child{margin-left:0;}
+
+/* ===== Davet bildirim toast'ı ===== */
+.momentInviteToast{
+  position:fixed;top:18px;left:50%;transform:translateX(-50%) translateY(-120%);
+  background:var(--glass-bg);border:1px solid var(--glass-border);backdrop-filter:blur(20px) saturate(180%);
+  -webkit-backdrop-filter:blur(20px) saturate(180%);border-radius:18px;padding:13px 18px;
+  display:flex;align-items:center;gap:12px;z-index:240;box-shadow:var(--glass-shadow);
+  transition:transform .35s ease;max-width:340px;width:calc(100% - 32px);
+}
+.momentInviteToast.show{transform:translateX(-50%) translateY(0);}
+.momentInviteToast img{width:38px;height:38px;border-radius:50%;object-fit:cover;flex-shrink:0;}
+.momentInviteToast .txt{flex:1;min-width:0;font-size:12.5px;line-height:1.4;color:var(--text);}
+.momentInviteToast .txt b{font-weight:700;}
+.momentInviteToast button{
+  background:var(--gradient-vivid);color:#fff;border:none;border-radius:10px;padding:7px 12px;
+  font-size:11.5px;font-weight:700;cursor:pointer;flex-shrink:0;
+}
+@media (max-width:520px){
+  .momentCountdown{font-size:90px;}
+}
 </style>
 </head>
 
@@ -544,6 +771,7 @@ tbody tr:hover{background:var(--surface-2);}
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 <script>
   const firebaseConfig = {
     apiKey: "AIzaSyCsGmCLBbOcqpnHrcn66PIHhIr5RSaRSFY",
@@ -555,11 +783,12 @@ tbody tr:hover{background:var(--surface-2);}
     appId: "1:286141336960:web:92e80c38865665d6b80565",
     measurementId: "G-T5147XWHL5"
   };
-  let fbAuth = null, fbDb = null, fbReady = false;
+  let fbAuth = null, fbDb = null, fbStorage = null, fbReady = false;
   try{
     firebase.initializeApp(firebaseConfig);
     fbAuth = firebase.auth();
     fbDb = firebase.database();
+    fbStorage = firebase.storage();
     fbReady = true;
   }catch(e){
     console.error('Firebase başlatılamadı (internet/SDK yüklenemedi):', e);
@@ -693,7 +922,7 @@ tbody tr:hover{background:var(--surface-2);}
                   Doğrulandı, harika!
                 </div>
               </div>
-              <div class="row"><button class="btn btn-ghost" onclick="resendVerificationLink()">Linki Tekrar Gönder</button><button class="btn btn-primary" onclick="manualCheckVerified()">Doğruladım</button></div>
+              <div class="row"><button class="btn btn-ghost" id="resendVerifyBtn" onclick="resendVerificationLink()">Linki Tekrar Gönder</button><button class="btn btn-primary" onclick="manualCheckVerified()">Doğruladım</button></div>
             </div>
 
             <div class="regstep" id="reg4">
@@ -725,81 +954,27 @@ tbody tr:hover{background:var(--surface-2);}
       </div>
 
       <div class="screen-body">
-      <div class="feed">
-        <div class="post" data-post-id="p1" data-post-img="https://images.unsplash.com/photo-1521119989659-a83eee488004?w=400&q=60">
-          <div class="post-head">
-            <img src="https://i.pravatar.cc/60?img=32">
-            <div><div class="who">user_sanan</div><div class="loc">İstanbul, Türkiye</div></div>
-            <div class="dots">⋯</div>
+      <!-- ANI YAKALA — hikaye şeridi (aktif/yakın zamanda biten anılar) -->
+      <div class="momentStrip" id="momentStrip">
+        <div class="momentStartCircle" onclick="openMomentStart()" title="Anı Yakala">
+          <div class="momentStartIcon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 011 1v10a1 1 0 01-1 1H4a1 1 0 01-1-1V9a1 1 0 011-1z"/><circle cx="12" cy="13" r="3.5"/><path d="M19 6.5h.01"/></svg>
+            <span class="momentStartPlus">+</span>
           </div>
-          <div class="post-media">
-            <img src="https://images.unsplash.com/photo-1521119989659-a83eee488004?w=800&q=60">
-          </div>
-          <div class="ig-actions">
-            <div class="icon-act" onclick="toggleLike(this)">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.8 4.6a5 5 0 00-7.1 0L12 6.3l-1.7-1.7a5 5 0 10-7.1 7.1L12 20.3l8.8-8.6a5 5 0 000-7.1z"/></svg>
-              Beğen
-            </div>
-            <div class="icon-act" onclick="toggleCommentBox(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.4 8.4 0 01-1.1 4.2L21 21l-5.4-1a8.5 8.5 0 11-.6-.4z"/></svg>Yorum</div>
-            <div class="icon-act" onclick="openShareSheet(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>Paylaş</div>
-            <div class="spacer"></div>
-            <div class="icon-act" onclick="toggleSave(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h12v18l-6-4-6 4V3z"/></svg>Kaydet</div>
-          </div>
-          <div class="like-count"><span class="likeNum">128</span> beğenme</div>
-          <div class="caption"><b>user_sanan</b>Bugün harika bir gündü ☀️</div>
-          <div class="commentsList"></div>
-          <div class="view-comments"><span class="commentCount">4</span> yorumun tümünü gör</div>
-          <div class="emoji-row">
-            <button onclick="quickEmoji(this, '❤️')">❤️</button>
-            <button onclick="quickEmoji(this, '😂')">😂</button>
-            <button onclick="quickEmoji(this, '🔥')">🔥</button>
-            <button onclick="quickEmoji(this, '🙌')">🙌</button>
-          </div>
-          <div class="comment-compose">
-            <input type="text" placeholder="Yorum yaz..." onkeydown="if(event.key==='Enter') submitComment(this)">
-            <button class="comment-send-btn" onclick="submitComment(this.previousElementSibling)" title="Gönder">
-              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 11l18-8-8 18-2-8-8-2z"/></svg>
-            </button>
-          </div>
-          <div class="post-timestamp">3 gün önce</div>
+          <span class="momentStripLabel">Anı Yakala</span>
         </div>
+        <div id="momentStripItems" style="display:contents;"></div>
+      </div>
 
-        <div class="post" data-post-id="p2" data-post-img="https://images.unsplash.com/photo-1493612276216-ee3925520721?w=400&q=60">
-          <div class="post-head">
-            <img src="https://i.pravatar.cc/60?img=47">
-            <div><div class="who">user_sanan</div><div class="loc"></div></div>
-            <div class="dots">⋯</div>
-          </div>
-          <div class="post-media">
-            <video controls poster="https://images.unsplash.com/photo-1493612276216-ee3925520721?w=800&q=60"></video>
-          </div>
-          <div class="ig-actions">
-            <div class="icon-act" onclick="toggleLike(this)">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.8 4.6a5 5 0 00-7.1 0L12 6.3l-1.7-1.7a5 5 0 10-7.1 7.1L12 20.3l8.8-8.6a5 5 0 000-7.1z"/></svg>
-              Beğen
-            </div>
-            <div class="icon-act" onclick="toggleCommentBox(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.4 8.4 0 01-1.1 4.2L21 21l-5.4-1a8.5 8.5 0 11-.6-.4z"/></svg>Yorum</div>
-            <div class="icon-act" onclick="openShareSheet(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>Paylaş</div>
-            <div class="spacer"></div>
-            <div class="icon-act" onclick="toggleSave(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h12v18l-6-4-6 4V3z"/></svg>Kaydet</div>
-          </div>
-          <div class="like-count"><span class="likeNum">56</span> beğenme</div>
-          <div class="caption"><b>user_sanan</b>Yeni video 🎬</div>
-          <div class="commentsList"></div>
-          <div class="view-comments"><span class="commentCount">1</span> yorumun tümünü gör</div>
-          <div class="emoji-row">
-            <button onclick="quickEmoji(this, '❤️')">❤️</button>
-            <button onclick="quickEmoji(this, '😂')">😂</button>
-            <button onclick="quickEmoji(this, '🔥')">🔥</button>
-            <button onclick="quickEmoji(this, '🙌')">🙌</button>
-          </div>
-          <div class="comment-compose">
-            <input type="text" placeholder="Yorum yaz..." onkeydown="if(event.key==='Enter') submitComment(this)">
-            <button class="comment-send-btn" onclick="submitComment(this.previousElementSibling)" title="Gönder">
-              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 11l18-8-8 18-2-8-8-2z"/></svg>
-            </button>
-          </div>
-          <div class="post-timestamp">5 gün önce</div>
+      <!-- ANI YAKALA — büyük floating action button (akışın tam ortası) -->
+      <button class="momentFab" id="momentFab" onclick="openMomentStart()" title="Anı Yakala">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 011 1v10a1 1 0 01-1 1H4a1 1 0 01-1-1V9a1 1 0 011-1z"/><circle cx="12" cy="13" r="3.5"/></svg>
+        <span class="momentFabPlus">+</span>
+      </button>
+
+      <div class="feed" id="feedPostsContainer">
+        <div id="feedEmptyState" style="text-align:center;color:var(--muted);font-size:13px;padding:50px 20px;">
+          Akış yükleniyor...
         </div>
       </div>
       </div>
@@ -815,29 +990,21 @@ tbody tr:hover{background:var(--surface-2);}
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 19l-7-7 7-7"/></svg>
               </button>
               <h1 style="margin:0;">Mesajlar</h1>
+              <button class="icon-btn" style="margin-left:auto;" onclick="openNewChatPicker()" title="Yeni Mesaj">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+              </button>
             </div>
             <div class="search" style="margin-top:10px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg> Kullanıcı ara</div>
-            <div class="dm-tabs">
-              <span class="dm-tab active">Mesajlar</span>
-              <span class="dm-tab">İstekler</span>
-            </div>
           </div>
-          <div class="list-body">
-            <div class="chat-item active"><img src="https://i.pravatar.cc/60?img=32"><div class="meta"><div class="name">KullanıcıA</div><div class="preview">Tamam, anlaştık o zaman 👍</div></div><span class="chat-time">2dk</span></div>
-            <div class="chat-item"><img src="https://i.pravatar.cc/60?img=47"><div class="meta"><div class="name">KullanıcıB</div><div class="preview">Fotoğrafı gönderdim, bak</div></div><span class="chat-time">14dk</span></div>
-            <div class="chat-item"><img src="https://i.pravatar.cc/60?img=15"><div class="meta"><div class="name">Neme</div><div class="preview">Online</div></div><span class="chat-time">1sa</span></div>
+          <div class="list-body" id="chatListBody">
+            <div style="text-align:center;color:var(--muted);font-size:12.5px;padding:24px 16px;">Yükleniyor...</div>
           </div>
         </div>
         <div class="chatcol">
           <div class="chat-head"><button class="back-btn" onclick="exitChatThread()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 19l-7-7 7-7"/></svg></button>
-            <img src="https://i.pravatar.cc/60?img=32"><div><div class="name" id="chatName">KullanıcıA</div><div class="status">Çevrimiçi</div></div></div>
+            <img id="chatHeadImg" src="https://i.pravatar.cc/60?img=32"><div><div class="name" id="chatName">Sohbet</div><div class="status" id="chatStatus"></div></div></div>
           <div class="messages" id="messagesBox">
-            <div class="msg them">Selam! Nasılsın? <span class="time">10:02</span></div>
-            <div class="msg me">İyiyim, sen nasılsın? <span class="time">10:03</span></div>
-            <div class="msg them">Şu gönderiyi gördün mü, çok iyiydi <span class="time">10:05</span></div>
-            <div class="msg-media"><img src="https://images.unsplash.com/photo-1493612276216-ee3925520721?w=400&q=60"></div>
-            <div class="msg me">Evet gördüm, harika olmuş 🙌 <span class="time">10:07</span></div>
-            <div class="msg them">Tamam, anlaştık o zaman 👍 <span class="time">10:08</span></div>
+            <div style="text-align:center;color:var(--muted);font-size:12.5px;padding:24px 16px;">Bir sohbet seç</div>
           </div>
           <div class="emoji-row">
             <button onclick="quickEmojiMsg('❤️')">❤️</button>
@@ -853,6 +1020,21 @@ tbody tr:hover{background:var(--surface-2);}
             <input type="text" id="msgInput" placeholder="Mesaj yaz..." onkeydown="if(event.key==='Enter') sendMsg()">
             <button class="send" onclick="sendMsg()" title="Gönder"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 11l18-8-8 18-2-8-8-2z"/></svg></button>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= YENİ MESAJ — KULLANICI SEÇİCİ ================= -->
+    <div class="momentModalOverlay hidden" id="newChatOverlay" onclick="if(event.target===this) closeNewChatPicker()">
+      <div class="momentModalCard">
+        <div class="momentModalHead">
+          <button class="momentModalClose" onclick="closeNewChatPicker()">✕</button>
+          <h2>Yeni Mesaj</h2>
+          <p>Birini seç, sohbete başla.</p>
+        </div>
+        <div class="momentModalBody">
+          <input type="text" class="momentFriendSearch" id="newChatSearch" placeholder="Kullanıcı ara..." oninput="renderNewChatList()">
+          <div class="momentFriendList" id="newChatList"><div class="momentFriendEmpty">Yükleniyor...</div></div>
         </div>
       </div>
     </div>
@@ -890,7 +1072,7 @@ tbody tr:hover{background:var(--surface-2);}
           <div class="section-title">Uygunsuz İçerik Denetimi</div>
           <p class="section-sub">Genel akış denetimi ve kullanıcı şikayetleri.</p>
           <div class="report-grid">
-            <div class="report-card"><h3>Genel Akış Denetimi</h3><p>Yapay zeka tüm yeni gönderileri otomatik tarar.</p><div class="count countgood">0</div><p style="margin:2px 0 0;color:var(--accent);">bekleyen sorun</p><button onclick="alert('Demo: tüm akış yeniden taranıyor...')">Akışı Yeniden Tara</button></div>
+            <div class="report-card"><h3>Genel Akış Denetimi</h3><p>Yapay zeka tüm yeni gönderileri otomatik tarar.</p><div class="count countgood">0</div><p style="margin:2px 0 0;color:var(--accent);">bekleyen sorun</p><button onclick="adminRescanFeed()">Akışı Yeniden Tara</button></div>
             <div class="report-card"><h3>Kullanıcı Şikayetleri</h3><p>Kullanıcıların bildirdiği raporlar.</p><div class="count">3</div><p style="margin:2px 0 0;">incelenmeyi bekliyor</p><button onclick="document.getElementById('flaggedList').scrollIntoView({behavior:'smooth'})">Şikayetleri Görüntüle</button></div>
           </div>
           <div class="flagged-list" id="flaggedList">
@@ -994,10 +1176,8 @@ tbody tr:hover{background:var(--surface-2);}
         <div style="text-align:left;margin-bottom:14px;">
           <div style="font-size:12.5px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.4px;">Paylaşımların</div>
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:18px;">
-          <div style="aspect-ratio:1/1;border-radius:10px;overflow:hidden;"><img src="https://images.unsplash.com/photo-1521119989659-a83eee488004?w=300&q=50" style="width:100%;height:100%;object-fit:cover;"></div>
-          <div style="aspect-ratio:1/1;border-radius:10px;overflow:hidden;position:relative;"><img src="https://images.unsplash.com/photo-1493612276216-ee3925520721?w=300&q=50" style="width:100%;height:100%;object-fit:cover;"><span style="position:absolute;top:6px;right:6px;font-size:11px;background:rgba(0,0,0,.5);color:#fff;padding:2px 5px;border-radius:5px;">▶</span></div>
-          <div style="aspect-ratio:1/1;border-radius:10px;overflow:hidden;background:var(--surface-2);display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:11px;">+ Yeni</div>
+        <div id="myPostsGrid" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:18px;">
+          <div onclick="openNewPostComposer()" style="cursor:pointer;aspect-ratio:1/1;border-radius:10px;overflow:hidden;background:var(--surface-2);display:flex;align-items:center;justify-content:center;color:var(--accent);font-size:24px;font-weight:300;">+</div>
         </div>
 
         <button class="btn btn-ghost" style="width:100%;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;" onclick="openSavedScreen()">
@@ -1062,6 +1242,128 @@ tbody tr:hover{background:var(--surface-2);}
 
   </div><!-- /main -->
 </div><!-- /appShell -->
+
+<!-- ================= ANI YAKALA — TÜM MODAL/EKRANLARI ================= -->
+
+<!-- 1) BAŞLATMA MODALI: arkadaş seçimi, mod, challenge -->
+<div class="momentModalOverlay hidden" id="momentStartOverlay" onclick="if(event.target===this) closeMomentStart()">
+  <div class="momentModalCard">
+    <div class="momentModalHead">
+      <button class="momentModalClose" onclick="closeMomentStart()">✕</button>
+      <h2>Anı Yakala</h2>
+      <p>Anları yalnız değil, birlikte yakala.</p>
+    </div>
+    <div class="momentModalBody">
+      <div class="momentModeRow">
+        <button class="momentModeBtn active" id="momentModePhoto" onclick="setMomentMode('photo')">📷 Fotoğraf</button>
+        <button class="momentModeBtn" id="momentModeVideo" onclick="setMomentMode('video')">🎥 Video</button>
+      </div>
+
+      <label style="display:block;font-size:12px;color:var(--muted);margin-bottom:8px;">Kimleri davet edeceksin? (en fazla 6 kişi)</label>
+      <input type="text" class="momentFriendSearch" id="momentFriendSearch" placeholder="Takip ettiklerinde ara..." oninput="renderMomentFriendList()">
+      <div class="momentFriendList" id="momentFriendList">
+        <div class="momentFriendEmpty">Yükleniyor...</div>
+      </div>
+
+      <div class="momentLinkRow" onclick="copyMomentInviteLink()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 007.07 0l2.83-2.83a5 5 0 00-7.07-7.07L11.5 4.5"/><path d="M14 11a5 5 0 00-7.07 0L4.1 13.83a5 5 0 007.07 7.07L12.5 19.5"/></svg>
+        <span>Hızlı Link Oluştur — kopyalanır, herkese gönderebilirsin</span>
+      </div>
+
+      <label style="display:block;font-size:12px;color:var(--muted);margin-bottom:8px;">Challenge (opsiyonel)</label>
+      <div class="momentChallengeRow" id="momentChallengeRow">
+        <span class="momentChallengeChip" data-c="">Yok</span>
+        <span class="momentChallengeChip" data-c="Hepimiz zıplayalım 🤸">Hepimiz zıplayalım</span>
+        <span class="momentChallengeChip" data-c="Aynı yüz ifadesi 😮">Aynı yüz ifadesi</span>
+        <span class="momentChallengeChip" data-c="Gülümseyin 😄">Gülümseyin</span>
+        <span class="momentChallengeChip" data-c="Dans edin 💃">Dans edin</span>
+      </div>
+
+      <button class="momentStartBtn" id="momentStartBtn" onclick="startMomentCapture()">Anı Yakala'yı Başlat</button>
+    </div>
+  </div>
+</div>
+
+<!-- 2) BEKLEME / DAVET EKRANI -->
+<div class="momentWaitOverlay hidden" id="momentWaitOverlay">
+  <div class="momentWaitTop">
+    <button onclick="cancelMomentSession()" title="İptal Et">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+    </button>
+    <div class="momentWaitTitle">Anı Yakala</div>
+    <div style="width:34px;"></div>
+  </div>
+  <div class="momentWaitBody">
+    <h3 id="momentWaitHeading">Herkesin hazır olması bekleniyor...</h3>
+    <p id="momentWaitSub">Davet ettiğin kişiler katıldıkça burada görünecek. Herkes hazır olunca sayım başlayacak.</p>
+    <div class="momentParticipantsWrap" id="momentParticipantsWrap"></div>
+    <button class="momentReadyBtn" id="momentReadyBtn" onclick="toggleMomentReady()">Hazırım</button>
+  </div>
+</div>
+
+<!-- 3) SENKRON ÇEKİM EKRANI -->
+<div class="momentCaptureOverlay hidden" id="momentCaptureOverlay">
+  <div class="momentCamWrap" id="momentCamWrap">
+    <video id="momentCamVideo" autoplay playsinline muted></video>
+    <div class="momentCamPlaceholder hidden" id="momentCamPlaceholder">📷<br>Kamera erişimi yok — sırayla çekim moduna geçildi.<br><button class="momentReadyBtn" style="margin-top:14px;padding:10px 20px;font-size:13px;" onclick="momentManualShutter()">Şimdi Çek</button></div>
+    <div class="momentCamTopBar">
+      <button class="momentCamBtn" onclick="cancelMomentSession()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+      <button class="momentCamBtn" id="momentFlipBtn" onclick="flipMomentCamera()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 1 2.6 6.3M3 12V6m0 6h6"/></svg></button>
+    </div>
+    <div class="momentCountdown hidden" id="momentCountdown">3</div>
+    <div class="momentParticipantsBottom" id="momentParticipantsBottom"></div>
+  </div>
+</div>
+
+<!-- 4) BİRLEŞTİRME / ÖNİZLEME EKRANI -->
+<div class="momentPreviewOverlay hidden" id="momentPreviewOverlay">
+  <div class="momentPreviewTop">
+    <button onclick="cancelMomentSession()">✕</button>
+    <div class="momentWaitTitle">Önizleme</div>
+    <div style="width:34px;"></div>
+  </div>
+  <div class="momentPreviewBody">
+    <div class="momentCollageWrap" id="momentCollageWrap">
+      <canvas id="momentCollageCanvas" width="800" height="800"></canvas>
+    </div>
+    <input type="text" class="momentCaptionInput" id="momentCaptionInput" placeholder="Bir açıklama ekle... (örn. Arkadaşlarla unutulmaz an! 🎉)">
+  </div>
+  <div class="momentPreviewFoot">
+    <button class="momentRetakeBtn" onclick="retakeMoment()">Yeniden Çek</button>
+    <button class="momentPublishBtn" id="momentPublishBtn" onclick="publishMoment()">Yayınla 🚀</button>
+  </div>
+</div>
+
+<!-- DAVET BİLDİRİM TOAST'I -->
+<div class="momentInviteToast" id="momentInviteToast"></div>
+
+<!-- ================= NORMAL GÖNDERİ OLUŞTURMA ================= -->
+<div class="momentModalOverlay hidden" id="newPostOverlay" onclick="if(event.target===this) closeNewPostComposer()">
+  <div class="momentModalCard">
+    <div class="momentModalHead">
+      <button class="momentModalClose" onclick="closeNewPostComposer()">✕</button>
+      <h2>Yeni Gönderi</h2>
+      <p>Akışında paylaş.</p>
+    </div>
+    <div class="momentModalBody">
+      <div class="upload-zone" id="newPostDropzone" onclick="document.getElementById('newPostFileInput').click()">
+        <div class="icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 16V4M12 4l-4 4M12 4l4 4M4 20h16"/></svg></div>
+        <p>Fotoğraf veya video seç</p>
+      </div>
+      <input type="file" id="newPostFileInput" accept="image/*,video/*" onchange="onNewPostFileChosen(event)">
+      <div style="margin-top:14px;">
+        <label style="display:block;font-size:12px;color:var(--muted);margin-bottom:6px;">Açıklama</label>
+        <input type="text" class="momentFriendSearch" id="newPostCaption" placeholder="Bir şeyler yaz...">
+      </div>
+      <div style="margin-top:10px;">
+        <label style="display:block;font-size:12px;color:var(--muted);margin-bottom:6px;">Konum (opsiyonel)</label>
+        <input type="text" class="momentFriendSearch" id="newPostLocation" placeholder="örn. İstanbul, Türkiye">
+      </div>
+      <button class="momentStartBtn" id="newPostPublishBtn" style="margin-top:16px;" disabled onclick="publishNewPost()">Paylaş</button>
+    </div>
+  </div>
+</div>
+<!-- ================= /ANI YAKALA ================= -->
 
 <!-- HESAP DEĞİŞTİRİCİ (Bottom Sheet) -->
 <div class="bottomsheet-overlay hidden" id="accountSwitcherOverlay" onclick="if(event.target===this) closeAccountSwitcher()">
@@ -1437,13 +1739,57 @@ function createAccountAndSendVerification(){
   });
 }
 
+/* "Linki Tekrar Gönder" — Firebase'in sendEmailVerification çağrısı çok sık
+   tekrarlanırsa auth/too-many-requests hatası fırlatır. Önceki sürümde bu
+   hata yutulup herkese aynı "gönderilemedi" mesajı gösteriliyordu ve butona
+   art arda basmaya karşı hiçbir koruma yoktu. Şimdi: (1) buton 30 saniyelik
+   bir bekleme süresince devre dışı kalır, böylece istek Firebase'in rate
+   limitine takılmadan önce kullanıcı zaten engellenir, (2) gerçek Firebase
+   hata kodu firebaseErrorMessage() ile kullanıcıya doğru şekilde gösterilir. */
+let resendCooldownTimer = null;
 function resendVerificationLink(){
   if(!requireFirebase()) return;
   if(!fbAuth.currentUser){ showToast('Önce hesap oluşturman gerekiyor.'); return; }
+
+  const btn = document.getElementById('resendVerifyBtn');
+  if(btn && btn.disabled) return; // zaten bekleme süresinde, ikinci tıklamayı yok say
+
   generateSymbolicCode();
+  if(btn){ btn.disabled = true; }
+
   fbAuth.currentUser.sendEmailVerification(getVerificationActionSettings())
-    .then(()=> showToast('Doğrulama linki tekrar gönderildi 📩'))
-    .catch(()=> showToast('Gönderilemedi, az sonra tekrar dene.'));
+    .then(()=>{
+      showToast('Doğrulama linki tekrar gönderildi 📩');
+      startResendCooldown(btn, 30);
+    })
+    .catch((err)=>{
+      // Gerçek Firebase hatasını göster (örn. "Çok fazla deneme yapıldı...")
+      // — artık sabit "gönderilemedi" mesajı yerine doğru bilgi veriliyor.
+      showToast(firebaseErrorMessage(err));
+      // too-many-requests durumunda kullanıcıyı biraz daha uzun bekletelim ki
+      // bir sonraki deneme de aynı hataya çarpmasın.
+      const waitSeconds = (err && err.code === 'auth/too-many-requests') ? 60 : 10;
+      startResendCooldown(btn, waitSeconds);
+    });
+}
+function startResendCooldown(btn, seconds){
+  if(!btn) return;
+  if(resendCooldownTimer) clearInterval(resendCooldownTimer);
+  let remaining = seconds;
+  const originalLabel = 'Linki Tekrar Gönder';
+  btn.disabled = true;
+  btn.textContent = `Tekrar gönder (${remaining}sn)`;
+  resendCooldownTimer = setInterval(()=>{
+    remaining -= 1;
+    if(remaining <= 0){
+      clearInterval(resendCooldownTimer);
+      resendCooldownTimer = null;
+      btn.disabled = false;
+      btn.textContent = originalLabel;
+    } else {
+      btn.textContent = `Tekrar gönder (${remaining}sn)`;
+    }
+  }, 1000);
 }
 
 /* ===== ŞİFRE GÖSTER/GİZLE ===== */
@@ -1886,8 +2232,12 @@ function toggleFollowOther(){
 }
 
 function messageOtherUser(){
-  showToast('Mesajlar ekranına yönlendiriliyorsun');
+  if(!requireFirebase() || !fbAuth.currentUser || !viewingOtherUid){ showToast('Bir hata oluştu, tekrar dene.'); return; }
+  const chatId = makeChatId(fbAuth.currentUser.uid, viewingOtherUid);
+  const targetUid = viewingOtherUid;
+  closeOtherProfile();
   goNav('messages', document.getElementById('navMsg'));
+  setTimeout(()=> openChatThread(chatId, targetUid), 80);
 }
 
 /* Kendi profilimin (Bio) takipçi/takip sayılarını GERÇEK verilerle güncelle */
@@ -2109,6 +2459,11 @@ function enterAppFromAuth(){
   document.querySelectorAll('.island button').forEach(b=>b.classList.remove('active'));
   document.getElementById('navFeed').classList.add('active');
   saveSession();
+  // Gerçek veri akışlarını başlat: feed, Anı Yakala şeridi, gelen davet dinleyicisi
+  try{
+    initFeedListener();
+    initMomentStripListener();
+  }catch(e){ console.error('Feed/strip listener başlatılamadı:', e); }
 }
 
 /* ===== SAĞDAN AÇILAN YAN MENÜ (DRAWER) ===== */
@@ -2200,6 +2555,9 @@ function goNav(name, btnEl){
   document.getElementById('island').classList.remove('chat-fullscreen-hide');
 
   if(name === 'admin') loadAdminUsers();
+  if(name === 'feed'){ initFeedListener(); initMomentStripListener(); }
+  if(name === 'messages') initChatListListener();
+  if(name === 'profile') renderMyPostsGrid();
 }
 
 function exitChatToFeed(){
@@ -2261,35 +2619,54 @@ cVideo.addEventListener('timeupdate', ()=>{
 });
 
 /* ===== ANA AKIŞ ETKİLEŞİMLERİ ===== */
-let likedPosts = [];  // [{id, img}]
-let savedPosts = [];  // [{id, img}]
+let likedPosts = [];  // [{id, img}] (artık kullanılmıyor, geriye dönük uyumluluk için bırakıldı)
+let savedPosts = [];  // [{id, img}] (artık kullanılmıyor, geriye dönük uyumluluk için bırakıldı)
+let shareSheetActivePostId = null;
+let feedPostsRef = null;       // posts/ üzerindeki canlı dinleyici referansı
+let feedFriendsCache = [];     // Anı Yakala arkadaş listesi için takip edilen kullanıcılar
 
+/* ============================================================
+   GERÇEK BEĞENİ / KAYDETME / YORUM — Firebase Realtime Database
+   posts/{postId}/likes/{uid} = true
+   posts/{postId}/saves/{uid} = true (sadece kullanıcının kendi görünümünde, ama
+   tutarlılık için herkesle aynı node'da, sadece kendi uid'i okunur/yazılır)
+   posts/{postId}/comments/{commentId} = {uid, username, text, ts}
+   ============================================================ */
 function toggleLike(el){
-  el.classList.toggle('liked');
   const post = el.closest('.post');
-  const numEl = post.querySelector('.likeNum');
-  let n = parseInt(numEl.textContent.replace(/\./g,''));
-  numEl.textContent = (el.classList.contains('liked') ? n+1 : n-1);
+  const id = post.dataset.postId;
+  if(!id || !requireFirebase() || !fbAuth.currentUser){ showToast('Beğenmek için giriş yapmalısın.'); return; }
+  const uid = fbAuth.currentUser.uid;
+  const likeRef = fbDb.ref('posts/' + id + '/likes/' + uid);
+  const willLike = !el.classList.contains('liked');
 
-  const id = post.dataset.postId, img = post.dataset.postImg;
-  if(el.classList.contains('liked')){
-    if(!likedPosts.find(p=>p.id===id)) likedPosts.push({id, img});
+  // İyimser (optimistic) UI güncellemesi — anında tepki, DB yazımı arka planda
+  el.classList.toggle('liked');
+  const numEl = post.querySelector('.likeNum');
+  let n = parseInt((numEl.textContent || '0').replace(/\./g,'')) || 0;
+  numEl.textContent = willLike ? (n+1) : Math.max(0, n-1);
+
+  if(willLike){
+    likeRef.set(true).catch(()=>{ el.classList.toggle('liked'); numEl.textContent = n; showToast('Beğeni kaydedilemedi, tekrar dene.'); });
   } else {
-    likedPosts = likedPosts.filter(p=>p.id!==id);
+    likeRef.remove().catch(()=>{ el.classList.toggle('liked'); numEl.textContent = n; showToast('Beğeni kaldırılamadı, tekrar dene.'); });
   }
-  renderLikedGrid();
 }
 
 function toggleSave(el){
-  el.classList.toggle('saved');
   const post = el.closest('.post');
-  const id = post.dataset.postId, img = post.dataset.postImg;
-  if(el.classList.contains('saved')){
-    if(!savedPosts.find(p=>p.id===id)) savedPosts.push({id, img});
+  const id = post.dataset.postId;
+  if(!id || !requireFirebase() || !fbAuth.currentUser){ showToast('Kaydetmek için giriş yapmalısın.'); return; }
+  const uid = fbAuth.currentUser.uid;
+  const saveRef = fbDb.ref('users/' + uid + '/savedPosts/' + id);
+  const willSave = !el.classList.contains('saved');
+  el.classList.toggle('saved');
+
+  if(willSave){
+    saveRef.set(true).then(()=> showToast('Gönderi kaydedildi 🔖')).catch(()=>{ el.classList.toggle('saved'); showToast('Kaydedilemedi, tekrar dene.'); });
   } else {
-    savedPosts = savedPosts.filter(p=>p.id!==id);
+    saveRef.remove().catch(()=>{ el.classList.toggle('saved'); showToast('Kaldırılamadı, tekrar dene.'); });
   }
-  renderSavedGrid();
 }
 
 function quickEmoji(btn, emoji){
@@ -2305,6 +2682,8 @@ function quickEmojiMsg(emoji){
 }
 
 function openShareSheet(el){
+  const post = el.closest('.post');
+  shareSheetActivePostId = post ? post.dataset.postId : null;
   document.getElementById('shareSheet').classList.remove('hidden');
 }
 function closeShareSheet(){
@@ -2326,70 +2705,270 @@ function submitComment(inputEl){
   const text = inputEl.value.trim();
   if(!text) return;
   const post = inputEl.closest('.post');
-  const list = post.querySelector('.commentsList');
-  const line = document.createElement('div');
-  line.className = 'comment-line';
-  line.innerHTML = `<b>${savedUsername || '@misafir'}</b>${text}`;
-  list.appendChild(line);
-  const countEl = post.querySelector('.commentCount');
-  countEl.textContent = parseInt(countEl.textContent) + 1;
+  const id = post.dataset.postId;
+  if(!id || !requireFirebase() || !fbAuth.currentUser){ showToast('Yorum yapmak için giriş yapmalısın.'); return; }
+
   inputEl.value = '';
+  inputEl.disabled = true;
+  const commentRef = fbDb.ref('posts/' + id + '/comments').push();
+  commentRef.set({
+    uid: fbAuth.currentUser.uid,
+    username: savedUsername || '@kullanici',
+    text: text,
+    ts: firebase.database.ServerValue.TIMESTAMP
+  }).then(()=>{
+    inputEl.disabled = false;
+  }).catch(()=>{
+    inputEl.disabled = false;
+    inputEl.value = text;
+    showToast('Yorum gönderilemedi, tekrar dene.');
+  });
 }
 
 function renderSavedGrid(){
   const grid = document.getElementById('savedGrid');
   const empty = document.getElementById('savedEmpty');
   if(!grid) return;
-  grid.innerHTML = savedPosts.map(p=>`<div class="gridThumb"><img src="${p.img}"></div>`).join('');
-  empty.style.display = savedPosts.length ? 'none' : 'block';
+  if(!requireFirebase() || !fbAuth.currentUser){ grid.innerHTML=''; empty.style.display='block'; return; }
+  const uid = fbAuth.currentUser.uid;
+  fbDb.ref('users/' + uid + '/savedPosts').once('value').then((snap)=>{
+    const data = snap.val() || {};
+    const ids = Object.keys(data);
+    if(!ids.length){ grid.innerHTML=''; empty.style.display='block'; return; }
+    Promise.all(ids.map(pid => fbDb.ref('posts/' + pid).once('value'))).then((snaps)=>{
+      const items = snaps.map((s,i)=>({id:ids[i], data:s.val()})).filter(x=>x.data);
+      empty.style.display = items.length ? 'none' : 'block';
+      grid.innerHTML = items.map(it => `<div class="gridThumb" onclick="scrollToPost('${it.id}')"><img src="${(it.data.media && it.data.media[0]) || it.data.photo || ''}"></div>`).join('');
+    });
+  }).catch(()=>{ empty.style.display='block'; });
 }
 
 function renderLikedGrid(){
   const grid = document.getElementById('likedGrid');
   const empty = document.getElementById('likedEmpty');
   if(!grid) return;
-  grid.innerHTML = likedPosts.map(p=>`<div class="gridThumb"><img src="${p.img}"></div>`).join('');
-  empty.style.display = likedPosts.length ? 'none' : 'block';
+  if(!requireFirebase() || !fbAuth.currentUser){ grid.innerHTML=''; empty.style.display='block'; return; }
+  const uid = fbAuth.currentUser.uid;
+  // Tüm postları tarayıp kullanıcının beğendiklerini buluyoruz (MVP ölçeğinde yeterli)
+  fbDb.ref('posts').once('value').then((snap)=>{
+    const data = snap.val() || {};
+    const items = Object.keys(data).filter(pid => data[pid].likes && data[pid].likes[uid]).map(pid => ({id:pid, data:data[pid]}));
+    empty.style.display = items.length ? 'none' : 'block';
+    grid.innerHTML = items.map(it => `<div class="gridThumb" onclick="scrollToPost('${it.id}')"><img src="${(it.data.media && it.data.media[0]) || it.data.photo || ''}"></div>`).join('');
+  }).catch(()=>{ empty.style.display='block'; });
+}
+function scrollToPost(id){
+  showScreen('feed');
+  setTimeout(()=>{
+    const el = document.querySelector(`.post[data-post-id="${id}"]`);
+    if(el) el.scrollIntoView({behavior:'smooth', block:'center'});
+  }, 150);
 }
 
 function openSavedScreen(){ showScreen('saved'); renderSavedGrid(); }
 function openLikedScreen(){ showScreen('liked'); renderLikedGrid(); }
 
 function nowTime(){ const d=new Date(); return d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0'); }
+/* ============================================================
+   GERÇEK MESAJLAŞMA — Firebase Realtime Database
+   chatMeta/{chatId} = {users:{uid1:true,uid2:true}, lastMsg, lastTs}
+   chats/{chatId}/messages/{msgId} = {from, text|mediaUrl|mediaType, ts}
+   chatId = iki kullanıcının uid'i alfabetik sıralanıp '_' ile birleştirilir
+   (deterministik — hangi taraf başlatırsa başlatsın aynı chatId üretilir).
+   ============================================================ */
+let activeChatId = null;
+let activeChatPeerUid = null;
+let activeChatMessagesRef = null;
+let chatListMetaRef = null;
+
+function makeChatId(uidA, uidB){
+  return [uidA, uidB].sort().join('_');
+}
+
+function initChatListListener(){
+  if(!requireFirebase() || !fbAuth.currentUser) return;
+  const myUid = fbAuth.currentUser.uid;
+  const body = document.getElementById('chatListBody');
+  if(chatListMetaRef) chatListMetaRef.off();
+  chatListMetaRef = fbDb.ref('chatMeta').orderByChild('users/' + myUid).equalTo(true);
+  chatListMetaRef.on('value', (snap)=>{
+    const data = snap.val() || {};
+    const chatIds = Object.keys(data);
+    if(!chatIds.length){
+      body.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:12.5px;padding:24px 16px;">Henüz hiç sohbetin yok. Sağ üstteki ✛ ile yeni mesaj başlat.</div>';
+      return;
+    }
+    // En son mesaja göre sırala (yeni en üstte)
+    chatIds.sort((a,b) => (data[b].lastTs||0) - (data[a].lastTs||0));
+    Promise.all(chatIds.map(cid => {
+      const peerUid = Object.keys(data[cid].users || {}).find(u => u !== myUid);
+      if(!peerUid) return Promise.resolve(null);
+      return fbDb.ref('users/' + peerUid).once('value').then(s => ({cid, peerUid, peer: s.val() || {}, meta: data[cid]}));
+    })).then((rows)=>{
+      rows = rows.filter(Boolean);
+      if(!rows.length){
+        body.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:12.5px;padding:24px 16px;">Henüz hiç sohbetin yok.</div>';
+        return;
+      }
+      body.innerHTML = rows.map(r => `
+        <div class="chat-item ${activeChatId===r.cid?'active':''}" onclick="openChatThread('${r.cid}','${r.peerUid}')">
+          <img src="${r.peer.photo || 'https://i.pravatar.cc/60?img=68'}">
+          <div class="meta">
+            <div class="name">${r.peer.username || '@kullanici'}</div>
+            <div class="preview">${(r.meta.lastMsg || 'Sohbete başla').toString().slice(0,40)}</div>
+          </div>
+          <span class="chat-time">${formatChatTime(r.meta.lastTs)}</span>
+        </div>
+      `).join('');
+    });
+  });
+}
+
+function formatChatTime(ts){
+  if(!ts) return '';
+  const diffMin = Math.floor((Date.now() - ts) / 60000);
+  if(diffMin < 1) return 'şimdi';
+  if(diffMin < 60) return diffMin + 'dk';
+  if(diffMin < 1440) return Math.floor(diffMin/60) + 'sa';
+  return Math.floor(diffMin/1440) + 'g';
+}
+
+function openChatThread(chatId, peerUid){
+  if(!requireFirebase() || !fbAuth.currentUser) return;
+  activeChatId = chatId;
+  activeChatPeerUid = peerUid;
+
+  document.querySelectorAll('#screenMessages .chat-item').forEach(i=>i.classList.remove('active'));
+
+  fbDb.ref('users/' + peerUid).once('value').then((snap)=>{
+    const peer = snap.val() || {};
+    document.getElementById('chatName').textContent = peer.username || '@kullanici';
+    document.getElementById('chatHeadImg').src = peer.photo || 'https://i.pravatar.cc/60?img=68';
+    document.getElementById('chatStatus').textContent = '';
+  });
+
+  document.getElementById('dmWrap').classList.add('view-chat');
+  document.getElementById('island').classList.add('chat-fullscreen-hide');
+
+  const box = document.getElementById('messagesBox');
+  box.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:12.5px;padding:24px 16px;">Yükleniyor...</div>';
+
+  if(activeChatMessagesRef) activeChatMessagesRef.off();
+  activeChatMessagesRef = fbDb.ref('chats/' + chatId + '/messages').limitToLast(200);
+  activeChatMessagesRef.on('value', (snap)=>{
+    const data = snap.val() || {};
+    const ids = Object.keys(data).sort((a,b) => (data[a].ts||0) - (data[b].ts||0));
+    const myUid = fbAuth.currentUser.uid;
+    if(!ids.length){
+      box.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:12.5px;padding:24px 16px;">Henüz mesaj yok. İlk mesajı sen gönder 👋</div>';
+      return;
+    }
+    box.innerHTML = ids.map(id => {
+      const m = data[id];
+      const mine = m.from === myUid;
+      const t = m.ts ? new Date(m.ts).toTimeString().slice(0,5) : '';
+      if(m.mediaUrl){
+        return `<div class="msg-media" style="${mine?'align-self:flex-end;':''}">${m.mediaType==='video' ? `<video src="${m.mediaUrl}" controls></video>` : `<img src="${m.mediaUrl}">`}</div>`;
+      }
+      return `<div class="msg ${mine?'me':'them'}">${escapeHtml(m.text||'')} <span class="time">${t}</span></div>`;
+    }).join('');
+    box.scrollTop = box.scrollHeight;
+  });
+}
+
+function escapeHtml(s){
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+function ensureChatMeta(chatId, peerUid){
+  const myUid = fbAuth.currentUser.uid;
+  return fbDb.ref('chatMeta/' + chatId + '/users').set({[myUid]:true, [peerUid]:true});
+}
+
 function sendMsg(){
   const input = document.getElementById('msgInput'); const text = input.value.trim(); if(!text) return;
-  const box = document.getElementById('messagesBox');
-  const div = document.createElement('div'); div.className='msg me';
-  div.innerHTML = text + ` <span class="time">${nowTime()}</span>`;
-  box.appendChild(div); box.scrollTop = box.scrollHeight; input.value='';
+  if(!requireFirebase() || !fbAuth.currentUser || !activeChatId){ showToast('Bir sohbet seçmelisin.'); return; }
+  input.value = '';
+  const msgRef = fbDb.ref('chats/' + activeChatId + '/messages').push();
+  const ts = Date.now();
+  ensureChatMeta(activeChatId, activeChatPeerUid).then(()=>{
+    return msgRef.set({ from: fbAuth.currentUser.uid, text: text, ts: ts });
+  }).then(()=>{
+    return fbDb.ref('chatMeta/' + activeChatId).update({ lastMsg: text, lastTs: ts });
+  }).catch(()=>{
+    showToast('Mesaj gönderilemedi, tekrar dene.');
+    input.value = text;
+  });
 }
+
 function sendMedia(ev){
   const file = ev.target.files[0]; if(!file) return;
-  const reader = new FileReader();
-  reader.onload = function(e){
-    const box = document.getElementById('messagesBox');
-    const wrap = document.createElement('div'); wrap.className='msg-media'; wrap.style.alignSelf='flex-end';
-    wrap.innerHTML = file.type.startsWith('video') ? `<video src="${e.target.result}" controls></video>` : `<img src="${e.target.result}">`;
-    box.appendChild(wrap); box.scrollTop = box.scrollHeight;
-  };
-  reader.readAsDataURL(file);
+  if(!requireFirebase() || !fbAuth.currentUser || !activeChatId){ showToast('Bir sohbet seçmelisin.'); ev.target.value=''; return; }
+  if(!fbStorage){ showToast('Dosya depolama şu an kullanılamıyor.'); ev.target.value=''; return; }
+  const mediaType = file.type.startsWith('video') ? 'video' : 'image';
+  showToast('Gönderiliyor...');
+  const path = 'chatMedia/' + activeChatId + '/' + Date.now() + '_' + file.name.replace(/[^a-zA-Z0-9._-]/g,'_');
+  const ref = fbStorage.ref().child(path);
+  ref.put(file).then(snap => snap.ref.getDownloadURL()).then((url)=>{
+    const msgRef = fbDb.ref('chats/' + activeChatId + '/messages').push();
+    const ts = Date.now();
+    return ensureChatMeta(activeChatId, activeChatPeerUid).then(()=>{
+      return msgRef.set({ from: fbAuth.currentUser.uid, mediaUrl: url, mediaType: mediaType, ts: ts });
+    }).then(()=>{
+      return fbDb.ref('chatMeta/' + activeChatId).update({ lastMsg: mediaType==='video' ? '🎥 Video' : '📷 Fotoğraf', lastTs: ts });
+    });
+  }).catch(()=>{
+    showToast('Dosya gönderilemedi, tekrar dene.');
+  }).finally(()=>{ ev.target.value=''; });
 }
-document.querySelectorAll('#screenMessages .chat-item').forEach(item=>{
-  item.addEventListener('click', ()=>{
-    document.querySelectorAll('#screenMessages .chat-item').forEach(i=>i.classList.remove('active'));
-    item.classList.add('active');
-    document.getElementById('chatName').textContent = item.querySelector('.name').textContent;
-    document.querySelector('#screenMessages .chat-head img').src = item.querySelector('img').src;
-    document.getElementById('dmWrap').classList.add('view-chat');
-    // Birebir sohbetin İÇİNE girildi: ada tamamen gizlenir.
-    document.getElementById('island').classList.add('chat-fullscreen-hide');
-  });
-});
 
 function exitChatThread(){
   document.getElementById('dmWrap').classList.remove('view-chat');
   // Mesaj listesine geri dönüldü: ada tekrar görünür olur.
   document.getElementById('island').classList.remove('chat-fullscreen-hide');
+  if(activeChatMessagesRef){ activeChatMessagesRef.off(); activeChatMessagesRef = null; }
+  activeChatId = null; activeChatPeerUid = null;
+}
+
+/* ===== YENİ MESAJ — kullanıcı seçici (takip ettiklerin + takipçilerin) ===== */
+function openNewChatPicker(){
+  document.getElementById('newChatOverlay').classList.remove('hidden');
+  loadNewChatCandidates();
+}
+function closeNewChatPicker(){
+  document.getElementById('newChatOverlay').classList.add('hidden');
+}
+let newChatCandidates = [];
+function loadNewChatCandidates(){
+  const list = document.getElementById('newChatList');
+  list.innerHTML = '<div class="momentFriendEmpty">Yükleniyor...</div>';
+  if(!requireFirebase() || !fbAuth.currentUser){ list.innerHTML = '<div class="momentFriendEmpty">Giriş yapmalısın.</div>'; return; }
+  const myUid = fbAuth.currentUser.uid;
+  fbDb.ref('users').once('value').then((snap)=>{
+    const data = snap.val() || {};
+    newChatCandidates = Object.keys(data).filter(uid => uid !== myUid && !data[uid].blocked).map(uid => ({uid, ...data[uid]}));
+    renderNewChatList();
+  }).catch(()=>{ list.innerHTML = '<div class="momentFriendEmpty">Liste yüklenemedi.</div>'; });
+}
+function renderNewChatList(){
+  const list = document.getElementById('newChatList');
+  const q = (document.getElementById('newChatSearch').value || '').toLowerCase().replace(/^@/,'');
+  const filtered = newChatCandidates.filter(u => (u.username||'').toLowerCase().replace(/^@/,'').includes(q));
+  if(!filtered.length){ list.innerHTML = '<div class="momentFriendEmpty">Kullanıcı bulunamadı.</div>'; return; }
+  list.innerHTML = filtered.map(u => `
+    <div class="momentFriendRow" onclick="startChatWith('${u.uid}')">
+      <img src="${u.photo || 'https://i.pravatar.cc/60?img=68'}">
+      <div class="name">${u.username || '@kullanici'}</div>
+    </div>
+  `).join('');
+}
+function startChatWith(peerUid){
+  if(!requireFirebase() || !fbAuth.currentUser) return;
+  const chatId = makeChatId(fbAuth.currentUser.uid, peerUid);
+  closeNewChatPicker();
+  openChatThread(chatId, peerUid);
 }
 
 /* ===== ADMIN ===== */
@@ -2426,6 +3005,19 @@ function removeRow(btn){
   }
 }
 function resolveReport(btn){ btn.closest('.flagged-item').remove(); }
+
+/* Admin: tüm akışı yeniden tarayıp istatistik raporlar (gerçek veri tabanlı) */
+function adminRescanFeed(){
+  if(!requireFirebase()) return;
+  showToast('Akış taranıyor...');
+  fbDb.ref('posts').once('value').then((snap)=>{
+    const data = snap.val() || {};
+    const ids = Object.keys(data);
+    const moments = ids.filter(id => data[id].isMoment).length;
+    const normal = ids.length - moments;
+    showToast(`✅ Tarama bitti: ${ids.length} gönderi (${normal} normal, ${moments} Anı Yakala)`);
+  }).catch(()=> showToast('Tarama başarısız oldu.'));
+}
 function filterMembers(){
   const q = document.getElementById('memberSearch').value.toLowerCase();
   document.querySelectorAll('#memberTable tr').forEach(row=>{
@@ -2434,6 +3026,855 @@ function filterMembers(){
 }
 
 /* Sayfa her açıldığında: önce NeXT logosu kısa süre görünür, sonra oturum kontrolü yapılıp doğru ekran gösterilir */
+/* ============================================================
+   GERÇEK FEED — Firebase Realtime Database
+   posts/{postId} = {
+     uid, username, photo (yazarın profil foto'su), location,
+     media: [url, ...], mediaType: 'image'|'video',
+     caption, ts, likes:{uid:true}, comments:{id:{uid,username,text,ts}},
+     isMoment: true|false, momentParticipants: [{uid,username,photo}], momentChallenge
+   }
+   ============================================================ */
+function initFeedListener(){
+  if(!requireFirebase()) return;
+  if(feedPostsRef) feedPostsRef.off();
+  const container = document.getElementById('feedPostsContainer');
+  feedPostsRef = fbDb.ref('posts').orderByChild('ts').limitToLast(60);
+  feedPostsRef.on('value', (snap)=>{
+    const data = snap.val() || {};
+    const ids = Object.keys(data).sort((a,b) => (data[b].ts||0) - (data[a].ts||0));
+    if(!ids.length){
+      container.innerHTML = '<div id="feedEmptyState" style="text-align:center;color:var(--muted);font-size:13px;padding:50px 20px;">Henüz hiç gönderi yok. İlk paylaşımı sen yap, ya da yukarıdan bir Anı Yakala başlat!</div>';
+      return;
+    }
+    const myUid = fbAuth.currentUser ? fbAuth.currentUser.uid : null;
+    container.innerHTML = ids.map(id => renderPostCard(id, data[id], myUid)).join('');
+  }, ()=>{
+    container.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:13px;padding:50px 20px;">Akış yüklenemedi, internetini kontrol et.</div>';
+  });
+}
+
+function renderPostCard(id, p, myUid){
+  const isLiked = !!(p.likes && myUid && p.likes[myUid]);
+  const likeCount = p.likes ? Object.keys(p.likes).length : 0;
+  const comments = p.comments ? Object.keys(p.comments).map(cid => p.comments[cid]).sort((a,b)=>(a.ts||0)-(b.ts||0)) : [];
+  const mediaList = Array.isArray(p.media) ? p.media : (p.photo ? [p.photo] : []);
+  const isVideo = p.mediaType === 'video';
+  const momentBadge = p.isMoment ? `<span class="momentBadge"><span class="ring"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span>Anı Yakala</span>` : '';
+  const momentStrip = (p.isMoment && Array.isArray(p.momentParticipants) && p.momentParticipants.length)
+    ? `<div class="momentParticipantStrip">${p.momentParticipants.map(u=>`<img src="${u.photo||'https://i.pravatar.cc/60?img=68'}" title="${u.username||''}">`).join('')}</div>`
+    : '';
+  const mediaHtml = mediaList.length <= 1
+    ? `<div class="post-media">${isVideo ? `<video controls src="${mediaList[0]||''}"></video>` : `<img src="${mediaList[0]||''}">`}</div>`
+    : `<div class="post-media" style="display:grid;grid-template-columns:1fr 1fr;gap:2px;aspect-ratio:1/1;">${mediaList.slice(0,4).map(m=>`<img src="${m}" style="width:100%;height:100%;object-fit:cover;">`).join('')}</div>`;
+
+  return `
+    <div class="post ${p.isMoment?'momentPost':''}" data-post-id="${id}">
+      <div class="post-head">
+        <img src="${p.photo && mediaList.length ? (p.authorPhoto||'https://i.pravatar.cc/60?img=68') : (p.authorPhoto||'https://i.pravatar.cc/60?img=68')}">
+        <div><div class="who">${p.username || '@kullanici'}${momentBadge}</div><div class="loc">${p.location || ''}</div></div>
+        <div class="dots">⋯</div>
+      </div>
+      ${mediaHtml}
+      ${momentStrip}
+      <div class="ig-actions">
+        <div class="icon-act ${isLiked?'liked':''}" onclick="toggleLike(this)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.8 4.6a5 5 0 00-7.1 0L12 6.3l-1.7-1.7a5 5 0 10-7.1 7.1L12 20.3l8.8-8.6a5 5 0 000-7.1z"/></svg>
+          Beğen
+        </div>
+        <div class="icon-act" onclick="toggleCommentBox(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.4 8.4 0 01-1.1 4.2L21 21l-5.4-1a8.5 8.5 0 11-.6-.4z"/></svg>Yorum</div>
+        <div class="icon-act" onclick="openShareSheet(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>Paylaş</div>
+        <div class="spacer"></div>
+        <div class="icon-act" onclick="toggleSave(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h12v18l-6-4-6 4V3z"/></svg>Kaydet</div>
+      </div>
+      <div class="like-count"><span class="likeNum">${likeCount}</span> beğenme</div>
+      <div class="caption"><b>${p.username || '@kullanici'}</b>${escapeHtml(p.caption || '')}</div>
+      <div class="commentsList">${comments.map(c => `<div class="comment-line"><b>${c.username||'@kullanici'}</b>${escapeHtml(c.text||'')}</div>`).join('')}</div>
+      <div class="view-comments"><span class="commentCount">${comments.length}</span> yorumun tümünü gör</div>
+      <div class="emoji-row">
+        <button onclick="quickEmoji(this, '❤️')">❤️</button>
+        <button onclick="quickEmoji(this, '😂')">😂</button>
+        <button onclick="quickEmoji(this, '🔥')">🔥</button>
+        <button onclick="quickEmoji(this, '🙌')">🙌</button>
+      </div>
+      <div class="comment-compose">
+        <input type="text" placeholder="Yorum yaz..." onkeydown="if(event.key==='Enter') submitComment(this)">
+        <button class="comment-send-btn" onclick="submitComment(this.previousElementSibling)" title="Gönder">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 11l18-8-8 18-2-8-8-2z"/></svg>
+        </button>
+      </div>
+      <div class="post-timestamp">${formatPostAge(p.ts)}</div>
+    </div>
+  `;
+}
+
+function formatPostAge(ts){
+  if(!ts) return '';
+  const diffMin = Math.floor((Date.now() - ts) / 60000);
+  if(diffMin < 1) return 'az önce';
+  if(diffMin < 60) return diffMin + ' dakika önce';
+  if(diffMin < 1440) return Math.floor(diffMin/60) + ' saat önce';
+  return Math.floor(diffMin/1440) + ' gün önce';
+}
+
+/* ===== Yeni (normal) gönderi oluşturma ===== */
+let newPostFile = null, newPostDataUrl = null, newPostMediaType = 'image';
+function openNewPostComposer(){
+  newPostFile = null; newPostDataUrl = null;
+  document.getElementById('newPostCaption').value = '';
+  document.getElementById('newPostLocation').value = '';
+  document.getElementById('newPostDropzone').innerHTML = `
+    <div class="icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 16V4M12 4l-4 4M12 4l4 4M4 20h16"/></svg></div>
+    <p>Fotoğraf veya video seç</p>`;
+  document.getElementById('newPostDropzone').classList.remove('has-img');
+  document.getElementById('newPostPublishBtn').disabled = true;
+  document.getElementById('newPostOverlay').classList.remove('hidden');
+}
+function closeNewPostComposer(){
+  document.getElementById('newPostOverlay').classList.add('hidden');
+}
+function onNewPostFileChosen(ev){
+  const file = ev.target.files[0]; if(!file) return;
+  const maxBytes = 25 * 1024 * 1024;
+  if(file.size > maxBytes){ showToast('Dosya en fazla 25 MB olabilir.'); ev.target.value=''; return; }
+  newPostFile = file;
+  newPostMediaType = file.type.startsWith('video') ? 'video' : 'image';
+  const reader = new FileReader();
+  reader.onload = (e)=>{
+    newPostDataUrl = e.target.result;
+    const dz = document.getElementById('newPostDropzone');
+    dz.classList.add('has-img');
+    dz.innerHTML = newPostMediaType === 'video'
+      ? `<video src="${newPostDataUrl}" style="width:100%;max-height:220px;border-radius:13px;" controls></video>`
+      : `<img src="${newPostDataUrl}">`;
+    document.getElementById('newPostPublishBtn').disabled = false;
+  };
+  reader.readAsDataURL(file);
+}
+function publishNewPost(){
+  if(!requireFirebase() || !fbAuth.currentUser){ showToast('Giriş yapmalısın.'); return; }
+  if(!newPostFile){ showToast('Önce bir fotoğraf/video seç.'); return; }
+  if(!fbStorage){ showToast('Dosya depolama şu an kullanılamıyor.'); return; }
+
+  const btn = document.getElementById('newPostPublishBtn');
+  btn.disabled = true; btn.textContent = 'Yükleniyor...';
+
+  const uid = fbAuth.currentUser.uid;
+  const path = 'posts/' + uid + '/' + Date.now() + '_' + newPostFile.name.replace(/[^a-zA-Z0-9._-]/g,'_');
+  const ref = fbStorage.ref().child(path);
+
+  ref.put(newPostFile).then(snap => snap.ref.getDownloadURL()).then((url)=>{
+    const postRef = fbDb.ref('posts').push();
+    return postRef.set({
+      uid: uid,
+      username: savedUsername || '@kullanici',
+      authorPhoto: savedProfilePhoto || 'https://i.pravatar.cc/60?img=68',
+      location: (document.getElementById('newPostLocation').value || '').trim(),
+      media: [url],
+      mediaType: newPostMediaType,
+      caption: (document.getElementById('newPostCaption').value || '').trim(),
+      ts: firebase.database.ServerValue.TIMESTAMP,
+      isMoment: false
+    });
+  }).then(()=>{
+    return fbDb.ref('users/' + uid + '/postsCount').transaction(n => (n||0) + 1);
+  }).then(()=>{
+    btn.disabled = false; btn.textContent = 'Paylaş';
+    closeNewPostComposer();
+    showToast('Gönderin paylaşıldı 🎉');
+    renderMyPostsGrid();
+  }).catch((err)=>{
+    btn.disabled = false; btn.textContent = 'Paylaş';
+    showToast('Paylaşılamadı: ' + (err && err.message ? err.message : 'bilinmeyen hata'));
+  });
+}
+
+function renderMyPostsGrid(){
+  const grid = document.getElementById('myPostsGrid');
+  if(!grid || !requireFirebase() || !fbAuth.currentUser) return;
+  const uid = fbAuth.currentUser.uid;
+  fbDb.ref('posts').orderByChild('uid').equalTo(uid).once('value').then((snap)=>{
+    const data = snap.val() || {};
+    const ids = Object.keys(data).sort((a,b)=>(data[b].ts||0)-(data[a].ts||0));
+    const plusTile = `<div onclick="openNewPostComposer()" style="cursor:pointer;aspect-ratio:1/1;border-radius:10px;overflow:hidden;background:var(--surface-2);display:flex;align-items:center;justify-content:center;color:var(--accent);font-size:24px;font-weight:300;">+</div>`;
+    grid.innerHTML = plusTile + ids.map(id => {
+      const p = data[id];
+      const thumb = (Array.isArray(p.media) && p.media[0]) || p.photo || '';
+      const playIcon = p.mediaType === 'video' ? `<span style="position:absolute;top:6px;right:6px;font-size:11px;background:rgba(0,0,0,.5);color:#fff;padding:2px 5px;border-radius:5px;">▶</span>` : '';
+      return `<div style="aspect-ratio:1/1;border-radius:10px;overflow:hidden;position:relative;cursor:pointer;" onclick="scrollToPost('${id}')"><img src="${thumb}" style="width:100%;height:100%;object-fit:cover;">${playIcon}</div>`;
+    }).join('');
+  });
+}
+
+
+/* ============================================================
+   ANI YAKALA (Capture the Moment) — TAM MVP AKIŞI
+   Firebase Realtime Database veri modeli:
+
+   momentSessions/{sessionId} = {
+     hostUid, mode: 'photo'|'video', challenge,
+     createdAt,
+     participants: { uid: { username, photo, status: 'invited'|'ready'|'captured', joinedAt } },
+     state: 'waiting'|'countdown'|'capturing'|'done'|'cancelled',
+     countdownStartAt,         // tüm katılımcılar bu timestamp'e göre senkron sayar
+     captures: { uid: { url, ts } }   // her katılımcının çektiği kare/video
+   }
+
+   Yayınlanınca normal bir post olarak posts/{postId}'e
+   (isMoment:true, momentParticipants:[...]) yazılır — feed'de görünür,
+   ayrıca stories/{storyId}'e 24 saatlik hikaye olarak da yazılır.
+   ============================================================ */
+
+let momentSelectedFriends = [];   // [{uid, username, photo}]
+let momentSelectedMode = 'photo';
+let momentSelectedChallenge = '';
+let momentSessionId = null;
+let momentSessionRef = null;
+let momentCamStream = null;
+let momentFacingMode = 'user';
+let momentCapturedDataUrl = null;
+let momentIsHost = false;
+let momentCountdownTimer = null;
+let momentStripListenerRef = null;
+let momentCountdownStarted = false;
+let momentSessionPendingChallenge = '';
+let momentInviteListenerRef = null;
+
+/* ---------- 1) BAŞLATMA MODALI ---------- */
+function openMomentStart(){
+  if(!requireFirebase() || !fbAuth.currentUser){ showToast('Anı Yakala için giriş yapmalısın.'); return; }
+  momentSelectedFriends = [];
+  momentSelectedMode = 'photo';
+  momentSelectedChallenge = '';
+  document.getElementById('momentModePhoto').classList.add('active');
+  document.getElementById('momentModeVideo').classList.remove('active');
+  document.querySelectorAll('.momentChallengeChip').forEach(c=>c.classList.remove('active'));
+  document.querySelector('.momentChallengeChip[data-c=""]').classList.add('active');
+  document.getElementById('momentFriendSearch').value = '';
+  document.getElementById('momentStartOverlay').classList.remove('hidden');
+  loadMomentFriendCandidates();
+}
+function closeMomentStart(){
+  document.getElementById('momentStartOverlay').classList.add('hidden');
+}
+function setMomentMode(mode){
+  momentSelectedMode = mode;
+  document.getElementById('momentModePhoto').classList.toggle('active', mode==='photo');
+  document.getElementById('momentModeVideo').classList.toggle('active', mode==='video');
+}
+document.addEventListener('click', (e)=>{
+  const chip = e.target.closest('.momentChallengeChip');
+  if(chip){
+    document.querySelectorAll('.momentChallengeChip').forEach(c=>c.classList.remove('active'));
+    chip.classList.add('active');
+    momentSelectedChallenge = chip.dataset.c || '';
+  }
+});
+
+function loadMomentFriendCandidates(){
+  const myUid = fbAuth.currentUser.uid;
+  // Takip ettiklerin + seni takip edenler birleşik liste (MVP: gerçek sosyal grafikten)
+  Promise.all([
+    fbDb.ref('follows/' + myUid).once('value'),
+    fbDb.ref('followers/' + myUid).once('value')
+  ]).then(([followsSnap, followersSnap])=>{
+    const uids = new Set([
+      ...Object.keys(followsSnap.val() || {}),
+      ...Object.keys(followersSnap.val() || {})
+    ]);
+    if(!uids.size){
+      feedFriendsCache = [];
+      renderMomentFriendList();
+      return;
+    }
+    Promise.all([...uids].map(uid => fbDb.ref('users/' + uid).once('value').then(s=>({uid, ...(s.val()||{})})))).then((list)=>{
+      feedFriendsCache = list.filter(u => u.username && !u.blocked);
+      renderMomentFriendList();
+    });
+  }).catch(()=>{ feedFriendsCache = []; renderMomentFriendList(); });
+}
+
+function renderMomentFriendList(){
+  const list = document.getElementById('momentFriendList');
+  const q = (document.getElementById('momentFriendSearch').value || '').toLowerCase().replace(/^@/,'');
+  const filtered = feedFriendsCache.filter(u => (u.username||'').toLowerCase().replace(/^@/,'').includes(q));
+  if(!filtered.length){
+    list.innerHTML = '<div class="momentFriendEmpty">Takip ettiğin/takipçin kimse bulunamadı. Hızlı Link ile yine de davet edebilirsin.</div>';
+    return;
+  }
+  list.innerHTML = filtered.map(u => {
+    const selected = momentSelectedFriends.find(f=>f.uid===u.uid);
+    return `
+      <div class="momentFriendRow ${selected?'selected':''}" onclick="toggleMomentFriend('${u.uid}','${(u.username||'').replace(/'/g,"\\'")}','${u.photo||''}')">
+        <img src="${u.photo || 'https://i.pravatar.cc/60?img=68'}">
+        <div class="name">${u.username || '@kullanici'}</div>
+        <div class="momentFriendCheck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></div>
+      </div>
+    `;
+  }).join('');
+}
+function toggleMomentFriend(uid, username, photo){
+  const idx = momentSelectedFriends.findIndex(f=>f.uid===uid);
+  if(idx > -1){
+    momentSelectedFriends.splice(idx, 1);
+  } else {
+    if(momentSelectedFriends.length >= 6){ showToast('En fazla 6 kişi davet edebilirsin.'); return; }
+    momentSelectedFriends.push({uid, username, photo});
+  }
+  renderMomentFriendList();
+}
+function copyMomentInviteLink(){
+  const fakeLink = window.location.href.split('#')[0].split('?')[0] + '?moment=invite';
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(fakeLink).then(()=> showToast('Davet linki kopyalandı 🔗')).catch(()=> showToast('Kopyalanamadı, linki elle paylaşabilirsin: ' + fakeLink));
+  } else {
+    showToast('Davet linki: ' + fakeLink);
+  }
+}
+
+/* ---------- 2) OTURUM BAŞLATMA + DAVET ---------- */
+function startMomentCapture(){
+  if(!requireFirebase() || !fbAuth.currentUser) return;
+  const myUid = fbAuth.currentUser.uid;
+  const sessionRef = fbDb.ref('momentSessions').push();
+  momentSessionId = sessionRef.key;
+  momentIsHost = true;
+
+  const participants = {
+    [myUid]: {
+      username: savedUsername || '@kullanici',
+      photo: savedProfilePhoto || 'https://i.pravatar.cc/60?img=68',
+      status: 'ready', // host her zaman hazır başlar
+      joinedAt: Date.now()
+    }
+  };
+  momentSelectedFriends.forEach(f => {
+    participants[f.uid] = { username: f.username, photo: f.photo, status: 'invited', joinedAt: Date.now() };
+  });
+
+  sessionRef.set({
+    hostUid: myUid,
+    mode: momentSelectedMode,
+    challenge: momentSelectedChallenge,
+    createdAt: firebase.database.ServerValue.TIMESTAMP,
+    participants: participants,
+    state: 'waiting'
+  }).then(()=>{
+    closeMomentStart();
+    momentSessionPendingChallenge = momentSelectedChallenge;
+    // Davet edilenlere bildirim niyetine bir "davetler" node'u da yazalım
+    // (gerçek push notification altyapısı olmadığından, her kullanıcı kendi
+    // davetlerini dinleyerek toast olarak görür — bkz. listenForMyMomentInvites)
+    const writes = momentSelectedFriends.map(f =>
+      fbDb.ref('momentInvites/' + f.uid + '/' + momentSessionId).set({
+        fromUsername: savedUsername || '@kullanici',
+        fromPhoto: savedProfilePhoto || '',
+        sessionId: momentSessionId,
+        ts: Date.now()
+      })
+    );
+    Promise.all(writes).finally(()=>{
+      openMomentWaitScreen(momentSessionId);
+    });
+  }).catch(()=>{
+    showToast('Anı Yakala başlatılamadı, tekrar dene.');
+  });
+}
+
+function openMomentWaitScreen(sessionId){
+  momentSessionId = sessionId;
+  document.getElementById('momentReadyBtn').style.display = '';
+  document.getElementById('momentWaitOverlay').classList.remove('hidden');
+  if(momentSessionRef) momentSessionRef.off();
+  momentSessionRef = fbDb.ref('momentSessions/' + sessionId);
+  momentSessionRef.on('value', (snap)=>{
+    const session = snap.val();
+    if(!session){ closeAllMomentOverlays(); return; }
+    if(session.state === 'cancelled'){ showToast('Anı Yakala iptal edildi.'); closeAllMomentOverlays(); return; }
+    momentSessionPendingChallenge = session.challenge || '';
+    renderMomentWaitParticipants(session);
+    if(session.state === 'countdown' && session.countdownStartAt){
+      beginMomentCountdownUI(session);
+    }
+    if(session.state === 'done'){
+      // host collage'ı yayınlayınca diğer katılımcılar da burada bilgilendirilir
+      closeAllMomentOverlays();
+    }
+  });
+}
+
+function renderMomentWaitParticipants(session){
+  const wrap = document.getElementById('momentParticipantsWrap');
+  const participants = session.participants || {};
+  const uids = Object.keys(participants).filter(uid => participants[uid].status !== 'left');
+  wrap.innerHTML = uids.map(uid => {
+    const p = participants[uid];
+    const ready = p.status === 'ready' || p.status === 'captured';
+    return `
+      <div class="momentParticipantPill ${ready?'ready':''}">
+        <img src="${p.photo || 'https://i.pravatar.cc/60?img=68'}">
+        <span class="readyDot"></span>
+        <span class="pname">${p.username || '@kullanici'}</span>
+      </div>
+    `;
+  }).join('');
+
+  const allReady = uids.length > 0 && uids.every(uid => participants[uid].status === 'ready' || participants[uid].status === 'captured');
+  const myUid = fbAuth.currentUser.uid;
+  const myStatus = participants[myUid] ? participants[myUid].status : 'invited';
+  const readyBtn = document.getElementById('momentReadyBtn');
+  const heading = document.getElementById('momentWaitHeading');
+  const sub = document.getElementById('momentWaitSub');
+
+  if(myStatus === 'ready' || myStatus === 'captured'){
+    readyBtn.textContent = 'Hazırsın ✓';
+    readyBtn.classList.add('isReady');
+  } else {
+    readyBtn.textContent = 'Hazırım';
+    readyBtn.classList.remove('isReady');
+  }
+
+  if(allReady && uids.length >= 1){
+    heading.textContent = 'Herkes hazır! 🎉';
+    sub.textContent = momentIsHost ? 'Sayımı başlatmak için tekrar "Hazırsın" yazan butona bas.' : 'Host sayımı başlatınca otomatik geçeceksin.';
+  } else {
+    heading.textContent = 'Herkesin hazır olması bekleniyor...';
+    sub.textContent = 'Davet ettiğin kişiler katıldıkça burada görünecek. Herkes hazır olunca sayım başlayacak.';
+  }
+}
+
+function toggleMomentReady(){
+  if(!momentSessionId) return;
+  const myUid = fbAuth.currentUser.uid;
+  const myRef = fbDb.ref('momentSessions/' + momentSessionId + '/participants/' + myUid);
+
+  myRef.once('value').then((snap)=>{
+    const me = snap.val() || {};
+    const nowReady = me.status !== 'ready' && me.status !== 'captured';
+    return myRef.update({ status: nowReady ? 'ready' : 'invited' });
+  }).then(()=>{
+    // Host ise ve herkes hazırsa, countdown'ı başlat
+    if(!momentIsHost) return;
+    return fbDb.ref('momentSessions/' + momentSessionId).once('value').then((snap)=>{
+      const session = snap.val();
+      if(!session) return;
+      const uids = Object.keys(session.participants || {}).filter(u => session.participants[u].status !== 'left');
+      const allReady = uids.length > 0 && uids.every(u => session.participants[u].status === 'ready' || session.participants[u].status === 'captured');
+      if(allReady && session.state === 'waiting'){
+        return fbDb.ref('momentSessions/' + momentSessionId).update({
+          state: 'countdown',
+          countdownStartAt: Date.now() + 1200 // herkesin clientı senkron saysın diye küçük bir gecikme payı
+        });
+      }
+    });
+  }).catch(()=>{ showToast('Bir hata oluştu, tekrar dene.'); });
+}
+
+function cancelMomentSession(){
+  if(momentSessionId && momentIsHost){
+    fbDb.ref('momentSessions/' + momentSessionId).update({ state: 'cancelled' }).catch(()=>{});
+  } else if(momentSessionId && fbAuth.currentUser){
+    // katılımcı sadece kendi durumunu çıkışa çeker
+    fbDb.ref('momentSessions/' + momentSessionId + '/participants/' + fbAuth.currentUser.uid).update({ status: 'left' }).catch(()=>{});
+  }
+  closeAllMomentOverlays();
+}
+
+function closeAllMomentOverlays(){
+  document.getElementById('momentWaitOverlay').classList.add('hidden');
+  document.getElementById('momentCaptureOverlay').classList.add('hidden');
+  document.getElementById('momentPreviewOverlay').classList.add('hidden');
+  document.getElementById('momentCountdown').classList.add('hidden');
+  if(momentSessionRef){ momentSessionRef.off(); momentSessionRef = null; }
+  if(momentCountdownTimer){ clearInterval(momentCountdownTimer); momentCountdownTimer = null; }
+  stopMomentCamera();
+  momentSessionId = null;
+  momentIsHost = false;
+  momentCapturedDataUrl = null;
+  momentCountdownStarted = false;
+}
+
+/* ---------- 3) GERİ SAYIM + SENKRON ÇEKİM ---------- */
+function beginMomentCountdownUI(session){
+  if(momentCountdownStarted) return; // birden fazla tetiklenmeyi önle
+  momentCountdownStarted = true;
+
+  document.getElementById('momentWaitOverlay').classList.add('hidden');
+  document.getElementById('momentCaptureOverlay').classList.remove('hidden');
+  startMomentCamera();
+  renderMomentCaptureParticipants(session);
+
+  const countdownEl = document.getElementById('momentCountdown');
+  countdownEl.classList.remove('hidden');
+
+  const tick = ()=>{
+    const remainingMs = session.countdownStartAt - Date.now();
+    const secs = Math.ceil(remainingMs / 1000);
+    if(secs > 0){
+      countdownEl.textContent = secs;
+    } else if(secs === 0 || (secs < 0 && remainingMs > -1000)){
+      countdownEl.textContent = 'YAKALA!';
+      countdownEl.classList.add('flash');
+      captureMomentFrame();
+    } else {
+      clearInterval(momentCountdownTimer);
+      momentCountdownTimer = null;
+      countdownEl.classList.add('hidden');
+    }
+  };
+  tick();
+  momentCountdownTimer = setInterval(tick, 250);
+}
+
+function renderMomentCaptureParticipants(session){
+  const wrap = document.getElementById('momentParticipantsBottom');
+  const participants = session.participants || {};
+  wrap.innerHTML = Object.keys(participants).filter(uid=>participants[uid].status !== 'left').map(uid => `<img src="${participants[uid].photo || 'https://i.pravatar.cc/60?img=68'}" title="${participants[uid].username||''}">`).join('');
+}
+
+function startMomentCamera(){
+  const video = document.getElementById('momentCamVideo');
+  const placeholder = document.getElementById('momentCamPlaceholder');
+  placeholder.classList.add('hidden');
+  video.classList.remove('hidden');
+
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+    placeholder.classList.remove('hidden');
+    video.classList.add('hidden');
+    return;
+  }
+  navigator.mediaDevices.getUserMedia({ video: { facingMode: momentFacingMode }, audio: momentSelectedMode === 'video' })
+    .then((stream)=>{
+      momentCamStream = stream;
+      video.srcObject = stream;
+    })
+    .catch(()=>{
+      placeholder.classList.remove('hidden');
+      video.classList.add('hidden');
+      showToast('Kamera erişimi reddedildi — manuel çekim yapabilirsin.');
+    });
+}
+function stopMomentCamera(){
+  if(momentCamStream){
+    momentCamStream.getTracks().forEach(t=>t.stop());
+    momentCamStream = null;
+  }
+}
+function flipMomentCamera(){
+  momentFacingMode = momentFacingMode === 'user' ? 'environment' : 'user';
+  stopMomentCamera();
+  startMomentCamera();
+}
+function momentManualShutter(){
+  captureMomentFrame();
+}
+
+function captureMomentFrame(){
+  if(momentCapturedDataUrl) return; // zaten çekildi, tekrar çekme
+  const video = document.getElementById('momentCamVideo');
+  const canvas = document.createElement('canvas');
+  const W = 480, H = 480;
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+
+  if(video && video.videoWidth){
+    const side = Math.min(video.videoWidth, video.videoHeight);
+    const sx = (video.videoWidth - side)/2, sy = (video.videoHeight - side)/2;
+    // Selfie kamerasında ayna efekti doğal görünsün diye yatay çeviriyoruz
+    if(momentFacingMode === 'user'){
+      ctx.translate(W, 0); ctx.scale(-1, 1);
+    }
+    ctx.drawImage(video, sx, sy, side, side, 0, 0, W, H);
+  } else {
+    // Kamera yoksa nötr bir gradient kare üret (akış kesintiye uğramasın)
+    const grad = ctx.createLinearGradient(0,0,W,H);
+    grad.addColorStop(0,'#7c3aed'); grad.addColorStop(1,'#06b6d4');
+    ctx.fillStyle = grad; ctx.fillRect(0,0,W,H);
+  }
+  momentCapturedDataUrl = canvas.toDataURL('image/jpeg', 0.9);
+
+  setTimeout(()=>{
+    stopMomentCamera();
+    document.getElementById('momentCaptureOverlay').classList.add('hidden');
+    document.getElementById('momentCountdown').classList.add('hidden');
+    momentCountdownStarted = false;
+    uploadMyMomentCapture();
+  }, 650);
+}
+
+function uploadMyMomentCapture(){
+  if(!momentSessionId || !fbAuth.currentUser) return;
+  const myUid = fbAuth.currentUser.uid;
+
+  const finishLocal = (url)=>{
+    fbDb.ref('momentSessions/' + momentSessionId + '/captures/' + myUid).set({ url, ts: Date.now() });
+    fbDb.ref('momentSessions/' + momentSessionId + '/participants/' + myUid + '/status').set('captured');
+    if(momentIsHost){
+      watchAllCapturesForCollage();
+    }
+  };
+
+  if(fbStorage){
+    fetch(momentCapturedDataUrl).then(r=>r.blob()).then(blob=>{
+      const path = 'momentCaptures/' + momentSessionId + '/' + myUid + '.jpg';
+      return fbStorage.ref().child(path).put(blob);
+    }).then(snap => snap.ref.getDownloadURL()).then(finishLocal).catch(()=>{
+      // Storage başarısız olursa base64'ü doğrudan DB'ye yazarak akışı kesmeyelim
+      finishLocal(momentCapturedDataUrl);
+    });
+  } else {
+    finishLocal(momentCapturedDataUrl);
+  }
+
+  // Katılımcı (host olmayan) için: kendi çekimini yaptıktan sonra host'un
+  // collage'ı yayınlamasını bekleyen bir bekleme ekranı göster.
+  if(!momentIsHost){
+    showMomentParticipantWaitingForHost();
+  }
+}
+
+function showMomentParticipantWaitingForHost(){
+  document.getElementById('momentWaitOverlay').classList.remove('hidden');
+  document.getElementById('momentWaitHeading').textContent = 'Anın birleştiriliyor...';
+  document.getElementById('momentWaitSub').textContent = 'Herkesin karesi toplandıktan sonra anı otomatik olarak akışına düşecek.';
+  document.getElementById('momentReadyBtn').style.display = 'none';
+}
+
+/* ---------- 4) HOST: TÜM ÇEKİMLER TOPLANINCA COLLAGE ÖNİZLEMESİ ---------- */
+function watchAllCapturesForCollage(){
+  fbDb.ref('momentSessions/' + momentSessionId).once('value').then((snap)=>{
+    const session = snap.val();
+    if(!session) return;
+    const participantUids = Object.keys(session.participants || {}).filter(uid => session.participants[uid].status !== 'left');
+    const captureListener = fbDb.ref('momentSessions/' + momentSessionId + '/captures');
+    captureListener.on('value', (csnap)=>{
+      const captures = csnap.val() || {};
+      const allIn = participantUids.every(uid => captures[uid]);
+      if(allIn){
+        captureListener.off();
+        openMomentPreview(session, captures);
+      }
+    });
+  });
+}
+
+function openMomentPreview(session, captures){
+  document.getElementById('momentWaitOverlay').classList.add('hidden');
+  document.getElementById('momentPreviewOverlay').classList.remove('hidden');
+  document.getElementById('momentCaptionInput').value = session.challenge ? session.challenge + ' — ' : '';
+
+  const uids = Object.keys(captures);
+  const urls = uids.map(uid => captures[uid].url);
+  document.getElementById('momentPublishBtn').disabled = true;
+  drawMomentCollage(urls).then(()=>{
+    document.getElementById('momentPublishBtn').disabled = false;
+  });
+
+  momentSessionPendingParticipants = uids.map(uid => ({
+    uid,
+    username: (session.participants[uid]||{}).username || '@kullanici',
+    photo: (session.participants[uid]||{}).photo || ''
+  }));
+  momentSessionPendingMode = session.mode;
+}
+let momentSessionPendingParticipants = [];
+let momentSessionPendingMode = 'photo';
+
+function drawMomentCollage(urls){
+  const canvas = document.getElementById('momentCollageCanvas');
+  const ctx = canvas.getContext('2d');
+  const SIZE = 800;
+  canvas.width = SIZE; canvas.height = SIZE;
+  ctx.fillStyle = '#000'; ctx.fillRect(0,0,SIZE,SIZE);
+
+  const loadImg = (src)=> new Promise((resolve)=>{
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = ()=>resolve(img);
+    img.onerror = ()=>resolve(null);
+    img.src = src;
+  });
+
+  return Promise.all(urls.map(loadImg)).then((imgs)=>{
+    imgs = imgs.filter(Boolean);
+    const n = imgs.length || 1;
+    let layout;
+    if(n === 1) layout = [[0,0,SIZE,SIZE]];
+    else if(n === 2) layout = [[0,0,SIZE/2,SIZE],[SIZE/2,0,SIZE/2,SIZE]];
+    else if(n === 3) layout = [[0,0,SIZE,SIZE/2],[0,SIZE/2,SIZE/2,SIZE/2],[SIZE/2,SIZE/2,SIZE/2,SIZE/2]];
+    else if(n === 4) layout = [[0,0,SIZE/2,SIZE/2],[SIZE/2,0,SIZE/2,SIZE/2],[0,SIZE/2,SIZE/2,SIZE/2],[SIZE/2,SIZE/2,SIZE/2,SIZE/2]];
+    else {
+      // 5-6 kişi: 3x2 grid
+      const cols = 3, rows = Math.ceil(n/cols);
+      const cw = SIZE/cols, ch = SIZE/rows;
+      layout = imgs.map((_,i)=>[(i%cols)*cw, Math.floor(i/cols)*ch, cw, ch]);
+    }
+    imgs.forEach((img, i)=>{
+      if(!layout[i]) return;
+      const [x,y,w,h] = layout[i];
+      // Kareyi (cover) doldur
+      const ratio = Math.max(w/img.width, h/img.height);
+      const dw = img.width*ratio, dh = img.height*ratio;
+      const dx = x + (w-dw)/2, dy = y + (h-dh)/2;
+      ctx.save();
+      ctx.beginPath(); ctx.rect(x,y,w,h); ctx.clip();
+      ctx.drawImage(img, dx, dy, dw, dh);
+      ctx.restore();
+      ctx.strokeStyle = 'rgba(255,255,255,.15)'; ctx.lineWidth = 3;
+      ctx.strokeRect(x,y,w,h);
+    });
+  });
+}
+
+function retakeMoment(){
+  if(!momentSessionId || !momentIsHost) return;
+  // Tüm çekimleri sıfırlayıp tekrar countdown başlat
+  fbDb.ref('momentSessions/' + momentSessionId + '/captures').remove().then(()=>{
+    return fbDb.ref('momentSessions/' + momentSessionId + '/participants').once('value');
+  }).then((snap)=>{
+    const participants = snap.val() || {};
+    const resetUpdates = {};
+    Object.keys(participants).forEach(uid => {
+      if(participants[uid].status !== 'left') resetUpdates[uid + '/status'] = 'ready';
+    });
+    return fbDb.ref('momentSessions/' + momentSessionId + '/participants').update(resetUpdates);
+  }).then(()=>{
+    momentCapturedDataUrl = null;
+    document.getElementById('momentPreviewOverlay').classList.add('hidden');
+    return fbDb.ref('momentSessions/' + momentSessionId).update({ state: 'countdown', countdownStartAt: Date.now() + 1200 });
+  });
+}
+
+function publishMoment(){
+  if(!momentSessionId || !fbAuth.currentUser) return;
+  const btn = document.getElementById('momentPublishBtn');
+  btn.disabled = true; btn.textContent = 'Yayınlanıyor...';
+
+  const canvas = document.getElementById('momentCollageCanvas');
+  const myUid = fbAuth.currentUser.uid;
+  const caption = (document.getElementById('momentCaptionInput').value || '').trim() || 'Arkadaşlarla unutulmaz an! 🎉';
+
+  const finishPublish = (collageUrl)=>{
+    const postRef = fbDb.ref('posts').push();
+    const postId = postRef.key;
+    const postData = {
+      uid: myUid,
+      username: savedUsername || '@kullanici',
+      authorPhoto: savedProfilePhoto || 'https://i.pravatar.cc/60?img=68',
+      media: [collageUrl],
+      mediaType: 'image',
+      caption: caption,
+      ts: firebase.database.ServerValue.TIMESTAMP,
+      isMoment: true,
+      momentParticipants: momentSessionPendingParticipants,
+      momentChallenge: momentSessionPendingChallenge || ''
+    };
+    const storyRef = fbDb.ref('stories').push();
+    const expiresAt = Date.now() + 24*60*60*1000;
+
+    const sharedWrites = {};
+    momentSessionPendingParticipants.forEach(p => { sharedWrites[p.uid] = true; });
+
+    Promise.all([
+      postRef.set(postData),
+      storyRef.set({
+        postId: postId,
+        mediaUrl: collageUrl,
+        uid: myUid,
+        username: savedUsername || '@kullanici',
+        photo: savedProfilePhoto || '',
+        createdAt: firebase.database.ServerValue.TIMESTAMP,
+        expiresAt: expiresAt,
+        isMoment: true
+      }),
+      fbDb.ref('users/' + myUid + '/postsCount').transaction(n => (n||0)+1),
+      fbDb.ref('momentSessions/' + momentSessionId).update({ state: 'done', publishedPostId: postId }),
+      // Tüm katılımcıların "Ortak Anılarım" kalıcı albümüne de eklenir
+      ...momentSessionPendingParticipants.map(p =>
+        fbDb.ref('users/' + p.uid + '/sharedMoments/' + postId).set(true)
+      )
+    ]).then(()=>{
+      btn.disabled = false; btn.textContent = 'Yayınla 🚀';
+      closeAllMomentOverlays();
+      showToast('Anın yayınlandı 🎉');
+      goNav('feed', document.getElementById('navFeed'));
+    }).catch((err)=>{
+      btn.disabled = false; btn.textContent = 'Yayınla 🚀';
+      showToast('Yayınlanamadı: ' + (err && err.message ? err.message : 'bilinmeyen hata'));
+    });
+  };
+
+  if(fbStorage){
+    canvas.toBlob((blob)=>{
+      if(!blob){ finishPublish(canvas.toDataURL('image/jpeg',0.85)); return; }
+      const path = 'momentCollages/' + momentSessionId + '.jpg';
+      fbStorage.ref().child(path).put(blob).then(snap=>snap.ref.getDownloadURL()).then(finishPublish).catch(()=>{
+        finishPublish(canvas.toDataURL('image/jpeg',0.85));
+      });
+    }, 'image/jpeg', 0.85);
+  } else {
+    finishPublish(canvas.toDataURL('image/jpeg',0.85));
+  }
+}
+
+/* ---------- 5) FEED ÜSTÜ HİKAYE ŞERİDİ — aktif/yakın zamanda biten anılar ---------- */
+function initMomentStripListener(){
+  if(!requireFirebase() || !fbAuth.currentUser) return;
+  const myUid = fbAuth.currentUser.uid;
+  if(momentStripListenerRef) momentStripListenerRef.off();
+  // Son 24 saatteki hikayeleri çek
+  momentStripListenerRef = fbDb.ref('stories').orderByChild('createdAt').limitToLast(30);
+  momentStripListenerRef.on('value', (snap)=>{
+    const data = snap.val() || {};
+    const now = Date.now();
+    const items = Object.keys(data).map(id=>({id, ...data[id]})).filter(s => s.expiresAt && s.expiresAt > now);
+    items.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+    const container = document.getElementById('momentStripItems');
+    if(!container) return;
+    if(!items.length){ container.innerHTML = ''; return; }
+    container.innerHTML = items.map(s => `
+      <div class="momentStripItem" onclick="scrollToPost('${s.postId}')">
+        <div class="momentStripAvatarRing"><img src="${s.photo || 'https://i.pravatar.cc/60?img=68'}"></div>
+        <span class="momentStripLabel">${s.username || '@kullanici'}</span>
+      </div>
+    `).join('');
+  });
+
+  // Kendime gelen davetleri dinle (toast olarak göster) — sadece bir kez bağla
+  if(!window.__momentInviteListenerBound){
+    window.__momentInviteListenerBound = true;
+    listenForMyMomentInvites(myUid);
+  }
+}
+
+function listenForMyMomentInvites(myUid){
+  fbDb.ref('momentInvites/' + myUid).on('child_added', (snap)=>{
+    const invite = snap.val();
+    if(!invite || !invite.sessionId) return;
+    // 30 saniyeden eski davetleri (sayfa yeniden açıldığında) toast'lama
+    if(Date.now() - (invite.ts||0) > 30000) return;
+    showMomentInviteToast(invite);
+  });
+}
+
+function showMomentInviteToast(invite){
+  const toast = document.getElementById('momentInviteToast');
+  toast.innerHTML = `
+    <img src="${invite.fromPhoto || 'https://i.pravatar.cc/60?img=68'}">
+    <div class="txt"><b>${invite.fromUsername || 'Birisi'}</b> seni Anı Yakala'ya davet etti</div>
+    <button onclick="acceptMomentInvite('${invite.sessionId}')">Katıl</button>
+  `;
+  toast.classList.add('show');
+  setTimeout(()=> toast.classList.remove('show'), 8000);
+}
+function acceptMomentInvite(sessionId){
+  document.getElementById('momentInviteToast').classList.remove('show');
+  momentIsHost = false;
+  momentCountdownStarted = false;
+  fbDb.ref('momentSessions/' + sessionId + '/participants/' + fbAuth.currentUser.uid + '/status').set('invited');
+  openMomentWaitScreen(sessionId);
+}
+
 function bootApp(){
   initTheme();
   try{
