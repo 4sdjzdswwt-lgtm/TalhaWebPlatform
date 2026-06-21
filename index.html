@@ -12,11 +12,17 @@
   --accent:#34d399; --accent-dim:#1f6b50; --warn:#f2b33d; --danger:#f25c5c;
   --text:#f3f4f2; --muted:#8b9296; --bubble-me:#1f6b50;
 }
+body.light-mode{
+  --bg:#f5f6f4; --surface:#ffffff; --surface-2:#eef0ee; --line:#dfe2de;
+  --accent:#1f9d6b; --accent-dim:#bfe9d7; --warn:#b9790a; --danger:#d23c3c;
+  --text:#14171a; --muted:#6b7278; --bubble-me:#1f9d6b;
+}
 html,body{height:100%;overflow:hidden;}
 html,body{scroll-behavior:smooth;}
 *{-webkit-overflow-scrolling:touch;}
 *{box-sizing:border-box;}
-body{margin:0;background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;}
+body{margin:0;background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;transition:background-color .3s ease, color .3s ease;}
+*{transition:background-color .25s ease, border-color .25s ease, color .25s ease;}
 .btn{padding:13px;border-radius:10px;border:none;font-size:14px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;}
 .btn-primary{background:var(--accent);color:#06140d;}
 .btn-primary:disabled{opacity:.35;cursor:not-allowed;}
@@ -63,6 +69,7 @@ input:focus{border-color:var(--accent);}
 .island button svg{width:20px;height:20px;}
 .island button.active{color:var(--accent);background:rgba(52,211,153,.16);transform:scale(1.05);}
 .island button.pulse{animation:islandPulse .32s ease;}
+.island.chat-fullscreen-hide{display:none;}
 @keyframes islandPulse{0%{transform:scale(1.05);}45%{transform:scale(1.28);}100%{transform:scale(1.05);}}
 
 /* BIO / PROFİL EKRANI */
@@ -242,6 +249,20 @@ input[type=file]{display:none;}
 .comment-send-btn svg{width:15px;height:15px;}
 .comment-send-btn:active{transform:scale(.92);}
 
+.emoji-row{display:flex;gap:8px;padding:0 18px 8px;}
+.emoji-row button{
+  background:var(--surface-2);border:1px solid var(--line);border-radius:50%;
+  width:32px;height:32px;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:transform .12s ease, background .12s ease;
+}
+.emoji-row button:active{transform:scale(1.2);background:var(--accent-dim);}
+
+.share-option{
+  background:var(--surface-2);border:1px solid var(--line);color:var(--text);
+  padding:13px 16px;border-radius:11px;font-size:13.5px;text-align:left;cursor:pointer;font-family:'Inter',sans-serif;
+}
+.share-option:active{background:var(--accent-dim);}
+
 .post-actions{display:none;}
 
 .overlay{position:fixed;inset:0;background:rgba(8,9,10,.86);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;z-index:50;padding:18px;}
@@ -291,6 +312,50 @@ input[type=file]{display:none;}
 .msg-media img,.msg-media video{width:220px;display:block;}
 .composer{padding:13px 16px;border-top:1px solid var(--line);display:flex;align-items:center;gap:9px;}
 .icon-btn{width:36px;height:36px;border-radius:50%;background:var(--surface-2);display:flex;align-items:center;justify-content:center;color:var(--muted);border:none;cursor:pointer;flex-shrink:0;}
+.bio-header{
+  display:grid;grid-template-columns:1fr auto 1fr;align-items:center;
+  padding:14px 18px;border-bottom:1px solid var(--line);
+}
+.bio-header-left{justify-self:start;font-family:'Space Grotesk',sans-serif;font-size:17px;margin:0;}
+.bio-header-center{justify-self:center;display:flex;align-items:center;}
+.bio-header-logo-img{max-height:26px;max-width:90px;object-fit:contain;}
+.bio-header-logo-fallback{display:none;font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;color:var(--text);}
+.bio-header-right{justify-self:end;}
+
+/* SAĞDAN AÇILAN YAN MENÜ (DRAWER) */
+.drawer-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:110;}
+.drawer-overlay.hidden{display:none;}
+.side-drawer{
+  position:fixed;top:0;right:0;bottom:0;width:78%;max-width:300px;
+  background:var(--surface);border-left:1px solid var(--line);
+  z-index:120;transform:translateX(100%);transition:transform .32s ease;
+  padding:24px 18px;display:flex;flex-direction:column;gap:8px;
+}
+.side-drawer.open{transform:translateX(0);}
+.drawer-title{font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:600;margin-bottom:10px;}
+.drawer-theme-row{
+  display:flex;align-items:center;justify-content:space-between;
+  background:var(--surface-2);border:1px solid var(--line);border-radius:12px;
+  padding:13px 14px;font-size:13.5px;margin-bottom:14px;
+}
+.drawer-btn{
+  background:var(--surface-2);border:1px solid var(--line);color:var(--text);
+  padding:13px 14px;border-radius:11px;font-size:13.5px;text-align:left;cursor:pointer;font-family:'Inter',sans-serif;
+}
+.drawer-btn.danger{color:var(--danger);}
+
+/* Tema değiştirme anahtarı (switch) */
+.switch{position:relative;display:inline-block;width:42px;height:24px;flex-shrink:0;}
+.switch input{opacity:0;width:0;height:0;}
+.switch-slider{
+  position:absolute;cursor:pointer;inset:0;background:var(--line);border-radius:24px;transition:background .25s;
+}
+.switch-slider:before{
+  position:absolute;content:"";height:18px;width:18px;left:3px;bottom:3px;
+  background:#fff;border-radius:50%;transition:transform .25s;
+}
+.switch input:checked + .switch-slider{background:var(--accent);}
+.switch input:checked + .switch-slider:before{transform:translateX(18px);}
 .icon-btn:hover{color:var(--accent);}
 .composer input[type=text]{flex:1;border-radius:20px;}
 .send{width:38px;height:38px;border-radius:50%;background:var(--accent);border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;}
@@ -513,6 +578,7 @@ tbody tr:hover{background:var(--surface-2);}
               Beğen
             </div>
             <div class="icon-act" onclick="toggleCommentBox(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.4 8.4 0 01-1.1 4.2L21 21l-5.4-1a8.5 8.5 0 11-.6-.4z"/></svg>Yorum</div>
+            <div class="icon-act" onclick="openShareSheet(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>Paylaş</div>
             <div class="spacer"></div>
             <div class="icon-act" onclick="toggleSave(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h12v18l-6-4-6 4V3z"/></svg>Kaydet</div>
           </div>
@@ -520,6 +586,12 @@ tbody tr:hover{background:var(--surface-2);}
           <div class="caption"><b>user_sanan</b>Bugün harika bir gündü ☀️</div>
           <div class="commentsList"></div>
           <div class="view-comments"><span class="commentCount">4</span> yorumun tümünü gör</div>
+          <div class="emoji-row">
+            <button onclick="quickEmoji(this, '❤️')">❤️</button>
+            <button onclick="quickEmoji(this, '😂')">😂</button>
+            <button onclick="quickEmoji(this, '🔥')">🔥</button>
+            <button onclick="quickEmoji(this, '🙌')">🙌</button>
+          </div>
           <div class="comment-compose">
             <input type="text" placeholder="Yorum yaz..." onkeydown="if(event.key==='Enter') submitComment(this)">
             <button class="comment-send-btn" onclick="submitComment(this.previousElementSibling)" title="Gönder">
@@ -544,6 +616,7 @@ tbody tr:hover{background:var(--surface-2);}
               Beğen
             </div>
             <div class="icon-act" onclick="toggleCommentBox(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.4 8.4 0 01-1.1 4.2L21 21l-5.4-1a8.5 8.5 0 11-.6-.4z"/></svg>Yorum</div>
+            <div class="icon-act" onclick="openShareSheet(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>Paylaş</div>
             <div class="spacer"></div>
             <div class="icon-act" onclick="toggleSave(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h12v18l-6-4-6 4V3z"/></svg>Kaydet</div>
           </div>
@@ -551,6 +624,12 @@ tbody tr:hover{background:var(--surface-2);}
           <div class="caption"><b>user_sanan</b>Yeni video 🎬</div>
           <div class="commentsList"></div>
           <div class="view-comments"><span class="commentCount">1</span> yorumun tümünü gör</div>
+          <div class="emoji-row">
+            <button onclick="quickEmoji(this, '❤️')">❤️</button>
+            <button onclick="quickEmoji(this, '😂')">😂</button>
+            <button onclick="quickEmoji(this, '🔥')">🔥</button>
+            <button onclick="quickEmoji(this, '🙌')">🙌</button>
+          </div>
           <div class="comment-compose">
             <input type="text" placeholder="Yorum yaz..." onkeydown="if(event.key==='Enter') submitComment(this)">
             <button class="comment-send-btn" onclick="submitComment(this.previousElementSibling)" title="Gönder">
@@ -567,7 +646,11 @@ tbody tr:hover{background:var(--surface-2);}
     <div class="screen" id="screenMessages">
       <div class="dmWrap" id="dmWrap">
         <div class="list">
-          <div class="list-head"><h1>Mesajlar</h1>
+          <div class="list-head" style="display:flex;align-items:center;gap:10px;">
+            <button class="back-btn" style="display:inline-flex;" onclick="exitChatToFeed()" title="Ana Akışa Dön">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 19l-7-7 7-7"/></svg>
+            </button>
+            <h1 style="margin:0;">Mesajlar</h1>
             <div class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg> Kullanıcı ara</div>
           </div>
           <div class="list-body">
@@ -588,7 +671,9 @@ tbody tr:hover{background:var(--surface-2);}
             <div class="msg them">Tamam, anlaştık o zaman 👍 <span class="time">10:08</span></div>
           </div>
           <div class="composer">
-            <button class="icon-btn" onclick="document.getElementById('dmFile').click()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M21 16l-5-4-4 3-3-2-5 4"/></svg></button>
+            <button class="icon-btn" onclick="document.getElementById('dmFile').click()" title="Fotoğraf / Galeri">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 011 1v10a1 1 0 01-1 1H4a1 1 0 01-1-1V9a1 1 0 011-1z"/><circle cx="12" cy="13" r="3.5"/></svg>
+            </button>
             <input type="file" id="dmFile" accept="image/*,video/*" onchange="sendMedia(event)">
             <input type="text" id="msgInput" placeholder="Mesaj yaz..." onkeydown="if(event.key==='Enter') sendMsg()">
             <button class="send" onclick="sendMsg()"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 11l18-8-8 18-2-8-8-2z"/></svg></button>
@@ -658,16 +743,34 @@ tbody tr:hover{background:var(--surface-2);}
 
     <!-- ================= EKRAN 5: BIO / PROFİL ================= -->
     <div class="screen" id="screenProfile">
-      <div class="topbar screen-header" style="position:relative;">
-        <h1>Bio</h1>
-        <button class="icon-btn" style="margin-left:auto;" onclick="toggleProfileMenu()" title="Menü">
+      <div class="bio-header screen-header">
+        <h1 class="bio-header-left">Bio</h1>
+        <div class="bio-header-center">
+          <img src="NeXT.PNG" alt="NeXT" class="bio-header-logo-img" onerror="this.style.display='none';this.nextElementSibling.style.display='block';">
+          <span class="bio-header-logo-fallback">NeXT</span>
+        </div>
+        <button class="icon-btn bio-header-right" onclick="openDrawer()" title="Menü">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
         </button>
-        <div id="profileMenu" class="hidden" style="position:absolute;top:54px;right:14px;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.4);overflow:hidden;z-index:30;min-width:180px;">
-          <button style="display:block;width:100%;text-align:left;padding:12px 16px;background:none;border:none;color:var(--text);font-size:13px;cursor:pointer;font-family:'Inter',sans-serif;" onclick="toggleProfileMenu();goToRegisterScreen()">Kayıt Ekranını Yeniden Aç</button>
-          <button style="display:block;width:100%;text-align:left;padding:12px 16px;background:none;border:none;color:var(--danger);font-size:13px;cursor:pointer;font-family:'Inter',sans-serif;border-top:1px solid var(--line);" onclick="toggleProfileMenu();logoutAccount()">Çıkış Yap</button>
-        </div>
       </div>
+
+      <!-- SAĞDAN AÇILAN YAN MENÜ (DRAWER) -->
+      <div class="drawer-overlay hidden" id="drawerOverlay" onclick="closeDrawer()"></div>
+      <div class="side-drawer" id="sideDrawer">
+        <div class="drawer-title">Menü</div>
+
+        <div class="drawer-theme-row">
+          <span>🌙 Karanlık Mod</span>
+          <label class="switch">
+            <input type="checkbox" id="themeToggle" onchange="toggleTheme()">
+            <span class="switch-slider"></span>
+          </label>
+        </div>
+
+        <button class="drawer-btn" onclick="closeDrawer();goToRegisterScreen()">Kayıt Ekranını Yeniden Aç</button>
+        <button class="drawer-btn danger" onclick="closeDrawer();logoutAccount()">Çıkış Yap</button>
+      </div>
+
       <div class="screen-body">
       <div class="profileWrap">
         <img class="avatarBig" id="profileAvatar" src="https://i.pravatar.cc/120?img=68">
@@ -743,6 +846,22 @@ tbody tr:hover{background:var(--surface-2);}
   </div><!-- /main -->
 </div><!-- /appShell -->
 
+<!-- PAYLAŞIM PENCERESİ (Share Sheet) -->
+<div class="overlay hidden" id="shareSheet" onclick="if(event.target===this) closeShareSheet()">
+  <div class="contract-card" style="max-width:380px;">
+    <div class="contract-head">
+      <div class="eyebrow">Paylaş</div>
+      <h2>Gönderiyi Paylaş</h2>
+    </div>
+    <div style="padding:0 18px 18px;display:flex;flex-direction:column;gap:8px;">
+      <button class="share-option" onclick="shareAction('Bağlantı kopyalandı ✅')">🔗 Bağlantıyı Kopyala</button>
+      <button class="share-option" onclick="shareAction('Mesaj olarak paylaşıldı ✅')">💬 Mesajla Paylaş</button>
+      <button class="share-option" onclick="shareAction('Hikayene eklendi ✅')">⭐ Hikayene Ekle</button>
+      <button class="share-option" onclick="closeShareSheet()" style="color:var(--muted);">Vazgeç</button>
+    </div>
+  </div>
+</div>
+
 <!-- ALTTAN ÇIKAN SİSTEM MESAJI (TOAST) -->
 <div class="toast" id="toast"></div>
 
@@ -773,7 +892,7 @@ tbody tr:hover{background:var(--surface-2);}
       <p>Devam etmeden önce site kurallarını anlatan kısa videoyu izlemen gerekiyor.</p>
     </div>
     <div class="video-wrap">
-      <video id="contractVideo" poster="https://images.unsplash.com/photo-1551836022-d5d88e9218df?w=700&q=60" autoplay muted playsinline preload="auto">
+      <video id="contractVideo" poster="https://images.unsplash.com/photo-1551836022-d5d88e9218df?w=700&q=60" playsinline preload="auto">
         <source src="Onay_videosu.mp4" type="video/mp4">
       </video>
       <div class="playbtn hidden" id="playBtn" onclick="playVideo()"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="11" fill="rgba(0,0,0,.35)"/><path d="M10 8l6 4-6 4V8z" fill="#fff"/></svg></div>
@@ -1136,13 +1255,24 @@ function agreeToContract(){
   document.getElementById('contractVideoStage').classList.remove('hidden');
   const video = document.getElementById('contractVideo');
   const playBtn = document.getElementById('playBtn');
-  const playPromise = video.play();
-  if(playPromise && playPromise.catch){
-    playPromise.catch(()=>{
-      // Tarayıcı otomatik oynatmaya izin vermediyse oynat butonunu göster
+
+  // Bu fonksiyon kullanıcının "Okudum, Kabul Ediyorum" tıklamasıyla (gerçek bir
+  // kullanıcı etkileşimi) tetiklendiği için tarayıcılar genelde SESLİ otomatik
+  // oynatmaya izin verir. Önce sesli deneriz; bazı tarayıcılar yine de
+  // engellerse sessize alıp otomatik oynatmaya devam ederiz; o da olmazsa
+  // oynat butonunu gösteririz.
+  video.muted = false;
+  video.currentTime = 0;
+  video.load(); // asenkron yüklenmeyi en baştan, gecikmeden başlat
+
+  const tryPlay = () => video.play();
+
+  tryPlay().catch(()=>{
+    video.muted = true;
+    tryPlay().catch(()=>{
       playBtn.classList.remove('hidden');
     });
-  }
+  });
 }
 
 /* ===== UYGULAMAYA GİRİŞ (sözleşme videosu bittikten sonra) ===== */
@@ -1219,16 +1349,33 @@ function loginReturning(){
   saveSession();
 }
 
-function toggleProfileMenu(){
-  document.getElementById('profileMenu').classList.toggle('hidden');
+/* ===== SAĞDAN AÇILAN YAN MENÜ (DRAWER) ===== */
+function openDrawer(){
+  document.getElementById('sideDrawer').classList.add('open');
+  document.getElementById('drawerOverlay').classList.remove('hidden');
 }
-document.addEventListener('click', (e)=>{
-  const menu = document.getElementById('profileMenu');
-  if(!menu || menu.classList.contains('hidden')) return;
-  if(!menu.contains(e.target) && !e.target.closest('[onclick="toggleProfileMenu()"]')){
-    menu.classList.add('hidden');
-  }
-});
+function closeDrawer(){
+  document.getElementById('sideDrawer').classList.remove('open');
+  document.getElementById('drawerOverlay').classList.add('hidden');
+}
+
+/* ===== KARANLIK / AYDINLIK MOD ===== */
+function applyTheme(mode){
+  const isLight = mode === 'light';
+  document.body.classList.toggle('light-mode', isLight);
+  const toggle = document.getElementById('themeToggle');
+  if(toggle) toggle.checked = !isLight; // anahtar "Karanlık Mod" açık = checked
+  try{ localStorage.setItem('next_theme', mode); }catch(e){}
+}
+function toggleTheme(){
+  const wantsDark = document.getElementById('themeToggle').checked;
+  applyTheme(wantsDark ? 'dark' : 'light');
+}
+function initTheme(){
+  let mode = 'dark';
+  try{ mode = localStorage.getItem('next_theme') || 'dark'; }catch(e){}
+  applyTheme(mode);
+}
 
 function saveBio(){
   const btn = event.target;
@@ -1286,6 +1433,19 @@ function goNav(name, btnEl){
   btnEl.classList.add('active');
   btnEl.classList.add('pulse');
   setTimeout(()=>btnEl.classList.remove('pulse'), 320);
+
+  // Chat (Mesajlar) tam ekran açılsın: alt ada navigasyonu gizlenir,
+  // başka bir sekmeye geçince otomatik geri gelir.
+  const island = document.getElementById('island');
+  if(name === 'messages'){
+    island.classList.add('chat-fullscreen-hide');
+  } else {
+    island.classList.remove('chat-fullscreen-hide');
+  }
+}
+
+function exitChatToFeed(){
+  goNav('feed', document.getElementById('navFeed'));
 }
 
 function showScreen(name){
@@ -1302,6 +1462,16 @@ const continueBtn = document.getElementById('continueBtn');
 let demoSeconds = 0; const demoDuration = 6; let demoTimer = null;
 function playVideo(){
   playBtn.style.display = 'none';
+  // Önce gerçek videoyu (kullanıcı tıklamasıyla, bu kesin izinlidir) oynatmayı dene.
+  const realPlay = cVideo.play();
+  if(realPlay && realPlay.then){
+    realPlay.then(()=>{ /* gerçek video oynuyor, timeupdate ilerlemeyi takip edecek */ })
+      .catch(()=>{ startDemoSimulation(); });
+  } else {
+    startDemoSimulation();
+  }
+}
+function startDemoSimulation(){
   if(demoTimer) return;
   demoTimer = setInterval(()=>{
     demoSeconds += 0.2;
@@ -1352,6 +1522,24 @@ function toggleSave(el){
     savedPosts = savedPosts.filter(p=>p.id!==id);
   }
   renderSavedGrid();
+}
+
+function quickEmoji(btn, emoji){
+  const post = btn.closest('.post');
+  const input = post.querySelector('.comment-compose input');
+  input.value += emoji;
+  input.focus();
+}
+
+function openShareSheet(el){
+  document.getElementById('shareSheet').classList.remove('hidden');
+}
+function closeShareSheet(){
+  document.getElementById('shareSheet').classList.add('hidden');
+}
+function shareAction(message){
+  closeShareSheet();
+  showToast(message);
 }
 
 function toggleCommentBox(el){
@@ -1441,6 +1629,7 @@ function filterMembers(){
 
 /* Sayfa her açıldığında: önce NeXT logosu kısa süre görünür, sonra oturum kontrolü yapılıp doğru ekran gösterilir */
 function bootApp(){
+  initTheme();
   try{
     initAuthState();
   }catch(err){
