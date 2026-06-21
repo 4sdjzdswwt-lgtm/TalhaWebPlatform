@@ -2,121 +2,135 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Talha Web Platform - Giriş</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="style.css">
+    
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
 </head>
 <body>
-    <div class="login-container">
-        <div class="login-box">
-            <h1>talhaweb</h1>
-            <h2>Giriş Yap</h2>
-            <form id="login-form">
-                <div class="input-group">
-                    <input type="email" id="login-email" placeholder="E-posta Adresi" required>
-                </div>
-                <div class="input-group">
-                    <input type="password" id="login-password" placeholder="Şifre" required>
-                </div>
-                <button type="submit" class="login-btn" id="login-btn">Giriş Yap</button>
-                <button type="button" class="create-account-btn" id="register-btn">Yeni Hesap Oluştur</button>
-                
-                <button type="button" id="google-btn" style="background-color: #ffffff; color: #757575; border: 1px solid #ddd; margin-top: 12px; display: flex; align-items: center; justify-content: center; gap: 10px;" class="login-btn">
-                    <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="Google Logo" width="18" height="18">
-                    Google ile Giriş Yap
-                </button>
-            </form>
+
+    <div class="video-bg-layer" id="videoBgLayer"></div>
+    <div class="gif-bg-layer" id="gifBgLayer"></div>
+    <div class="color-bg-overlay" id="colorBgOverlay"></div>
+
+    <div class="top-control-bar">
+        <button id="langToggleBtn" onclick="toggleLanguage()">EN</button>
+        <button id="themeToggleBtn" onclick="nextTheme()"><i class="fa-solid fa-palette"></i></button>
+    </div>
+
+    <div id="statusMessageBox" class="status-msg-box"></div>
+
+    <div class="lamp-container">
+        <div class="lamp-rope-trigger" onclick="pullLampChain()">
+            <div class="rope-line"></div>
+            <div class="rope-handle"></div>
         </div>
     </div>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    <div class="auth-master-container">
+        
+        <div id="startStep" class="step-card visible">
+            <h1 class="hero-title">talhaweb</h1>
+            <p id="heroDescription" class="hero-subtitle">Hoş geldiniz, geleceğin web sitesine. Lütfen abajuru açtıktan sonra hesabınız yoksa kaydolun varsa giriş yapınız.</p>
+        </div>
 
-        // Firebase Konsolundan aldığımız sizin projenize özel bilgiler
-        const firebaseConfig = {
-            apiKey: "AIzaSyCsGmCLBb0cqpnHrcn66PIHhIr5RSaRSFY",
-            authDomain: "talhaweb-c5e40.firebaseapp.com",
-            projectId: "talhaweb-c5e40",
-            storageBucket: "talhaweb-c5e40.firebasestorage.app",
-            messagingSenderId: "286141336960",
-            appId: "1:286141336960:web:92e80c38865665d6b80565",
-            measurementId: "G-T5147XWHL5"
-        };
+        <div id="loginStep" class="step-card" style="display: none;">
+            <h2 class="step-title">Giriş Yap</h2>
+            <form class="auth-form" onsubmit="return false;">
+                <div class="input-wrapper">
+                    <input type="email" id="loginEmail" placeholder="E-posta Adresi" required>
+                    <i class="fa-solid fa-envelope input-icon"></i>
+                </div>
+                <div class="input-wrapper">
+                    <input type="password" id="loginPassword" placeholder="Şifre" required>
+                    <button type="button" class="toggle-password" onclick="togglePasswordVisibility('loginPassword', this)"><i class="fa-solid fa-eye"></i></button>
+                </div>
+                <button type="button" onclick="handleLogin()" class="btn btn-primary">Giriş Yap</button>
+                
+                <button type="button" onclick="handleGoogleLogin()" class="btn btn-secondary" style="background:#fff; color:#000; margin-top:10px; border: 1px solid #ddd;"><img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" width="16" style="vertical-align:middle; margin-right:8px;"> Google ile Giriş</button>
+                
+                <div class="step-footer-links">
+                    <span onclick="switchStep('registerStep')">Hesabınız yok mu? <b>Kaydolun</b></span>
+                </div>
+            </form>
+        </div>
 
-        // Firebase'i Sistemde Başlatıyoruz
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const provider = new GoogleAuthProvider();
+        <div id="registerStep" class="step-card" style="display: none;">
+            <h2 class="step-title">Hesap Oluştur</h2>
+            <form class="auth-form" onsubmit="return false;">
+                <div class="input-wrapper">
+                    <input type="text" id="regUsername" placeholder="Kullanıcı Adı" required>
+                    <i class="fa-solid fa-user input-icon"></i>
+                </div>
+                <div class="input-wrapper">
+                    <input type="email" id="regEmail" placeholder="E-posta Adresi" required>
+                    <i class="fa-solid fa-envelope input-icon"></i>
+                </div>
+                <div class="input-wrapper">
+                    <input type="password" id="regPassword" placeholder="Şifre (Min 6 Karakter)" required>
+                    <button type="button" class="toggle-password" onclick="togglePasswordVisibility('regPassword', this)"><i class="fa-solid fa-eye"></i></button>
+                </div>
+                <button type="button" onclick="handleRegister()" class="btn btn-secondary">Kayıt Ol</button>
+                
+                <button type="button" onclick="handleGoogleLogin()" class="btn btn-secondary" style="background:#fff; color:#000; margin-top:10px; border: 1px solid #ddd;"><img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" width="16" style="vertical-align:middle; margin-right:8px;"> Google ile Kaydol</button>
+                
+                <div class="step-footer-links">
+                    <span onclick="switchStep('loginStep')">Zaten üye misiniz? <b>Giriş Yapın</b></span>
+                </div>
+            </form>
+        </div>
 
-        const emailInput = document.getElementById('login-email');
-        const passwordInput = document.getElementById('login-password');
-        const loginBtn = document.getElementById('login-btn');
-        const registerBtn = document.getElementById('register-btn');
-        const googleBtn = document.getElementById('google-btn');
+    </div>
 
-        // 1. E-POSTA VE ŞİFRE İLE GİRİŞ YAPMA
-        if(loginBtn) {
-            loginBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                const email = emailInput.value;
-                const password = passwordInput.value;
+    <script src="app.js"></script>
 
-                if(!email || !password) {
-                    alert("Lütfen tüm alanları doldurun!");
-                    return;
+    <script>
+        let isLampOn = false;
+
+        function pullLampChain() {
+            const body = document.body;
+            const startStep = document.getElementById('startStep');
+            const loginStep = document.getElementById('loginStep');
+
+            isLampOn = !isLampOn;
+
+            if (isLampOn) {
+                body.classList.add('light-on');
+                if(startStep && loginStep) {
+                    startStep.style.display = 'none';
+                    loginStep.style.display = 'block';
                 }
-
-                signInWithEmailAndPassword(auth, email, password)
-                    .then((userCredential) => {
-                        alert("Başarıyla giriş yapıldı!");
-                        window.location.href = "feed.html"; // Giriş başarılıysa feed sayfasına yönlendirir
-                    })
-                    .catch((error) => {
-                        alert("Giriş hatası: " + error.message);
-                    });
-            });
+            } else {
+                body.classList.remove('light-on');
+                document.getElementById('registerStep').style.display = 'none';
+                if(startStep && loginStep) {
+                    startStep.style.display = 'block';
+                    loginStep.style.display = 'none';
+                }
+            }
         }
 
-        // 2. E-POSTA VE ŞİFRE İLE KAYIT OLMA (YENİ HESAP)
-        if(registerBtn) {
-            registerBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                const email = emailInput.value;
-                const password = passwordInput.value;
-
-                if(!email || !password) {
-                    alert("Kayıt için e-posta ve şifre girmeniz gerekmektedir!");
-                    return;
-                }
-                if(password.length < 6) {
-                    alert("Güvenliğiniz için şifre en az 6 karakter olmalıdır!");
-                    return;
-                }
-
-                createUserWithEmailAndPassword(auth, email, password)
-                    .then((userCredential) => {
-                        alert("Hesabınız başarıyla oluşturuldu! Şimdi bilgilerinizle Giriş Yap butonuna tıklayarak sisteme girebilirsiniz.");
-                    })
-                    .catch((error) => {
-                        alert("Kayıt olma hatası: " + error.message);
-                    });
-            });
+        function switchStep(stepId) {
+            document.getElementById('loginStep').style.display = 'none';
+            document.getElementById('registerStep').style.display = 'none';
+            document.getElementById(stepId).style.display = 'block';
         }
 
-        // 3. GOOGLE HESABI İLE GİRİŞ YAPMA
-        if(googleBtn) {
-            googleBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                signInWithPopup(auth, provider)
-                    .then((result) => {
-                        alert("Google ile başarıyla oturum açıldı!");
-                        window.location.href = "feed.html";
-                    })
-                    .catch((error) => {
-                        alert("Google bağlantı hatası: " + error.message);
-                    });
-            });
+        function togglePasswordVisibility(inputId, button) {
+            const input = document.getElementById(inputId);
+            const icon = button.querySelector('i');
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.className = 'fa-solid fa-eye-slash';
+            } else {
+                input.type = 'password';
+                icon.className = 'fa-solid fa-eye';
+            }
         }
     </script>
 </body>
