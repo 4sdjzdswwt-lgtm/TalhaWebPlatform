@@ -99,6 +99,35 @@ input:focus{border-color:var(--accent);}
 .gridThumb{aspect-ratio:1/1;border-radius:10px;overflow:hidden;background:var(--surface-2);}
 .gridThumb img{width:100%;height:100%;object-fit:cover;display:block;}
 
+/* ===== ORTAK MODÜL: FOTOĞRAF KIRPMA EKRANI ===== */
+.crop-topbar{
+  flex-shrink:0;display:flex;align-items:center;justify-content:space-between;
+  padding:14px 16px;background:var(--surface);border-bottom:1px solid var(--line);
+}
+.crop-text-btn{background:none;border:none;color:var(--text);font-size:14px;font-weight:500;cursor:pointer;font-family:'Inter',sans-serif;padding:6px 4px;}
+.crop-done{color:var(--accent);font-weight:700;}
+.crop-title{font-family:'Space Grotesk',sans-serif;font-size:14.5px;font-weight:600;color:var(--text);}
+.crop-stage{
+  flex:1;min-height:0;position:relative;overflow:hidden;background:#000;
+  display:flex;align-items:center;justify-content:center;touch-action:none;
+}
+#cropImage{position:absolute;top:50%;left:50%;will-change:transform;user-select:none;-webkit-user-drag:none;}
+.crop-circle-mask{
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  width:280px;height:280px;max-width:78vw;max-height:78vw;border-radius:50%;
+  box-shadow:0 0 0 9999px rgba(0,0,0,.62);
+  border:2px solid rgba(255,255,255,.85);pointer-events:none;
+}
+.crop-controls{flex-shrink:0;background:var(--surface);border-top:1px solid var(--line);padding:14px 20px 22px;}
+.crop-rotate-btn{
+  display:flex;align-items:center;gap:7px;margin:0 auto 16px;background:var(--surface-2);
+  border:1px solid var(--line);color:var(--text);border-radius:20px;padding:9px 16px;font-size:13px;cursor:pointer;font-family:'Inter',sans-serif;
+}
+.crop-rotate-btn svg{width:16px;height:16px;}
+.crop-slider-row{margin-bottom:12px;}
+.crop-slider-row label{display:block;font-size:11.5px;color:var(--muted);margin-bottom:5px;}
+.crop-slider-row input[type=range]{width:100%;accent-color:var(--accent);}
+
 /* ===== REGISTER SCREEN ===== */
 
 .card{width:100%;max-width:460px;background:var(--surface);border:1px solid var(--line);border-radius:18px;overflow:hidden;}
@@ -168,15 +197,25 @@ label{display:block;font-size:12px;color:var(--muted);margin:0 0 6px;font-weight
 .success p{color:var(--muted);font-size:13px;margin:0 0 22px;}
 input[type=file]{display:none;}
 
-/* NeXT LOGO + SEKMELER */
-.auth-logo-wrap{display:flex;flex-direction:column;align-items:center;padding:30px 0 6px;}
-.auth-logo-img{max-width:180px;max-height:90px;object-fit:contain;}
-.auth-logo-fallback{display:none;font-family:'Space Grotesk',sans-serif;font-size:38px;font-weight:700;letter-spacing:-.5px;color:var(--text);}
-.authtabs{display:flex;margin:18px 20px 0;background:var(--surface-2);border-radius:12px;padding:4px;gap:4px;}
-.authtab{flex:1;padding:10px 0;border:none;background:transparent;color:var(--muted);font-size:13px;font-weight:600;border-radius:9px;cursor:pointer;font-family:'Inter',sans-serif;}
-.authtab.active{background:var(--accent);color:#06140d;}
+/* NeXT LOGO + ÜST ADA (sağ/sol köşede tema butonları) */
+.auth-top-bar{
+  display:grid;grid-template-columns:auto 1fr auto;align-items:center;
+  padding:18px 16px 10px;gap:8px;
+}
+.theme-corner-btn{
+  width:38px;height:38px;border-radius:50%;flex-shrink:0;
+  background:var(--surface-2);border:1px solid var(--line);color:var(--muted);
+  display:flex;align-items:center;justify-content:center;cursor:pointer;
+}
+.theme-corner-btn svg{width:18px;height:18px;}
+.theme-corner-btn:active{transform:scale(.92);}
+.auth-logo-wrap{display:flex;flex-direction:column;align-items:center;justify-self:center;}
+.auth-logo-img{max-width:170px;max-height:64px;object-fit:contain;}
+.auth-logo-fallback{display:none;font-family:'Space Grotesk',sans-serif;font-size:30px;font-weight:700;letter-spacing:-.5px;color:var(--text);}
 .authpanel{display:none;}
 .authpanel.active{display:block;animation:screenIn .25s ease both;}
+.auth-switch-link{text-align:center;font-size:12.5px;color:var(--muted);margin-top:16px;cursor:pointer;}
+.auth-switch-link b{color:var(--accent);font-weight:600;}
 
 /* SÖZLEŞME METNİ */
 .contract-text{margin:0 18px 4px;padding:14px 16px;background:var(--surface-2);border:1px solid var(--line);border-radius:12px;font-size:12.5px;line-height:1.6;color:var(--text);max-height:220px;overflow-y:auto;}
@@ -280,13 +319,13 @@ input[type=file]{display:none;}
 .post-actions{display:none;}
 
 .overlay{position:fixed;inset:0;background:rgba(8,9,10,.86);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;z-index:50;padding:18px;}
-.contract-card{width:100%;max-width:420px;background:var(--surface);border:1px solid var(--line);border-radius:18px;overflow:hidden;}
+.contract-card{width:100%;max-width:420px;max-height:94vh;overflow-y:auto;background:var(--surface);border:1px solid var(--line);border-radius:18px;}
 .contract-head{padding:18px 20px 4px;}
 .eyebrow{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent);letter-spacing:.5px;text-transform:uppercase;}
 .contract-head h2{font-family:'Space Grotesk',sans-serif;font-size:18px;margin:6px 0 6px;}
 .contract-head p{font-size:12.5px;color:var(--muted);margin:0 0 14px;line-height:1.5;}
-.video-wrap{position:relative;background:#000;aspect-ratio:16/9;margin:0 18px;border-radius:12px;overflow:hidden;}
-.video-wrap video{width:100%;height:100%;object-fit:cover;display:block;}
+.video-wrap{position:relative;background:#000;aspect-ratio:9/16;max-height:62vh;margin:0 18px;border-radius:12px;overflow:hidden;}
+.video-wrap video{width:100%;height:100%;object-fit:contain;display:block;background:#000;}
 .playbtn{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.25);cursor:pointer;}
 .playbtn svg{width:54px;height:54px;color:#fff;}
 .progress-row{padding:14px 20px 4px;}
@@ -495,14 +534,17 @@ tbody tr:hover{background:var(--surface-2);}
     <div class="screen" id="screenRegister">
       <div id="screenRegisterInner" style="height:100%;overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;align-items:flex-start;justify-content:center;padding:32px 16px;">
       <div class="card">
-        <div class="auth-logo-wrap">
-          <img src="NeXT.PNG" alt="NeXT" class="auth-logo-img" onerror="this.style.display='none';document.getElementById('logoFallback').style.display='block';">
-          <div id="logoFallback" class="auth-logo-fallback">NeXT</div>
-        </div>
-
-        <div class="authtabs">
-          <button class="authtab active" id="tabLogin" onclick="switchAuthTab('login')">Giriş Yap</button>
-          <button class="authtab" id="tabSignup" onclick="switchAuthTab('signup')">Kayıt Ol</button>
+        <div class="auth-top-bar">
+          <button class="theme-corner-btn" onclick="applyTheme('light')" title="Aydınlık Mod">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>
+          </button>
+          <div class="auth-logo-wrap">
+            <img src="NeXT.PNG" alt="NeXT" class="auth-logo-img" onerror="this.style.display='none';document.getElementById('logoFallback').style.display='block';">
+            <div id="logoFallback" class="auth-logo-fallback">NeXT</div>
+          </div>
+          <button class="theme-corner-btn" onclick="applyTheme('dark')" title="Karanlık Mod">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1111.2 3a7 7 0 109.8 9.8z"/></svg>
+          </button>
         </div>
 
         <!-- ===== GİRİŞ YAP ===== -->
@@ -513,6 +555,7 @@ tbody tr:hover{background:var(--surface-2);}
             <div class="field"><label>E-posta</label><input type="email" id="loginEmail" placeholder="ornek@mail.com"></div>
             <div class="field"><label>Şifre</label><input type="password" id="loginPassword" placeholder="••••••••"></div>
             <button class="btn btn-primary" style="width:100%" onclick="loginReturning()">Giriş Yap</button>
+            <div class="auth-switch-link" onclick="switchAuthTab('signup')">Hesabın yok mu? <b>Kayıt Ol</b></div>
           </div>
         </div>
 
@@ -528,6 +571,7 @@ tbody tr:hover{background:var(--surface-2);}
               <div class="field"><label>E-posta</label><input type="email" id="email" placeholder="ornek@mail.com">
                 <div class="err" id="err-email">Geçerli bir e-posta adresi gir.</div></div>
               <button class="btn btn-primary" style="width:100%" onclick="sendCode()">Doğrulama Kodu Gönder</button>
+              <div class="auth-switch-link" onclick="switchAuthTab('login')">Zaten hesabın var mı? <b>Giriş Yap</b></div>
             </div>
 
             <div class="regstep" id="reg2">
@@ -787,6 +831,36 @@ tbody tr:hover{background:var(--surface-2);}
           </div>
         </div>
       </div>
+      </div>
+    </div>
+
+    <!-- ================= ORTAK MODÜL: FOTOĞRAF KIRPMA ================= -->
+    <!-- Hem kayıt akışında (profil fotoğrafı adımı) hem Bio'da "Fotoğrafı Değiştir"
+         dediğinde AYNI ekran açılır. Hangi akıştan açıldığını cropContext
+         ('register' | 'edit') değişkeni tutar. -->
+    <div class="screen" id="screenCrop">
+      <div class="crop-topbar">
+        <button class="crop-text-btn" onclick="cancelCrop()">İptal</button>
+        <span class="crop-title">Fotoğrafı Düzenle</span>
+        <button class="crop-text-btn crop-done" id="cropDoneBtn" onclick="confirmCrop()">Bitti</button>
+      </div>
+      <div class="crop-stage" id="cropStage">
+        <img id="cropImage" draggable="false" alt="">
+        <div class="crop-circle-mask"></div>
+      </div>
+      <div class="crop-controls">
+        <button class="crop-rotate-btn" onclick="rotateCrop()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 1 2.6 6.3M3 12V6m0 6h6"/></svg>
+          Döndür
+        </button>
+        <div class="crop-slider-row">
+          <label>Yakınlaştır</label>
+          <input type="range" id="cropScaleSlider" min="100" max="300" value="100" oninput="onScaleSlider(this.value)">
+        </div>
+        <div class="crop-slider-row">
+          <label>Hizala</label>
+          <input type="range" id="cropAlignSlider" min="-100" max="100" value="0" oninput="onAlignSlider(this.value)">
+        </div>
       </div>
     </div>
 
@@ -1102,8 +1176,6 @@ function goReg(n){
 }
 
 function switchAuthTab(which){
-  document.getElementById('tabLogin').classList.toggle('active', which==='login');
-  document.getElementById('tabSignup').classList.toggle('active', which==='signup');
   document.getElementById('authpanelLogin').classList.toggle('active', which==='login');
   document.getElementById('authpanelSignup').classList.toggle('active', which==='signup');
 }
@@ -1247,6 +1319,159 @@ function validatePhotoFile(file){
 
 /* Fotoğrafı otomatik olarak ortadan kare (1:1) kırpar — profil fotoğrafı
    her zaman düzgün bir kare olsun, sonra CSS bunu yuvarlak gösterir. */
+/* ============================================================
+   ORTAK MODÜL: FOTOĞRAF KIRPMA EKRANI
+   isRegistering (cropContext='register') ve isEditing (cropContext='edit')
+   durumlarının HER İKİSİNDE de aynı ekran, aynı kod kullanılır.
+   ============================================================ */
+let cropContext = null;          // 'register' | 'edit'
+let cropImgNaturalW = 0, cropImgNaturalH = 0;
+let cropOffsetX = 0, cropOffsetY = 0;
+let cropUserScale = 1;           // 1.0 = %100
+let cropRotate = 0;              // derece
+const CROP_FRAME = 280;          // .crop-circle-mask çapı (CSS px) ile aynı
+
+function openCropScreen(dataUrl, context){
+  cropContext = context;
+  cropOffsetX = 0; cropOffsetY = 0; cropUserScale = 1; cropRotate = 0;
+  document.getElementById('cropScaleSlider').value = 100;
+  document.getElementById('cropAlignSlider').value = 0;
+  document.getElementById('cropDoneBtn').textContent = (context === 'register') ? 'İleri' : 'Bitti';
+
+  const img = document.getElementById('cropImage');
+  img.onload = () => {
+    cropImgNaturalW = img.naturalWidth;
+    cropImgNaturalH = img.naturalHeight;
+    renderCropTransform();
+  };
+  img.src = dataUrl;
+
+  // Hem kayıt hem profil düzenleme akışında: bu ekran açıkken
+  // Yüzen Ada NAVİGASYONU kesinlikle görünmez.
+  document.getElementById('island').classList.add('chat-fullscreen-hide');
+  showScreen('crop');
+}
+
+function renderCropTransform(){
+  const img = document.getElementById('cropImage');
+  if(!cropImgNaturalW) return;
+  const baseScale = CROP_FRAME / Math.min(cropImgNaturalW, cropImgNaturalH);
+  const combined = baseScale * cropUserScale;
+  img.style.width = cropImgNaturalW + 'px';
+  img.style.height = cropImgNaturalH + 'px';
+  img.style.transform =
+    `translate(-50%,-50%) translate(${cropOffsetX}px, ${cropOffsetY}px) rotate(${cropRotate}deg) scale(${combined})`;
+}
+
+function rotateCrop(){
+  cropRotate = (cropRotate + 90) % 360;
+  renderCropTransform();
+}
+function onScaleSlider(val){
+  cropUserScale = Math.max(1, parseInt(val) / 100);
+  renderCropTransform();
+}
+function onAlignSlider(val){
+  cropOffsetX = parseInt(val);
+  renderCropTransform();
+}
+
+/* Sürükleyerek (pan) konumlandırma — fare ve dokunma için ortak (Pointer Events) */
+(function setupCropDrag(){
+  const stage = document.getElementById('cropStage');
+  let dragging = false, startX = 0, startY = 0, baseX = 0, baseY = 0;
+
+  stage.addEventListener('pointerdown', (e)=>{
+    dragging = true; startX = e.clientX; startY = e.clientY;
+    baseX = cropOffsetX; baseY = cropOffsetY;
+    stage.setPointerCapture(e.pointerId);
+  });
+  stage.addEventListener('pointermove', (e)=>{
+    if(!dragging) return;
+    cropOffsetX = baseX + (e.clientX - startX);
+    cropOffsetY = baseY + (e.clientY - startY);
+    document.getElementById('cropAlignSlider').value = Math.max(-100, Math.min(100, cropOffsetX));
+    renderCropTransform();
+  });
+  ['pointerup','pointercancel','pointerleave'].forEach(evt=>{
+    stage.addEventListener(evt, ()=>{ dragging = false; });
+  });
+
+  /* İki parmakla yakınlaştırma (Pinch-to-Zoom) */
+  let pinchStartDist = 0, pinchStartScale = 1;
+  stage.addEventListener('touchstart', (e)=>{
+    if(e.touches.length === 2){
+      pinchStartDist = touchDistance(e.touches);
+      pinchStartScale = cropUserScale;
+    }
+  }, {passive:true});
+  stage.addEventListener('touchmove', (e)=>{
+    if(e.touches.length === 2 && pinchStartDist > 0){
+      const newDist = touchDistance(e.touches);
+      let scale = pinchStartScale * (newDist / pinchStartDist);
+      scale = Math.max(1, Math.min(3, scale));
+      cropUserScale = scale;
+      document.getElementById('cropScaleSlider').value = Math.round(scale * 100);
+      renderCropTransform();
+    }
+  }, {passive:true});
+  function touchDistance(touches){
+    const dx = touches[0].clientX - touches[1].clientX;
+    const dy = touches[0].clientY - touches[1].clientY;
+    return Math.hypot(dx, dy);
+  }
+})();
+
+function cancelCrop(){
+  document.getElementById('island').classList.remove('chat-fullscreen-hide');
+  if(cropContext === 'register'){
+    showScreen('register');
+    switchAuthTab('signup');
+    goReg(4);
+    // Kayıt akışında ana sayfaya henüz geçilmediği için ada zaten gizli kalacak.
+    document.getElementById('island').classList.add('chat-fullscreen-hide');
+  } else {
+    showScreen('profile');
+  }
+}
+
+function confirmCrop(){
+  const OUT = 480;
+  const canvas = document.createElement('canvas');
+  canvas.width = OUT; canvas.height = OUT;
+  const ctx = canvas.getContext('2d');
+  const img = document.getElementById('cropImage');
+  const baseScale = CROP_FRAME / Math.min(cropImgNaturalW, cropImgNaturalH);
+  const combined = baseScale * cropUserScale;
+  const ratio = OUT / CROP_FRAME;
+
+  ctx.save();
+  ctx.translate(OUT/2, OUT/2);
+  ctx.scale(ratio, ratio);
+  ctx.translate(cropOffsetX, cropOffsetY);
+  ctx.rotate(cropRotate * Math.PI/180);
+  ctx.scale(combined, combined);
+  ctx.drawImage(img, -cropImgNaturalW/2, -cropImgNaturalH/2, cropImgNaturalW, cropImgNaturalH);
+  ctx.restore();
+
+  const resultDataUrl = canvas.toDataURL('image/jpeg', 0.92);
+
+  if(cropContext === 'register'){
+    const dz = document.getElementById('dropzone');
+    dz.classList.add('has-img');
+    dz.innerHTML = `<img src="${resultDataUrl}">`;
+    showScreen('register');
+    switchAuthTab('signup');
+    goReg(4);
+    analyzePhoto(resultDataUrl, 'image/jpeg');
+  } else {
+    document.getElementById('editPreviewImg').src = resultDataUrl;
+    document.getElementById('editPreviewImg').dataset.pending = resultDataUrl;
+    document.getElementById('island').classList.remove('chat-fullscreen-hide');
+    showScreen('profile');
+  }
+}
+
 function cropImageToSquare(dataUrl){
   return new Promise((resolve)=>{
     const img = new Image();
@@ -1278,11 +1503,8 @@ function onFileChosen(ev){
     return;
   }
   const reader = new FileReader();
-  reader.onload = async function(e){
-    const squareDataUrl = await cropImageToSquare(e.target.result);
-    const dz = document.getElementById('dropzone');
-    dz.classList.add('has-img'); dz.innerHTML = `<img src="${squareDataUrl}">`;
-    await analyzePhoto(squareDataUrl, file.type);
+  reader.onload = function(e){
+    openCropScreen(e.target.result, 'register');
   };
   reader.readAsDataURL(file);
 }
@@ -1370,6 +1592,13 @@ function agreeToContract(){
   document.getElementById('contractVideoStage').classList.remove('hidden');
   const video = document.getElementById('contractVideo');
   const playBtn = document.getElementById('playBtn');
+
+  // Video dosyası hiç yüklenemiyorsa (format desteklenmiyor, dosya bulunamadı vb.)
+  // kullanıcıyı sonsuza kadar bekletmeyelim — otomatik olarak simülasyon moduna düş.
+  if(video.error || video.networkState === 3){
+    startDemoSimulation();
+    return;
+  }
 
   // Bu fonksiyon kullanıcının "Okudum, Kabul Ediyorum" tıklamasıyla (gerçek bir
   // kullanıcı etkileşimi) tetiklendiği için tarayıcılar genelde SESLİ otomatik
@@ -1519,10 +1748,8 @@ function onEditPhotoChosen(ev){
     return;
   }
   const reader = new FileReader();
-  reader.onload = async function(e){
-    const squareDataUrl = await cropImageToSquare(e.target.result);
-    document.getElementById('editPreviewImg').src = squareDataUrl;
-    document.getElementById('editPreviewImg').dataset.pending = squareDataUrl;
+  reader.onload = function(e){
+    openCropScreen(e.target.result, 'edit');
   };
   reader.readAsDataURL(file);
 }
@@ -1572,6 +1799,16 @@ const fill = document.getElementById('progressFill');
 const label = document.getElementById('progressLabel');
 const continueBtn = document.getElementById('continueBtn');
 let demoSeconds = 0; const demoDuration = 6; let demoTimer = null;
+
+/* Video dosyası HİÇ açılamıyorsa (404, format desteklenmiyor vb.) kullanıcıyı
+   bekletmeyelim: otomatik olarak simülasyon moduna geçip uyarı verelim. */
+let videoFailed = false;
+cVideo.addEventListener('error', ()=>{
+  videoFailed = true;
+  document.getElementById('progressLabel').textContent = 'Video açılamadı — devam ediliyor';
+  startDemoSimulation();
+});
+
 function playVideo(){
   playBtn.style.display = 'none';
   // Önce gerçek videoyu (kullanıcı tıklamasıyla, bu kesin izinlidir) oynatmayı dene.
