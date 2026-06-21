@@ -1,9 +1,15 @@
 // ==========================================
-// 1. FIREBASE BAĞLANTI AYARLARI
+// 1. FIREBASE BAĞLANTI AYARLARI (GÜNCELLENDİ)
 // ==========================================
 const firebaseConfig = {
-    databaseURL: "https://chat-ee35e-default-rtdb.europe-west1.firebasedatabase.app/",
-    storageBucket: "chat-ee35e.appspot.com"
+    apiKey: "AIzaSyCsGmCLBb0cqpnHrcn66PIHhIr5RSaRSFY",
+    authDomain: "talhaweb-c5e40.firebaseapp.com",
+    projectId: "talhaweb-c5e40",
+    storageBucket: "talhaweb-c5e40.firebasestorage.app",
+    messagingSenderId: "286141336960",
+    appId: "1:286141336960:web:92e80c38865665d6b80565",
+    measurementId: "G-T5147XWHL5",
+    databaseURL: "https://chat-ee35e-default-rtdb.europe-west1.firebasedatabase.app/"
 };
 
 // Eğer Firebase henüz başlatılmamışsa başlat
@@ -14,6 +20,7 @@ if (!firebase.apps.length) {
 const auth = firebase.auth();
 const database = firebase.database();
 const storage = firebase.storage();
+const googleProvider = new firebase.auth.GoogleAuthProvider();
 
 // ==========================================
 // 2. GLOBAL DEĞİŞKENLER VE DİL MOTORU
@@ -27,204 +34,94 @@ const translations = {
         txtHeroDesc: "Hoş geldiniz, geleceğin web sitesine. Lütfen abajuru açtıktan sonra hesabınız yoksa kaydolun varsa giriş yapınız.",
         errFields: "Lütfen tüm alanları eksiksiz doldurun!",
         errCodeWrong: "Hatalı veya eksik doğrulama kodu!",
-        msgSending: "Kod gönderiliyor...",
-        msgSuccessCode: "Kod başarıyla doğrulandı! Yönlendiriliyorsunuz...",
+        msgSending: "İşlem yapılıyor...",
+        msgSuccessCode: "Başarıyla giriş yapıldı! Yönlendiriliyorsunuz...",
         msgLoginSuccess: "Giriş başarılı! Yönlendiriliyorsunuz..."
     },
     en: {
         langLbl: "TR",
-        txtHeroDesc: "Welcome to the website of the future. Please turn on the lamp and register if you don't have an account, or log in.",
+        txtHeroDesc: "Welcome to the website of the future. Please turn on the lamp and register if you don't have an account, or login if you do.",
         errFields: "Please fill in all fields completely!",
-        errCodeWrong: "Invalid or incomplete verification code!",
-        msgSending: "Sending code...",
-        msgSuccessCode: "Code verified successfully! Redirecting...",
+        errCodeWrong: "Incorrect or missing verification code!",
+        msgSending: "Processing...",
+        msgSuccessCode: "Successfully logged in! Redirecting...",
         msgLoginSuccess: "Login successful! Redirecting..."
     }
 };
 
+// TEMA GİFLERİ LİSTESİ (Sizin seçtiğiniz hareketli arka planlar)
+const themeGifs = [
+    'https://i.pinimg.com/originals/ba/8e/3c/ba8e3c15b991da0733cb17f699042b4d.gif',
+    'https://i.pinimg.com/originals/5d/43/6e/5d436e2fbd6d0ef0413009fa3e764491.gif',
+    'https://i.pinimg.com/originals/60/a4/be/60a4be3524b8159d33b207dfecbc0213.gif',
+    'https://i.pinimg.com/originals/ef/95/43/ef954316688755b7da03ef2de405bc7f.gif',
+    'https://i.pinimg.com/originals/cf/14/08/cf1408ccb416be70e30206103b41d2f8.gif',
+    'https://i.pinimg.com/originals/ef/47/43/ef47432eb4a148f3254cb6b0a7b454e9.gif',
+    'https://i.pinimg.com/originals/bd/06/f0/bd06f0e69d3000b0805d7b5ec1e604f8.gif',
+    'https://i.pinimg.com/originals/e4/c7/ee/e4c7ee2db649e3bf32db4d3f54bf692f.gif',
+    'https://i.pinimg.com/originals/2c/45/c0/2c45c08000456c6ffc5d57b545465f24.gif',
+    'https://i.pinimg.com/originals/f5/01/29/f50129e9cbca7ee09e43681498e5e6e6.gif',
+    'https://i.pinimg.com/originals/29/73/0e/29730e1bc03e3a96860dbbf26bc6936c.gif',
+    'https://i.pinimg.com/originals/65/56/a0/6556a0df0b8ca8131e5e0cf79ffb698c.gif'
+];
+let currentThemeIndex = parseInt(localStorage.getItem('talha_theme_idx')) || 0;
+
 // ==========================================
-// 3. TEMA VE DİL SİSTEMİ FONKSİYONLARI
+// 3. SAYFA YÜKLENİNCE ÇALIŞAN MOTORLAR
 // ==========================================
-function toggleTheme() {
-    const currentTheme = document.documentElement.getAttribute('data-theme') || document.body.getAttribute('data-theme');
-    let newTheme = (currentTheme === 'light') ? 'dark' : 'light';
-    
-    document.documentElement.setAttribute('data-theme', newTheme);
-    document.body.setAttribute('data-theme', newTheme);
-    localStorage.setItem('site_theme', newTheme);
-    
-    // Temaya göre buton ikonunu ayarla
-    document.querySelectorAll('.theme-toggle-corner').forEach(btn => {
-        btn.textContent = (newTheme === 'light') ? '☀️' : '🌙';
-    });
-    
-    const logoImg = document.getElementById('siteLogo');
-    if (logoImg) {
-        logoImg.src = (newTheme === 'light') ? 'siyah_logo.PNG' : 'beyaz_logo.PNG';
-    }
-}
+document.addEventListener('DOMContentLoaded', () => {
+    applyLanguage(currentLanguage);
+    applyTheme(currentThemeIndex);
 
-function toggleLanguage() {
-    currentLanguage = (currentLanguage === 'tr') ? 'en' : 'tr';
-    localStorage.setItem('site_lang', currentLanguage);
-    applyLanguage();
-}
-
-function applyLanguage() {
-    const data = translations[currentLanguage];
-    const lbls = document.querySelectorAll('.lang-lbl');
-    lbls.forEach(el => el.textContent = data.langLbl);
-    
-    const desc = document.getElementById('txtHeroDesc');
-    if (desc) desc.textContent = data.txtHeroDesc;
-}
-
-// Sayfa ilk yüklendiğinde tema ve dili geri yükle
-window.addEventListener('DOMContentLoaded', () => {
-    const savedTheme = localStorage.getItem('site_theme') || 'dark';
-    document.documentElement.setAttribute('data-theme', savedTheme);
-    document.body.setAttribute('data-theme', savedTheme);
-    if (savedTheme === 'light' && document.getElementById('siteLogo')) {
-        document.getElementById('siteLogo').src = 'siyah_logo.PNG';
-    }
-    applyLanguage();
+    // Google Butonlarını HTML dosyasına dokunmadan dinamik olarak ekliyoruz
+    injectGoogleButtons();
 });
 
 // ==========================================
-// 4. ABAJUR LAMBA MOTORU (SADECE FORMLARI TETİKLER)
+// 4. TEMEL FONKSİYONLAR (LAMBA VE TEMA AYARLARI)
 // ==========================================
-function pullLampChain() {
-    const lamp = document.getElementById('mainLamp');
-    const loginStep = document.getElementById('loginStep');
-    const registerStep = document.getElementById('registerStep');
-    const verificationStep = document.getElementById('verificationStep');
-    
-    isLampOn = !isLampOn;
-    
-    if (isLampOn) {
-        // Lamba açıldı: Abajuru sarı yap, arka plan parlamasını aktif et
-        if (lamp) lamp.classList.add('on');
-        document.body.classList.add('light-on');
-        
-        // Form alanını görünür yap (İlk olarak Giriş Yap adımı gelir)
-        if (loginStep) loginStep.style.display = 'block';
-    } else {
-        // Lamba kapatıldı: Işıkları söndür ve açık olan tüm formları gizle
-        if (lamp) lamp.classList.remove('on');
-        document.body.classList.remove('light-on');
-        
-        if (loginStep) loginStep.style.display = 'none';
-        if (registerStep) registerStep.style.display = 'none';
-        if (verificationStep) verificationStep.style.display = 'none';
-        
-        // Hata/durum bildirim mesajını temizle
-        showStatus("", "");
-    }
+function toggleLanguage() {
+    currentLanguage = currentLanguage === 'tr' ? 'en' : 'tr';
+    localStorage.setItem('site_lang', currentLanguage);
+    applyLanguage(currentLanguage);
 }
 
-function switchStep(nextStepId) {
-    // Güvenlik Önlemi: Eğer lamba kapalıysa formlar arası geçişe izin verme
-    if (!isLampOn) return;
-
-    document.getElementById('loginStep').style.display = 'none';
-    document.getElementById('registerStep').style.display = 'none';
-    document.getElementById('verificationStep').style.display = 'none';
+function applyLanguage(lang) {
+    const btn = document.getElementById('langToggleBtn');
+    if(btn) btn.innerText = translations[lang].langLbl;
     
-    document.getElementById(nextStepId).style.display = 'block';
-    showStatus("", "");
+    const desc = document.getElementById('heroDescription');
+    if(desc) desc.innerText = translations[lang].txtHeroDesc;
 }
 
-function togglePasswordVisibility(inputId, button) {
-    const input = document.getElementById(inputId);
-    const icon = button.querySelector('i');
-    if (input.type === 'password') {
-        input.type = 'text';
-        icon.className = 'fa-solid fa-eye';
-    } else {
-        input.type = 'password';
-        icon.className = 'fa-solid fa-eye-slash';
+function nextTheme() {
+    currentThemeIndex = (currentThemeIndex + 1) % themeGifs.length;
+    localStorage.setItem('talha_theme_idx', currentThemeIndex);
+    applyTheme(currentThemeIndex);
+}
+
+function applyTheme(index) {
+    const bgLayer = document.getElementById('gifBgLayer');
+    if(bgLayer) {
+        bgLayer.style.backgroundImage = `url('${themeGifs[index]}')`;
     }
 }
 
 function showStatus(text, color) {
-    const msgBox = document.getElementById('statusMessage');
-    if(!msgBox) return;
-    msgBox.textContent = text;
-    msgBox.style.color = color || 'inherit';
+    const box = document.getElementById('statusMessageBox');
+    if(box) {
+        box.innerText = text;
+        box.style.background = color;
+        box.style.display = 'block';
+        setTimeout(() => { box.style.display = 'none'; }, 4000);
+    }
 }
 
 // ==========================================
-// 5. KIMLİK DOĞRULAMA (AUTH) İŞLEMLERİ
+// 5. FIREBASE AUTHENTICATION MOTORLARI
 // ==========================================
-let tempRegData = null; // Doğrulama öncesi kayıt bilgilerini geçici hafızada tutar
 
-function handleRegister() {
-    const username = document.getElementById('regUsername').value.trim();
-    const email = document.getElementById('regEmail').value.trim();
-    const password = document.getElementById('regPassword').value.trim();
-    
-    if(!username || !email || !password) {
-        showStatus(translations[currentLanguage].errFields, '#ff4d4d');
-        return;
-    }
-    
-    showStatus(translations[currentLanguage].msgSending, '#ff9f43');
-    
-    // Kullanıcı adının benzersiz olup olmadığını kontrol et
-    database.ref('users').orderByChild('username').equalTo(username).once('value', snapshot => {
-        if (snapshot.exists()) {
-            showStatus("Bu kullanıcı adı zaten alınmış!", '#ff4d4d');
-        } else {
-            // 6 Haneli Doğrulama Kodu Oluştur
-            const generatedCode = String(Math.floor(100000 + Math.random() * 900000));
-            
-            tempRegData = { username, email, password, code: generatedCode };
-            
-            // Kod veritabanında doğrulanmak üzere bekletilir
-            database.ref(`temp_verifications/${username}`).set({
-                email: email,
-                code: generatedCode,
-                timestamp: Date.now()
-            }).then(() => {
-                console.log(`[Talha Web Platform] E-posta doğrulama kodu gönderildi: ${generatedCode}`);
-                alert(`Doğrulama kodunuz e-postanıza simüle edildi!\nKod: ${generatedCode}`);
-                
-                switchStep('verificationStep');
-            });
-        }
-    });
-}
-
-function handleVerifyCode() {
-    const inputCode = document.getElementById('verificationCode').value.trim();
-    
-    if(!tempRegData || inputCode !== tempRegData.code) {
-        showStatus(translations[currentLanguage].errCodeWrong, '#ff4d4d');
-        return;
-    }
-    
-    showStatus(translations[currentLanguage].msgSuccessCode, '#28a745');
-    
-    // Firebase için e-posta temizliği yap
-    const cleanEmail = tempRegData.email.toLowerCase().replace('.', '_');
-    
-    database.ref(`users/${cleanEmail}`).set({
-        username: tempRegData.username,
-        email: tempRegData.email,
-        password: tempRegData.password, // Admin denetimi için şifre db'ye işlenir
-        avatar: "", 
-        role: (tempRegData.username.toLowerCase() === 'admin') ? 'admin' : 'user'
-    }).then(() => {
-        // Oturum açma bilgisi olarak tarayıcı hafızasını güncelle
-        sessionStorage.setItem('active_user_email', tempRegData.email);
-        sessionStorage.setItem('active_user_name', tempRegData.username);
-        
-        setTimeout(() => {
-            window.location.href = 'verify.html';
-        }, 1500);
-    });
-}
-
+// GİRİŞ YAPMA MOTORU
 function handleLogin() {
     const email = document.getElementById('loginEmail').value.trim();
     const password = document.getElementById('loginPassword').value.trim();
@@ -234,25 +131,116 @@ function handleLogin() {
         return;
     }
     
-    const cleanEmail = email.toLowerCase().replace('.', '_');
+    showStatus(translations[currentLanguage].msgSending, '#3a3b3c');
+
+    // Gerçek Firebase Giriş Metodu
+    auth.signInWithEmailAndPassword(email, password)
+        .then((userCredential) => {
+            const user = userCredential.user;
+            showStatus(translations[currentLanguage].msgLoginSuccess, '#28a745');
+            
+            sessionStorage.setItem('active_user_email', user.email);
+            sessionStorage.setItem('active_user_name', user.email.split('@')[0]);
+            
+            setTimeout(() => {
+                window.location.href = 'feed.html'; // Doğrudan akış sayfasına gider
+            }, 1200);
+        })
+        .catch((error) => {
+            showStatus("Giriş Başarısız: " + error.message, '#ff4d4d');
+        });
+}
+
+// KAYIT OLMA MOTORU
+function handleRegister() {
+    const username = document.getElementById('regUsername').value.trim();
+    const email = document.getElementById('regEmail').value.trim();
+    const password = document.getElementById('regPassword').value.trim();
     
-    database.ref(`users/${cleanEmail}`).once('value', snapshot => {
-        if(snapshot.exists()) {
-            const userData = snapshot.val();
-            if(userData.password === password) {
-                showStatus(translations[currentLanguage].msgLoginSuccess, '#28a745');
-                
-                sessionStorage.setItem('active_user_email', userData.email);
-                sessionStorage.setItem('active_user_name', userData.username);
-                
-                setTimeout(() => {
-                    window.location.href = 'verify.html';
-                }, 1200);
-            } else {
-                showStatus("Hatalı şifre girdiniz!", '#ff4d4d');
-            }
-        } else {
-            showStatus("Bu e-posta adresine ait kullanıcı bulunamadı!", '#ff4d4d');
-        }
-    });
+    if(!username || !email || !password) {
+        showStatus(translations[currentLanguage].errFields, '#ff4d4d');
+        return;
+    }
+
+    if(password.length < 6) {
+        showStatus("Şifre en az 6 karakter olmalıdır!", '#ff4d4d');
+        return;
+    }
+
+    showStatus(translations[currentLanguage].msgSending, '#3a3b3c');
+
+    // Gerçek Firebase Kayıt Metodu
+    auth.createUserWithEmailAndPassword(email, password)
+        .then((userCredential) => {
+            const user = userCredential.user;
+            
+            // Kullanıcı adını Realtime Database'e kaydeder
+            const cleanEmail = email.toLowerCase().replace(/\./g, '_');
+            database.ref(`users/${cleanEmail}`).set({
+                username: username,
+                email: email,
+                createdAt: firebase.database.ServerValue.TIMESTAMP
+            });
+
+            showStatus("Hesabınız oluşturuldu! Giriş yapılıyor...", '#28a745');
+            
+            sessionStorage.setItem('active_user_email', user.email);
+            sessionStorage.setItem('active_user_name', username);
+            
+            setTimeout(() => {
+                window.location.href = 'feed.html';
+            }, 1500);
+        })
+        .catch((error) => {
+            showStatus("Kayıt Hatası: " + error.message, '#ff4d4d');
+        });
+}
+
+// GOOGLE İLE GİRİŞ YAPMA MOTORU
+function handleGoogleLogin() {
+    auth.signInWithPopup(googleProvider)
+        .then((result) => {
+            const user = result.user;
+            showStatus("Google ile başarıyla giriş yapıldı!", '#28a745');
+            
+            sessionStorage.setItem('active_user_email', user.email);
+            sessionStorage.setItem('active_user_name', user.displayName || user.email.split('@')[0]);
+            
+            setTimeout(() => {
+                window.location.href = 'feed.html';
+            }, 1200);
+        })
+        .catch((error) => {
+            showStatus("Google Giriş Hatası: " + error.message, '#ff4d4d');
+        });
+}
+
+// Tasarımınızı bozmamak için butonları kodla otomatik olarak yerleştiriyoruz
+function injectGoogleButtons() {
+    const createGoogleBtn = (id) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.id = id;
+        btn.className = 'btn btn-secondary';
+        btn.style.marginTop = '12px';
+        btn.style.background = '#ffffff';
+        btn.style.color = '#000000';
+        btn.innerHTML = `<img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="G" width="16" style="margin-right:8px; vertical-align:middle;"> Google ile Devam Et`;
+        btn.addEventListener('click', handleGoogleLogin);
+        return btn;
+    };
+
+    // Giriş formunun altına yerleştir
+    const loginStepBox = document.getElementById('loginStep');
+    if (loginStepBox) {
+        const form = loginStepBox.querySelector('.auth-form');
+        if (form) form.appendChild(createGoogleBtn('googleLoginBtn1'));
+    }
+
+    // Kayıt formunun altına yerleştir
+    const registerStepBox = document.getElementById('registerStep');
+    if (registerStepBox) {
+        const form = registerStepBox.querySelector('.auth-form');
+        if (form) form.appendChild(createGoogleBtn('googleLoginBtn2'));
+    }
 }
