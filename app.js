@@ -1,22 +1,7 @@
 // ==========================================
-// 1. FIREBASE BAĞLANTI AYARLARI (GÜNCELLENDİ)
+// 1. FIREBASE BAĞLANTI AYARLARI (UYUMLU SÜRÜM)
 // ==========================================
-const firebaseConfig = {
-    apiKey: "AIzaSyCsGmCLBb0cqpnHrcn66PIHhIr5RSaRSFY",
-    authDomain: "talhaweb-c5e40.firebaseapp.com",
-    projectId: "talhaweb-c5e40",
-    storageBucket: "talhaweb-c5e40.firebasestorage.app",
-    messagingSenderId: "286141336960",
-    appId: "1:286141336960:web:92e80c38865665d6b80565",
-    measurementId: "G-T5147XWHL5",
-    databaseURL: "https://chat-ee35e-default-rtdb.europe-west1.firebasedatabase.app/"
-};
-
-// Eğer Firebase henüz başlatılmamışsa başlat
-if (!firebase.apps.length) {
-    firebase.initializeApp(firebaseConfig);
-}
-
+// Projenizin yapısına tam uyumlu (compat) Firebase Auth bağlantısı
 const auth = firebase.auth();
 const database = firebase.database();
 const storage = firebase.storage();
@@ -49,7 +34,7 @@ const translations = {
     }
 };
 
-// TEMA GİFLERİ LİSTESİ (Sizin seçtiğiniz hareketli arka planlar)
+// TEMA GİFLERİ LİSTESİ
 const themeGifs = [
     'https://i.pinimg.com/originals/ba/8e/3c/ba8e3c15b991da0733cb17f699042b4d.gif',
     'https://i.pinimg.com/originals/5d/43/6e/5d436e2fbd6d0ef0413009fa3e764491.gif',
@@ -66,19 +51,14 @@ const themeGifs = [
 ];
 let currentThemeIndex = parseInt(localStorage.getItem('talha_theme_idx')) || 0;
 
-// ==========================================
-// 3. SAYFA YÜKLENİNCE ÇALIŞAN MOTORLAR
-// ==========================================
-document.addEventListener('DOMContentLoaded', () => {
+// SAYFA YÜKLENDİĞİNDE ÇALIŞACAK AYARLAR
+window.addEventListener('load', () => {
     applyLanguage(currentLanguage);
     applyTheme(currentThemeIndex);
-
-    // Google Butonlarını HTML dosyasına dokunmadan dinamik olarak ekliyoruz
-    injectGoogleButtons();
 });
 
 // ==========================================
-// 4. TEMEL FONKSİYONLAR (LAMBA VE TEMA AYARLARI)
+// 3. TEMA VE GÖRSEL EFEKT MOTORLARI (ORİJİNAL)
 // ==========================================
 function toggleLanguage() {
     currentLanguage = currentLanguage === 'tr' ? 'en' : 'tr';
@@ -118,10 +98,10 @@ function showStatus(text, color) {
 }
 
 // ==========================================
-// 5. FIREBASE AUTHENTICATION MOTORLARI
+// 4. FIREBASE AUTHENTICATION (GERÇEK SİSTEM)
 // ==========================================
 
-// GİRİŞ YAPMA MOTORU
+// GİRİŞ YAPMA FONKSİYONU
 function handleLogin() {
     const email = document.getElementById('loginEmail').value.trim();
     const password = document.getElementById('loginPassword').value.trim();
@@ -133,7 +113,7 @@ function handleLogin() {
     
     showStatus(translations[currentLanguage].msgSending, '#3a3b3c');
 
-    // Gerçek Firebase Giriş Metodu
+    // Firebase Auth ile giriş doğrulaması
     auth.signInWithEmailAndPassword(email, password)
         .then((userCredential) => {
             const user = userCredential.user;
@@ -143,7 +123,7 @@ function handleLogin() {
             sessionStorage.setItem('active_user_name', user.email.split('@')[0]);
             
             setTimeout(() => {
-                window.location.href = 'feed.html'; // Doğrudan akış sayfasına gider
+                window.location.href = 'feed.html'; // Doğru sayfaya yönlendirme
             }, 1200);
         })
         .catch((error) => {
@@ -151,7 +131,7 @@ function handleLogin() {
         });
 }
 
-// KAYIT OLMA MOTORU
+// KAYIT OLMA FONKSİYONU
 function handleRegister() {
     const username = document.getElementById('regUsername').value.trim();
     const email = document.getElementById('regEmail').value.trim();
@@ -169,12 +149,12 @@ function handleRegister() {
 
     showStatus(translations[currentLanguage].msgSending, '#3a3b3c');
 
-    // Gerçek Firebase Kayıt Metodu
+    // Firebase Auth ile gerçek kullanıcı kaydı oluşturma
     auth.createUserWithEmailAndPassword(email, password)
         .then((userCredential) => {
             const user = userCredential.user;
             
-            // Kullanıcı adını Realtime Database'e kaydeder
+            // Kullanıcı profil bilgisini Realtime Database'e kaydetme
             const cleanEmail = email.toLowerCase().replace(/\./g, '_');
             database.ref(`users/${cleanEmail}`).set({
                 username: username,
@@ -196,7 +176,7 @@ function handleRegister() {
         });
 }
 
-// GOOGLE İLE GİRİŞ YAPMA MOTORU
+// GOOGLE İLE GİRİŞ YAPMA FONKSİYONU
 function handleGoogleLogin() {
     auth.signInWithPopup(googleProvider)
         .then((result) => {
@@ -213,34 +193,4 @@ function handleGoogleLogin() {
         .catch((error) => {
             showStatus("Google Giriş Hatası: " + error.message, '#ff4d4d');
         });
-}
-
-// Tasarımınızı bozmamak için butonları kodla otomatik olarak yerleştiriyoruz
-function injectGoogleButtons() {
-    const createGoogleBtn = (id) => {
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.id = id;
-        btn.className = 'btn btn-secondary';
-        btn.style.marginTop = '12px';
-        btn.style.background = '#ffffff';
-        btn.style.color = '#000000';
-        btn.innerHTML = `<img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="G" width="16" style="margin-right:8px; vertical-align:middle;"> Google ile Devam Et`;
-        btn.addEventListener('click', handleGoogleLogin);
-        return btn;
-    };
-
-    // Giriş formunun altına yerleştir
-    const loginStepBox = document.getElementById('loginStep');
-    if (loginStepBox) {
-        const form = loginStepBox.querySelector('.auth-form');
-        if (form) form.appendChild(createGoogleBtn('googleLoginBtn1'));
-    }
-
-    // Kayıt formunun altına yerleştir
-    const registerStepBox = document.getElementById('registerStep');
-    if (registerStepBox) {
-        const form = registerStepBox.querySelector('.auth-form');
-        if (form) form.appendChild(createGoogleBtn('googleLoginBtn2'));
-    }
 }
