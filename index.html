@@ -524,6 +524,26 @@ tbody tr:hover{background:var(--surface-2);}
 }
 </style>
 </head>
+
+<!-- FIREBASE — gerçek e-posta/şifre/kullanıcı adı sistemi -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyCsGmCLBbOcqpnHrcn66PIHhIr5RSaRSFY",
+    authDomain: "talhaweb-c5e40.firebaseapp.com",
+    databaseURL: "https://talhaweb-c5e40-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "talhaweb-c5e40",
+    storageBucket: "talhaweb-c5e40.firebasestorage.app",
+    messagingSenderId: "286141336960",
+    appId: "1:286141336960:web:92e80c38865665d6b80565",
+    measurementId: "G-T5147XWHL5"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const fbAuth = firebase.auth();
+  const fbDb = firebase.database();
+</script>
 <body>
 
 <!-- AÇILIŞ SPLASH -->
@@ -589,35 +609,14 @@ tbody tr:hover{background:var(--surface-2);}
 
             <div class="regstep active" id="reg1">
               <div class="step-title">E-posta Adresin</div>
-              <p class="step-sub">NeXT'e katılmak için gerçek e-posta adresini gir, sana özel bir doğrulama kodu gönderelim.</p>
+              <p class="step-sub">NeXT'e katılmak için gerçek e-posta adresini gir.</p>
               <div class="field"><label>E-posta</label><input type="email" id="email" placeholder="ornek@mail.com">
                 <div class="err" id="err-email">Geçerli bir e-posta adresi gir.</div></div>
-              <button class="btn btn-primary" style="width:100%" onclick="sendCode()">Doğrulama Kodu Gönder</button>
+              <button class="btn btn-primary" style="width:100%" onclick="goToPasswordStep()">İleri</button>
               <div class="auth-switch-link" onclick="switchAuthTab('login')">Zaten hesabın var mı? <b>Giriş Yap</b></div>
             </div>
 
             <div class="regstep" id="reg2">
-              <div class="step-title">Doğrulama</div>
-              <p class="step-sub"><span id="emailEcho">e-posta adresine</span> 6 haneli kod gönderdik (demo kodu: <b id="fakeCodeShow" style="color:var(--accent)"></b>).</p>
-              <div class="field"><label>6 Haneli Kod</label>
-                <div class="codeRow">
-                  <input inputmode="numeric" pattern="[0-9]*" type="tel" autocomplete="one-time-code" maxlength="1" class="digit">
-                  <input inputmode="numeric" pattern="[0-9]*" type="tel" autocomplete="one-time-code" maxlength="1" class="digit">
-                  <input inputmode="numeric" pattern="[0-9]*" type="tel" autocomplete="one-time-code" maxlength="1" class="digit">
-                  <input inputmode="numeric" pattern="[0-9]*" type="tel" autocomplete="one-time-code" maxlength="1" class="digit">
-                  <input inputmode="numeric" pattern="[0-9]*" type="tel" autocomplete="one-time-code" maxlength="1" class="digit">
-                  <input inputmode="numeric" pattern="[0-9]*" type="tel" autocomplete="one-time-code" maxlength="1" class="digit">
-                </div>
-                <div class="err" id="err-code">Kod hatalı. Tekrar dene.</div>
-                <div class="verify-check" id="verifyCheck">
-                  <span class="ring"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span>
-                  Doğrulandı, harika!
-                </div>
-              </div>
-              <div class="row"><button class="btn btn-ghost" onclick="goReg(1)">Geri</button><button class="btn btn-primary" onclick="verifyCode()">Doğrula</button></div>
-            </div>
-
-            <div class="regstep" id="reg3">
               <div class="step-title">Şifre & Kullanıcı Adı</div>
               <p class="step-sub">Bir şifre belirle ve kendine özel bir <b>@kullaniciadi</b> oluştur.</p>
               <div class="field"><label>Şifre</label><input type="password" id="password" placeholder="••••••••" oninput="updatePasswordStrength(this.value)">
@@ -626,14 +625,35 @@ tbody tr:hover{background:var(--surface-2);}
                   <span class="strength-label" id="strengthLabel">Şifre yaz</span>
                 </div>
                 <div class="hint">İstersen büyük harf, küçük harf ve özel karakter (!@#... gibi) ekleyerek şifreni güçlendirebilirsin.</div>
-                <div class="err" id="err-password">Şifre en az 4 karakter olmalı.</div></div>
+                <div class="err" id="err-password">Şifre en az 6 karakter olmalı (Firebase şartı).</div></div>
               <div class="field"><label>Kullanıcı Adı</label>
                 <div style="display:flex;align-items:center;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;overflow:hidden;">
                   <span style="padding:12px 0 12px 13px;color:var(--muted);font-family:'JetBrains Mono',monospace;">@</span>
                   <input type="text" id="username" placeholder="kullaniciadi" style="border:none;background:transparent;padding-left:2px;">
                 </div>
                 <div class="err" id="err-username">Kullanıcı adı en az 3 karakter olmalı.</div></div>
-              <div class="row"><button class="btn btn-ghost" onclick="goReg(2)">Geri</button><button class="btn btn-primary" onclick="savePasswordNickname()">İleri</button></div>
+              <div class="row"><button class="btn btn-ghost" onclick="goReg(1)">Geri</button><button class="btn btn-primary" id="createAccountBtn" onclick="createAccountAndSendVerification()">Hesabı Oluştur</button></div>
+            </div>
+
+            <div class="regstep" id="reg3">
+              <div class="step-title">E-postanı Doğrula</div>
+              <p class="step-sub"><span id="emailEcho">e-posta adresine</span> gerçek bir doğrulama linki gönderdik. Gelen kutunu (ve spam klasörünü) kontrol et, linke tıkla, sonra buraya dönüp aşağıdaki butona bas.</p>
+              <div class="field">
+                <div class="codeRow">
+                  <input class="digit" readonly tabindex="-1">
+                  <input class="digit" readonly tabindex="-1">
+                  <input class="digit" readonly tabindex="-1">
+                  <input class="digit" readonly tabindex="-1">
+                  <input class="digit" readonly tabindex="-1">
+                  <input class="digit" readonly tabindex="-1">
+                </div>
+                <div class="err" id="err-code">Henüz doğrulanmadı — linke tıkladıktan sonra tekrar dene.</div>
+                <div class="verify-check" id="verifyCheck">
+                  <span class="ring"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span>
+                  Doğrulandı, harika!
+                </div>
+              </div>
+              <div class="row"><button class="btn btn-ghost" onclick="resendVerificationLink()">Linki Tekrar Gönder</button><button class="btn btn-primary" onclick="manualCheckVerified()">Doğruladım</button></div>
             </div>
 
             <div class="regstep" id="reg4">
@@ -1150,35 +1170,45 @@ function renderAccountList(){
   `).join('');
 }
 function switchToAccount(email){
-  const list = getAccountsList();
-  const acc = list.find(a => a.email.toLowerCase() === email.toLowerCase());
-  if(!acc) return;
-  savedUsername = acc.username; savedEmail = acc.email; savedProfilePhoto = acc.photo; savedIsAdmin = !!acc.isAdmin;
-  applyAccountToUI();
-  saveSession();
   closeAccountSwitcher();
-  showToast(acc.username + ' hesabına geçildi');
+  showToast('Güvenlik için şifreni tekrar girmen gerekiyor');
+  fbAuth.signOut().finally(()=>{
+    document.querySelectorAll('#main .screen').forEach(s=>s.classList.remove('active'));
+    document.getElementById('screenRegister').classList.add('active');
+    switchAuthTab('login');
+    document.getElementById('island').classList.add('hidden');
+    const loginEmailInput = document.getElementById('loginEmail');
+    if(loginEmailInput) loginEmailInput.value = email;
+  });
 }
 
 function initAuthState(){
-  let session = null;
-  try{ session = JSON.parse(localStorage.getItem('next_session')); }catch(e){}
-
+  // Firebase kontrol sonucu gelene kadar (genelde yarım saniyeden az) açılış
+  // splash'i zaten ekranda — bu yüzden burada görünür bir "flaş" olmaz.
   document.querySelectorAll('#main .screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screenRegister').classList.add('active');
+  document.getElementById('island').classList.add('hidden');
+  switchAuthTab('login');
 
-  if(session && session.email){
-    savedUsername = session.username; savedEmail = session.email;
-    savedProfilePhoto = session.photo; savedIsAdmin = !!session.isAdmin;
-    document.getElementById('screenFeed').classList.add('active');
-    applyAccountToUI();
-    document.getElementById('island').classList.remove('hidden');
-    document.querySelectorAll('.island button').forEach(b=>b.classList.remove('active'));
-    document.getElementById('navFeed').classList.add('active');
-  } else {
-    document.getElementById('screenRegister').classList.add('active');
-    document.getElementById('island').classList.add('hidden');
-    switchAuthTab('login');
-  }
+  fbAuth.onAuthStateChanged((user)=>{
+    if(user && user.emailVerified){
+      loadUserProfileAndEnter(user);
+    } else if(user && !user.emailVerified){
+      // Hesabı var ama e-postasını henüz doğrulamamış: doğrulama adımına götür
+      savedEmail = user.email;
+      document.querySelectorAll('#main .screen').forEach(s=>s.classList.remove('active'));
+      document.getElementById('screenRegister').classList.add('active');
+      document.getElementById('emailEcho').textContent = savedEmail + ' adresine';
+      switchAuthTab('signup');
+      goReg(3);
+      document.getElementById('island').classList.add('hidden');
+    } else {
+      document.querySelectorAll('#main .screen').forEach(s=>s.classList.remove('active'));
+      document.getElementById('screenRegister').classList.add('active');
+      switchAuthTab('login');
+      document.getElementById('island').classList.add('hidden');
+    }
+  });
 }
 
 /* ===== KLAVYE AÇILDIĞINDA ALT ADAYI KLAVYENİN ÜSTÜNE KALDIR =====
@@ -1205,35 +1235,14 @@ function switchAuthTab(which){
   document.getElementById('authpanelSignup').classList.toggle('active', which==='signup');
 }
 
-/* ADIM 1: E-posta gönder
-   NOT: Gerçek e-posta göndermek için EmailJS gibi bir servis bağlanması gerekir.
-   Şu an demo amaçlı kodu ekranda gösteriyoruz. EmailJS bağlanınca bu fonksiyonun
-   içine gerçek gönderim kodu eklenecek, akışın geri kalanı değişmeyecek. */
-function sendCode(){
+/* ADIM 1: sadece e-postayı doğrula ve şifre/kullanıcı adı adımına geç */
+function goToPasswordStep(){
   const e = document.getElementById('email');
   const eOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e.value.trim());
   document.getElementById('err-email').style.display = eOk ? 'none' : 'block';
   if(!eOk) return;
   savedEmail = e.value.trim();
-  document.getElementById('emailEcho').textContent = savedEmail + ' adresine';
-  document.getElementById('fakeCodeShow').textContent = fakeCode;
   goReg(2);
-}
-
-/* Daha önce alınmış kullanıcı adları (demo: admin tablosundaki örnekler + kayıt olanlar) */
-let takenUsernames = ['kullanicia', 'usersanan', 'neme'];
-try{
-  const stored = JSON.parse(localStorage.getItem('next_taken_usernames'));
-  if(Array.isArray(stored)) takenUsernames = takenUsernames.concat(stored);
-}catch(e){}
-
-function isUsernameTaken(name){
-  return takenUsernames.includes(name.toLowerCase());
-}
-function reserveUsername(name){
-  const clean = name.toLowerCase();
-  if(!takenUsernames.includes(clean)) takenUsernames.push(clean);
-  try{ localStorage.setItem('next_taken_usernames', JSON.stringify(takenUsernames)); }catch(e){}
 }
 
 /* Şifre zorunlu değil ama önerilir: büyük harf, küçük harf, özel karakter kullanımı
@@ -1266,53 +1275,105 @@ function updatePasswordStrength(pass){
   label.textContent = steps.t; label.style.color = steps.c;
 }
 
-function isUsernameTakenCheck(name){ return isUsernameTaken(name); }
+function firebaseErrorMessage(err){
+  const map = {
+    'auth/email-already-in-use': 'Bu e-posta adresi zaten kayıtlı. "Zaten hesabın var mı?" linkinden giriş yap.',
+    'auth/weak-password': 'Şifre en az 6 karakter olmalı.',
+    'auth/invalid-email': 'Geçersiz e-posta adresi.',
+    'auth/network-request-failed': 'İnternet bağlantısı sorunu, tekrar dene.',
+    'auth/user-not-found': 'Bu e-posta ile kayıtlı bir hesap bulunamadı.',
+    'auth/wrong-password': 'Şifre hatalı.',
+    'auth/invalid-credential': 'E-posta veya şifre hatalı.',
+    'auth/too-many-requests': 'Çok fazla deneme yapıldı, biraz sonra tekrar dene.'
+  };
+  return map[err.code] || ('Bir hata oluştu: ' + err.message);
+}
 
-function savePasswordNickname(){
+/* ADIM 2: Şifre + kullanıcı adı — burada GERÇEK Firebase hesabı oluşturulur
+   ve gerçek doğrulama e-postası gönderilir. Kullanıcı adı, Realtime
+   Database'deki "usernames/" listesine karşı GERÇEKTEN kontrol edilir. */
+function createAccountAndSendVerification(){
   const p = document.getElementById('password'), u = document.getElementById('username');
   const passVal = p.value.trim();
   const userVal = u.value.trim().replace(/^@/,'');
 
-  const pOk = passVal.length >= 4; // şifre zorunlu kural yok, sadece minimum uzunluk
+  const pOk = passVal.length >= 6; // Firebase'in minimum şifre şartı
   const uOk = userVal.length >= 3;
-  const uTaken = uOk && isUsernameTaken(userVal);
 
   document.getElementById('err-password').style.display = pOk ? 'none' : 'block';
-  document.getElementById('err-username').style.display = (uOk && !uTaken) ? 'none' : 'block';
-  document.getElementById('err-username').textContent = !uOk
-    ? 'Kullanıcı adı en az 3 karakter olmalı.'
-    : 'Bu kullanıcı adı zaten alınmış, başka bir ad dene.';
+  document.getElementById('err-username').textContent = 'Kullanıcı adı en az 3 karakter olmalı.';
+  document.getElementById('err-username').style.display = uOk ? 'none' : 'block';
+  if(!pOk || !uOk) return;
 
-  if(!pOk || !uOk || uTaken) return;
+  const btn = document.getElementById('createAccountBtn');
+  btn.disabled = true; btn.textContent = 'Kontrol ediliyor...';
+  const usernameKey = userVal.toLowerCase();
 
-  savedPassword = passVal;
-  savedUsername = '@' + userVal;
-  savedIsAdmin = (savedEmail.toLowerCase() === ADMIN_EMAIL.toLowerCase() && savedPassword === ADMIN_PASSWORD);
-  reserveUsername(userVal);
-  goReg(4);
+  fbDb.ref('usernames/' + usernameKey).once('value').then((snap)=>{
+    if(snap.exists()){
+      btn.disabled = false; btn.textContent = 'Hesabı Oluştur';
+      document.getElementById('err-username').textContent = 'Bu kullanıcı adı zaten alınmış, başka bir ad dene.';
+      document.getElementById('err-username').style.display = 'block';
+      return;
+    }
+    fbAuth.createUserWithEmailAndPassword(savedEmail, passVal).then((cred)=>{
+      savedPassword = passVal;
+      savedUsername = '@' + userVal;
+      savedIsAdmin = (savedEmail.toLowerCase() === ADMIN_EMAIL.toLowerCase() && passVal === ADMIN_PASSWORD);
+      document.getElementById('emailEcho').textContent = savedEmail + ' adresine';
+      return cred.user.sendEmailVerification();
+    }).then(()=>{
+      btn.disabled = false; btn.textContent = 'Hesabı Oluştur';
+      goReg(3);
+    }).catch((err)=>{
+      btn.disabled = false; btn.textContent = 'Hesabı Oluştur';
+      document.getElementById('err-password').textContent = firebaseErrorMessage(err);
+      document.getElementById('err-password').style.display = 'block';
+    });
+  }).catch(()=>{
+    btn.disabled = false; btn.textContent = 'Hesabı Oluştur';
+    document.getElementById('err-username').textContent = 'Kullanıcı adı kontrol edilemedi, internetini kontrol et.';
+    document.getElementById('err-username').style.display = 'block';
+  });
 }
 
-function verifyCode(){
-  const boxes = [...document.querySelectorAll('.digit')];
-  const digits = boxes.map(i=>i.value).join('');
-  if(digits.length < 6){
-    document.getElementById('err-code').style.display='block';
-    boxes.forEach(b=>{ b.classList.add('shake'); setTimeout(()=>b.classList.remove('shake'),350); });
+function resendVerificationLink(){
+  if(!fbAuth.currentUser){ showToast('Önce hesap oluşturman gerekiyor.'); return; }
+  fbAuth.currentUser.sendEmailVerification()
+    .then(()=> showToast('Doğrulama linki tekrar gönderildi 📩'))
+    .catch(()=> showToast('Gönderilemedi, az sonra tekrar dene.'));
+}
+
+function manualCheckVerified(){
+  if(!fbAuth.currentUser){
+    document.getElementById('err-code').style.display = 'block';
     return;
   }
-  if(digits === fakeCode){
-    document.getElementById('err-code').style.display='none';
-    boxes.forEach((b,i)=>{
-      setTimeout(()=>b.classList.add('success'), i*90);
-    });
-    setTimeout(()=>{
-      document.getElementById('verifyCheck').classList.add('show');
-    }, boxes.length*90 + 200);
-    setTimeout(()=>{ goReg(3); }, boxes.length*90 + 1100);
-  } else {
-    document.getElementById('err-code').style.display='block';
-    boxes.forEach(b=>{ b.classList.add('shake'); setTimeout(()=>b.classList.remove('shake'),350); });
-  }
+  fbAuth.currentUser.reload().then(()=>{
+    if(fbAuth.currentUser.emailVerified){
+      document.getElementById('err-code').style.display = 'none';
+      playSuccessAnimation(()=>{ goReg(4); });
+    } else {
+      document.getElementById('err-code').style.display = 'block';
+      const boxes = [...document.querySelectorAll('#reg3 .digit')];
+      boxes.forEach(b=>{ b.classList.add('shake'); setTimeout(()=>b.classList.remove('shake'),350); });
+    }
+  }).catch(()=>{
+    document.getElementById('err-code').style.display = 'block';
+  });
+}
+
+/* O sevilen kutu animasyonu — artık yazılan bir kod değil, GERÇEK doğrulama
+   onaylandığında otomatik oynuyor. */
+function playSuccessAnimation(onDone){
+  const boxes = [...document.querySelectorAll('#reg3 .digit')];
+  boxes.forEach((b,i)=>{
+    setTimeout(()=>b.classList.add('filled','success'), i*90);
+  });
+  setTimeout(()=>{
+    document.getElementById('verifyCheck').classList.add('show');
+  }, boxes.length*90 + 200);
+  setTimeout(()=>{ onDone && onDone(); }, boxes.length*90 + 1100);
 }
 document.querySelectorAll('.digit').forEach((inp, idx, list)=>{
   inp.addEventListener('input', ()=>{
@@ -1577,12 +1638,30 @@ async function analyzePhoto(dataUrl, mimeType){
 
 function finishRegistration(){
   if(!uploadedImageOk || !savedProfilePhoto) return;
-  addMemberToAdminTable();
-  showToast(savedUsername + ', profilin hazır!');
-  setTimeout(()=>{
-    document.getElementById('screenRegister').classList.remove('active');
-    showContractAgree();
-  }, 900);
+  const btn = document.getElementById('finishBtn');
+  btn.disabled = true; btn.textContent = 'Kaydediliyor...';
+
+  const usernameKey = savedUsername.replace(/^@/,'').toLowerCase();
+  const uid = fbAuth.currentUser ? fbAuth.currentUser.uid : null;
+  const profileData = {
+    username: savedUsername, email: savedEmail, photo: savedProfilePhoto,
+    isAdmin: savedIsAdmin, postsCount, followersCount, followingCount,
+    createdAt: Date.now()
+  };
+
+  const writes = [fbDb.ref('usernames/' + usernameKey).set(uid || true)];
+  if(uid) writes.push(fbDb.ref('users/' + uid).set(profileData));
+
+  Promise.all(writes).then(finishRegistrationUI).catch(finishRegistrationUI);
+
+  function finishRegistrationUI(){
+    addMemberToAdminTable();
+    showToast(savedUsername + ', profilin hazır!');
+    setTimeout(()=>{
+      document.getElementById('screenRegister').classList.remove('active');
+      showContractAgree();
+    }, 900);
+  }
 }
 
 function addMemberToAdminTable(){
@@ -1686,36 +1765,64 @@ function goToRegisterScreen(){
 }
 
 function logoutAccount(){
-  clearSession();
-  document.querySelectorAll('#main .screen').forEach(s=>s.classList.remove('active'));
-  document.getElementById('screenRegister').classList.add('active');
-  switchAuthTab('login');
-  document.getElementById('island').classList.add('hidden');
+  fbAuth.signOut().finally(()=>{
+    clearSession();
+    document.querySelectorAll('#main .screen').forEach(s=>s.classList.remove('active'));
+    document.getElementById('screenRegister').classList.add('active');
+    switchAuthTab('login');
+    document.getElementById('island').classList.add('hidden');
+  });
 }
 
 function loginReturning(){
   const email = document.getElementById('loginEmail').value.trim();
   const pass = document.getElementById('loginPassword').value.trim();
-  const isAdminLogin = (email.toLowerCase() === ADMIN_EMAIL.toLowerCase() && pass === ADMIN_PASSWORD);
+  if(!email || !pass) return;
 
-  if(isAdminLogin){
-    savedIsAdmin = true;
-    savedEmail = email;
-    if(!savedUsername) savedUsername = '@admin';
-    if(!savedProfilePhoto) savedProfilePhoto = 'https://i.pravatar.cc/120?img=68';
-  } else if(email){
-    // Admin değilse normal kullanıcı olarak devam eder (demo: önceki bilgiler varsa onlar kullanılır)
-    savedIsAdmin = false;
-    savedEmail = email;
-    if(!savedUsername) savedUsername = '@kullanici';
-    if(!savedProfilePhoto) savedProfilePhoto = 'https://i.pravatar.cc/120?img=20';
-  }
+  const btn = event.target;
+  const original = btn.textContent;
+  btn.disabled = true; btn.textContent = 'Giriş yapılıyor...';
 
-  // Geri dönen kullanıcı: sözleşme videosu TEKRAR gösterilmez, direkt Ana Akış'a girer.
-  document.getElementById('screenRegister').classList.remove('active');
+  fbAuth.signInWithEmailAndPassword(email, pass).then((cred)=>{
+    btn.disabled = false; btn.textContent = original;
+    if(!cred.user.emailVerified){
+      savedEmail = email;
+      document.getElementById('emailEcho').textContent = savedEmail + ' adresine';
+      switchAuthTab('signup');
+      goReg(3);
+      return;
+    }
+    loadUserProfileAndEnter(cred.user);
+  }).catch((err)=>{
+    btn.disabled = false; btn.textContent = original;
+    alert(firebaseErrorMessage(err));
+  });
+}
+
+function loadUserProfileAndEnter(user){
+  fbDb.ref('users/' + user.uid).once('value').then((snap)=>{
+    const data = snap.val() || {};
+    savedUsername = data.username || '@kullanici';
+    savedEmail = user.email;
+    savedProfilePhoto = data.photo || 'https://i.pravatar.cc/120?img=68';
+    savedIsAdmin = !!data.isAdmin;
+    if(data.postsCount != null) postsCount = data.postsCount;
+    if(data.followersCount != null) followersCount = data.followersCount;
+    if(data.followingCount != null) followingCount = data.followingCount;
+    enterAppFromAuth();
+  }).catch(()=>{
+    savedEmail = user.email;
+    enterAppFromAuth();
+  });
+}
+
+function enterAppFromAuth(){
+  document.querySelectorAll('#main .screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screenFeed').classList.add('active');
   applyAccountToUI();
   document.getElementById('island').classList.remove('hidden');
-  goNav('feed', document.getElementById('navFeed'));
+  document.querySelectorAll('.island button').forEach(b=>b.classList.remove('active'));
+  document.getElementById('navFeed').classList.add('active');
   saveSession();
 }
 
