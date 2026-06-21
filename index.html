@@ -19,8 +19,7 @@ body.light-mode{
   /* AYDINLIK MOD — Instagram beyaz teması */
   --bg:#ffffff; --surface:#ffffff; --surface-2:#efefef; --line:#dbdbdb;
   --accent:#0095f6; --accent-dim:#00376b; --warn:#b9790a; --danger:#ed4956;
-  --text:#262626;
-  --muted:#737373; --bubble-me:#0095f6;
+  --text:#262626; --muted:#737373; --bubble-me:#0095f6;
   --like-color:#ed4956;
   --glass-bg:rgba(255,255,255,.66); --glass-border:rgba(0,0,0,.08);
 }
@@ -130,6 +129,7 @@ input:focus{border-color:var(--accent);}
 .crop-slider-row input[type=range]{width:100%;accent-color:var(--accent);}
 
 /* ===== REGISTER SCREEN ===== */
+
 .card{width:100%;max-width:460px;background:var(--surface);border:1px solid var(--line);border-radius:18px;overflow:hidden;}
 .head{padding:22px 24px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px;}
 .head .mark{font-family:'JetBrains Mono',monospace;color:var(--accent);font-size:13px;border:1px solid var(--accent-dim);padding:3px 7px;border-radius:6px;}
@@ -385,13 +385,770 @@ input[type=file]{display:none;}
 .chat-item.active{background:var(--surface);border-left-color:var(--accent);}
 .chat-item img{width:54px;height:54px;border-radius:50%;object-fit:cover;flex-shrink:0;}
 .chat-item .meta{min-width:0;flex:1;}
+.chat-item .name{font-size:15px;font-weight:700;}
+.chat-item .preview{font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;}
+.chat-time{font-size:11px;color:var(--muted);flex-shrink:0;align-self:flex-start;margin-top:2px;}
+
+.dm-tabs{display:flex;gap:22px;margin-top:14px;border-bottom:1px solid var(--line);}
+.dm-tab{font-size:13px;font-weight:600;color:var(--muted);padding-bottom:10px;cursor:pointer;border-bottom:2px solid transparent;}
+.dm-tab.active{color:var(--text);border-bottom-color:var(--text);}
+.chatcol{flex:1;display:flex;flex-direction:column;min-width:0;}
+.chat-head{padding:14px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px;}
+.chat-head img{width:42px;height:42px;border-radius:50%;object-fit:cover;}
+.chat-head .name{font-size:15px;font-weight:700;}
+.chat-head .status{font-size:11px;color:var(--accent);}
+.messages{flex:1;overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:10px;}
+.msg{max-width:72%;padding:9px 13px;border-radius:14px;font-size:13.5px;line-height:1.4;}
+.msg.them{align-self:flex-start;background:var(--surface-2);border-bottom-left-radius:4px;}
+.msg.me{align-self:flex-end;background:var(--bubble-me);color:#eafff4;border-bottom-right-radius:4px;}
+.msg .time{display:block;font-size:10px;color:var(--muted);margin-top:4px;}
+.msg.me .time{color:#bdeed7;}
+.msg-media{max-width:72%;border-radius:14px;overflow:hidden;align-self:flex-start;}
+.msg-media img,.msg-media video{width:220px;display:block;}
+.composer{padding:13px 16px;border-top:1px solid var(--line);display:flex;align-items:center;gap:9px;}
+.icon-btn{width:36px;height:36px;border-radius:50%;background:var(--surface-2);display:flex;align-items:center;justify-content:center;color:var(--muted);border:none;cursor:pointer;flex-shrink:0;}
+.bio-header{
+  display:grid;grid-template-columns:1fr auto 1fr;align-items:center;
+  padding:10px 20px;
+}
+.bio-header-left{justify-self:start;font-family:'Space Grotesk',sans-serif;font-size:17px;margin:0;}
+.bio-header-center{justify-self:center;display:flex;align-items:center;cursor:pointer;}
+.bio-header-logo-img{max-height:46px;max-width:140px;object-fit:contain;}
+.bio-header-logo-fallback{display:none;font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:700;color:var(--text);}
+.bio-header-right{justify-self:end;}
+
+/* SAĞDAN AÇILAN YAN MENÜ (DRAWER) */
+.drawer-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:110;}
+.drawer-overlay.hidden{display:none;}
+.side-drawer{
+  position:fixed;top:0;right:0;bottom:0;width:78%;max-width:300px;
+  background:var(--surface);border-left:1px solid var(--line);
+  z-index:120;transform:translateX(100%);transition:transform .32s ease;
+  padding:24px 18px;display:flex;flex-direction:column;gap:8px;
+}
+.side-drawer.open{transform:translateX(0);}
+.drawer-title{font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:600;margin-bottom:10px;}
+.drawer-theme-row{
+  display:flex;align-items:center;justify-content:space-between;
+  background:var(--surface-2);border:1px solid var(--line);border-radius:12px;
+  padding:13px 14px;font-size:13.5px;margin-bottom:14px;
+}
+.drawer-btn{
+  background:var(--surface-2);border:1px solid var(--line);color:var(--text);
+  padding:13px 14px;border-radius:11px;font-size:13.5px;text-align:left;cursor:pointer;font-family:'Inter',sans-serif;
+}
+.drawer-btn.danger{color:var(--danger);}
+
+/* Tema değiştirme anahtarı (switch) */
+.switch{position:relative;display:inline-block;width:42px;height:24px;flex-shrink:0;}
+.switch input{opacity:0;width:0;height:0;}
+.switch-slider{
+  position:absolute;cursor:pointer;inset:0;background:var(--line);border-radius:24px;transition:background .25s;
+}
+.switch-slider:before{
+  position:absolute;content:"";height:18px;width:18px;left:3px;bottom:3px;
+  background:#fff;border-radius:50%;transition:transform .25s;
+}
+.switch input:checked + .switch-slider{background:var(--accent);}
+.switch input:checked + .switch-slider:before{transform:translateX(18px);}
+
+/* HESAP DEĞİŞTİRİCİ (Bottom Sheet) */
+.bottomsheet-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:130;display:flex;align-items:flex-end;justify-content:center;}
+.bottomsheet-overlay.hidden{display:none;}
+.bottomsheet{
+  width:100%;max-width:460px;background:var(--surface);border:1px solid var(--line);
+  border-radius:24px 24px 0 0;padding:14px 18px 28px;
+  transform:translateY(100%);transition:transform .32s ease;
+}
+.bottomsheet.open{transform:translateY(0);}
+.bottomsheet-handle{width:38px;height:4px;background:var(--line);border-radius:3px;margin:0 auto 14px;}
+.bottomsheet-title{font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:15px;margin-bottom:12px;text-align:center;}
+.account-row{display:flex;align-items:center;gap:12px;padding:10px 6px;border-radius:12px;cursor:pointer;}
+.account-row:active{background:var(--surface-2);}
+.account-row img{width:44px;height:44px;border-radius:50%;object-fit:cover;flex-shrink:0;}
+.account-row .acc-name{font-weight:600;font-size:13.5px;}
+.account-row .acc-email{font-size:11px;color:var(--muted);}
+.account-row .active-badge{margin-left:auto;color:var(--accent);font-size:11px;font-weight:600;flex-shrink:0;}
+.icon-btn:hover{color:var(--accent);}
+.composer input[type=text]{flex:1;border-radius:20px;}
+.send{width:38px;height:38px;border-radius:50%;background:var(--accent);border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;}
+.send svg{width:16px;height:16px;color:#06140d;}
+.back-btn{display:none;background:none;border:none;color:var(--muted);cursor:pointer;padding:4px;margin-right:2px;}
+.back-btn svg{width:20px;height:20px;}
+@media (max-width:700px){
+  .dmWrap{height:100vh;}
+  .list,.chatcol{width:100%;}
+  .chatcol{display:none;}
+  .dmWrap.view-chat .list{display:none;}
+  .dmWrap.view-chat .chatcol{display:flex;}
+  .back-btn{display:inline-flex;align-items:center;justify-content:center;}
+}
+
+/* ===== ADMIN SCREEN ===== */
+.adminWrap{max-width:880px;margin:0 auto;padding:22px 18px 60px;}
+.ahead{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;flex-wrap:wrap;gap:10px;}
+.ahead h1{font-family:'Space Grotesk',sans-serif;font-size:19px;margin:0;}
+.ahead .sub{font-size:12px;color:var(--muted);margin-top:2px;}
+.pill{font-size:11.5px;font-family:'JetBrains Mono',monospace;color:var(--accent);border:1px solid var(--accent-dim);padding:5px 11px;border-radius:20px;display:flex;align-items:center;gap:6px;}
+.pill .dot{width:6px;height:6px;border-radius:50%;background:var(--accent);}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:24px;}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px;}
+.stat .num{font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:600;}
+.stat .lbl{font-size:11.5px;color:var(--muted);margin-top:3px;}
+.section{margin-bottom:30px;}
+.section-title{font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:600;margin:0 0 4px;}
+.section-sub{font-size:12px;color:var(--muted);margin:0 0 14px;}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:hidden;}
+.search-row{padding:13px 16px;border-bottom:1px solid var(--line);}
+.search-row input{background:var(--surface-2);}
+table{width:100%;border-collapse:collapse;}
+thead th{text-align:left;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;padding:11px 16px;border-bottom:1px solid var(--line);font-weight:500;}
+tbody td{padding:12px 16px;font-size:13px;border-bottom:1px solid var(--line);}
+tbody tr:last-child td{border-bottom:none;}
+tbody tr:hover{background:var(--surface-2);}
+.user-cell{display:flex;align-items:center;gap:9px;}
+.user-cell img{width:28px;height:28px;border-radius:50%;object-fit:cover;}
+.email{color:var(--muted);}
+.badge{font-size:11px;padding:4px 10px;border-radius:20px;font-weight:600;display:inline-flex;align-items:center;gap:5px;}
+.badge.active{background:rgba(0,149,246,.12);color:var(--accent);}
+.badge.blocked{background:rgba(242,92,92,.12);color:var(--danger);}
+.badge.pending{background:rgba(242,179,61,.12);color:var(--warn);}
+.actions-cell{display:flex;gap:6px;}
+.actbtn{border:1px solid var(--line);background:var(--surface-2);color:var(--muted);font-size:11.5px;padding:6px 10px;border-radius:8px;cursor:pointer;font-family:'Inter',sans-serif;}
+.actbtn:hover{color:var(--text);}
+.actbtn.danger:hover{color:var(--danger);border-color:#5c2a2a;}
+.actbtn.success:hover{color:var(--accent);border-color:var(--accent-dim);}
+.report-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.report-card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:15px 16px;}
+.report-card h3{font-size:13px;margin:0 0 4px;font-weight:600;}
+.report-card p{font-size:11.5px;color:var(--muted);margin:0 0 12px;line-height:1.5;}
+.report-card .count{font-family:'Space Grotesk',sans-serif;font-size:24px;font-weight:600;color:var(--warn);}
+.report-card .countgood{color:var(--accent);}
+.report-card button{margin-top:10px;width:100%;background:var(--surface-2);border:1px solid var(--line);color:var(--text);padding:9px;border-radius:9px;font-size:12.5px;cursor:pointer;font-family:'Inter',sans-serif;}
+.report-card button:hover{border-color:var(--accent-dim);color:var(--accent);}
+.flagged-list{margin-top:14px;display:flex;flex-direction:column;gap:8px;}
+.flagged-item{display:flex;align-items:center;gap:10px;background:var(--surface-2);border:1px solid var(--line);border-radius:11px;padding:9px 12px;}
+.flagged-item img{width:44px;height:44px;border-radius:9px;object-fit:cover;flex-shrink:0;}
+.flagged-item .info{flex:1;min-width:0;}
+.flagged-item .who{font-size:12.5px;font-weight:600;}
+.flagged-item .why{font-size:11px;color:var(--muted);}
+.flagged-item .acts{display:flex;gap:6px;}
+@media (max-width:560px){
+  .stats{grid-template-columns:1fr 1fr;}
+  .report-grid{grid-template-columns:1fr;}
+}
 </style>
 </head>
+
+<!-- FIREBASE — gerçek e-posta/şifre/kullanıcı adı sistemi -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyCsGmCLBbOcqpnHrcn66PIHhIr5RSaRSFY",
+    authDomain: "talhaweb-c5e40.firebaseapp.com",
+    databaseURL: "https://talhaweb-c5e40-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "talhaweb-c5e40",
+    storageBucket: "talhaweb-c5e40.firebasestorage.app",
+    messagingSenderId: "286141336960",
+    appId: "1:286141336960:web:92e80c38865665d6b80565",
+    measurementId: "G-T5147XWHL5"
+  };
+  let fbAuth = null, fbDb = null, fbReady = false;
+  try{
+    firebase.initializeApp(firebaseConfig);
+    fbAuth = firebase.auth();
+    fbDb = firebase.database();
+    fbReady = true;
+  }catch(e){
+    console.error('Firebase başlatılamadı (internet/SDK yüklenemedi):', e);
+  }
+</script>
 <body>
+
+<!-- AÇILIŞ SPLASH -->
+<div class="app-splash" id="appSplash">
+  <img src="NeXT.PNG" alt="NeXT" onerror="this.style.display='none';document.getElementById('splashFallback').style.display='block';">
+  <div class="splash-fallback" id="splashFallback">NeXT</div>
+</div>
+
+<div id="appShell">
+
+  <!-- ALT ADA (PILL) NAVİGASYON -->
+  <div class="island hidden" id="island">
+    <button class="active" id="navFeed" onclick="goNav('feed', this)" title="Ana Akış">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1h-5v-7H9v7H4a1 1 0 01-1-1V9.5z"/></svg>
+    </button>
+    <button id="navMsg" onclick="goNav('messages', this)" title="Mesajlar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16v11H8l-4 4V5z"/></svg>
+    </button>
+    <button id="navAdmin" onclick="goNav('admin', this)" title="Admin Paneli">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l8 3v6c0 5-3.5 8.5-8 11-4.5-2.5-8-6-8-11V5l8-3z"/></svg>
+    </button>
+    <button id="navBio" onclick="goNav('profile', this)" title="Bio">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="3.4"/><path d="M5 20c0-3.6 3-6 7-6s7 2.4 7 6"/></svg>
+    </button>
+  </div>
+
+  <div id="main">
+
+    <!-- ================= EKRAN 1: NeXT GİRİŞ / KAYIT ================= -->
+    <div class="screen" id="screenRegister">
+      <div id="screenRegisterInner" style="height:100%;overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;align-items:flex-start;justify-content:center;padding:32px 16px;">
+      <div class="card">
+        <div class="auth-top-bar">
+          <button class="theme-corner-btn" onclick="applyTheme('light')" title="Aydınlık Mod">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>
+          </button>
+          <div class="auth-logo-wrap">
+            <img src="NeXT.PNG" alt="NeXT" class="auth-logo-img" onerror="this.style.display='none';document.getElementById('logoFallback').style.display='block';">
+            <div id="logoFallback" class="auth-logo-fallback">NeXT</div>
+          </div>
+          <button class="theme-corner-btn" onclick="applyTheme('dark')" title="Karanlık Mod">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1111.2 3a7 7 0 109.8 9.8z"/></svg>
+          </button>
+        </div>
+
+        <!-- ===== GİRİŞ YAP ===== -->
+        <div class="authpanel active" id="authpanelLogin">
+          <div class="cardbody">
+            <div class="step-title">Tekrar Hoş Geldin</div>
+            <p class="step-sub">NeXT'e tekrar hoş geldin. Giriş yap, akışına geri dön.</p>
+            <div class="field"><label>E-posta</label><input type="email" id="loginEmail" placeholder="ornek@mail.com"></div>
+            <div class="field">
+              <label>Şifre</label>
+              <div class="pwd-wrap">
+                <input type="password" id="loginPassword" placeholder="••••••••">
+                <button type="button" class="pwd-toggle" onclick="togglePwdVisibility('loginPassword', this)">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
+              </div>
+              <div class="auth-switch-link" style="margin-top:8px;text-align:right;" onclick="forgotPassword()">Şifremi Unuttum</div>
+            </div>
+            <button class="btn btn-primary" style="width:100%" onclick="loginReturning()">Giriş Yap</button>
+            <div class="auth-switch-link" onclick="switchAuthTab('signup')">Hesabın yok mu? <b>Kayıt Ol</b></div>
+          </div>
+        </div>
+
+        <!-- ===== KAYIT OL ===== -->
+        <div class="authpanel" id="authpanelSignup">
+          <div class="rail"><div class="seg on" id="seg1"></div><div class="seg" id="seg2"></div><div class="seg" id="seg3"></div><div class="seg" id="seg4"></div></div>
+          <div class="steplabel" id="stepLabel">ADIM 1 / 4</div>
+          <div class="cardbody">
+
+            <div class="regstep active" id="reg1">
+              <div class="step-title">E-posta Adresin</div>
+              <p class="step-sub">NeXT'e katılmak için gerçek e-posta adresini gir.</p>
+              <div class="field"><label>E-posta</label><input type="email" id="email" placeholder="ornek@mail.com">
+                <div class="err" id="err-email">Geçerli bir e-posta adresi gir.</div></div>
+              <button class="btn btn-primary" style="width:100%" onclick="goToPasswordStep()">İleri</button>
+              <div class="auth-switch-link" onclick="switchAuthTab('login')">Zaten hesabın var mı? <b>Giriş Yap</b></div>
+            </div>
+
+            <div class="regstep" id="reg2">
+              <div class="step-title">Şifre & Kullanıcı Adı</div>
+              <p class="step-sub">Bir şifre belirle ve kendine özel bir <b>@kullaniciadi</b> oluştur.</p>
+              <div class="field"><label>Şifre</label>
+                <div class="pwd-wrap">
+                  <input type="password" id="password" placeholder="••••••••" oninput="updatePasswordStrength(this.value)">
+                  <button type="button" class="pwd-toggle" onclick="togglePwdVisibility('password', this)">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
+                  </button>
+                </div>
+                <div class="strength-row">
+                  <div class="strength-bar"><div class="strength-fill" id="strengthFill"></div></div>
+                  <span class="strength-label" id="strengthLabel">Şifre yaz</span>
+                </div>
+                <div class="hint">İstersen büyük harf, küçük harf ve özel karakter (!@#... gibi) ekleyerek şifreni güçlendirebilirsin.</div>
+                <div class="err" id="err-password">Şifre en az 6 karakter olmalı (Firebase şartı).</div></div>
+              <div class="field"><label>Kullanıcı Adı</label>
+                <div style="display:flex;align-items:center;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;overflow:hidden;">
+                  <span style="padding:12px 0 12px 13px;color:var(--muted);font-family:'JetBrains Mono',monospace;">@</span>
+                  <input type="text" id="username" placeholder="kullaniciadi" style="border:none;background:transparent;padding-left:2px;">
+                </div>
+                <div class="err" id="err-username">Kullanıcı adı en az 3 karakter olmalı.</div></div>
+              <div class="row"><button class="btn btn-ghost" onclick="goReg(1)">Geri</button><button class="btn btn-primary" id="createAccountBtn" onclick="createAccountAndSendVerification()">Hesabı Oluştur</button></div>
+            </div>
+
+            <div class="regstep" id="reg3">
+              <div class="step-title">E-postanı Doğrula</div>
+              <p class="step-sub"><span id="emailEcho">e-posta adresine</span> gerçek bir doğrulama linki gönderdik.</p>
+              <div class="spam-warning">
+                ⚠️ E-posta gelmediyse <b>spam / gereksiz klasörünü</b> kontrol et. Linke tıkladığında açılan sayfada <b>"Siteye Geri Dön"</b> butonu olacak — ona basıp buraya dönüp aşağıdaki butona bas.
+              </div>
+              <div class="field">
+                <div class="codeRow">
+                  <input class="digit" readonly tabindex="-1">
+                  <input class="digit" readonly tabindex="-1">
+                  <input class="digit" readonly tabindex="-1">
+                  <input class="digit" readonly tabindex="-1">
+                  <input class="digit" readonly tabindex="-1">
+                  <input class="digit" readonly tabindex="-1">
+                </div>
+                <div class="symbolic-code-note">Referans kodun: <b id="symbolicCode">——————</b> <span style="opacity:.7">(sembolik, bilgi amaçlı)</span></div>
+                <div class="err" id="err-code">Henüz doğrulanmadı — linke tıkladıktan sonra tekrar dene.</div>
+                <div class="verify-check" id="verifyCheck">
+                  <span class="ring"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span>
+                  Doğrulandı, harika!
+                </div>
+              </div>
+              <div class="row"><button class="btn btn-ghost" onclick="resendVerificationLink()">Linki Tekrar Gönder</button><button class="btn btn-primary" onclick="manualCheckVerified()">Doğruladım</button></div>
+            </div>
+
+            <div class="regstep" id="reg4">
+              <div class="step-title">Profil Fotoğrafı</div>
+              <p class="step-sub">İstediğin fotoğrafı profil fotoğrafı olarak koyabilirsin. Tek kontrol: +18 / uygunsuz içerik olmaması.</p>
+              <div class="upload-zone" id="dropzone" onclick="document.getElementById('fileInput').click()">
+                <div class="icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 16V4M12 4l-4 4M12 4l4 4M4 20h16"/></svg></div>
+                <p>Yüklemek için tıkla <span class="accent-text">veya sürükle bırak</span></p>
+              </div>
+              <input type="file" id="fileInput" accept="image/*" onchange="onFileChosen(event)">
+              <div class="analysis-box" id="analysisBox"></div>
+              <div class="row" style="margin-top:18px;"><button class="btn btn-ghost" onclick="goReg(3)">Geri</button><button class="btn btn-primary" id="finishBtn" disabled onclick="finishRegistration()">Profili Tamamla</button></div>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+      </div>
+    </div>
+
+    <!-- ================= EKRAN 2: ANA AKIŞ ================= -->
+    <div class="screen" id="screenFeed">
+      <div class="topbar screen-header">
+        <h1>Ana Akış</h1>
+        <div class="icons">
+          <img class="avatar-sm" id="feedAvatar" src="https://i.pravatar.cc/60?img=68" style="cursor:pointer;" onclick="goNav('profile', document.getElementById('navBio'))" title="Profilim">
+        </div>
+      </div>
+
+      <div class="screen-body">
+      <div class="feed">
+        <div class="post" data-post-id="p1" data-post-img="https://images.unsplash.com/photo-1521119989659-a83eee488004?w=400&q=60">
+          <div class="post-head">
+            <img src="https://i.pravatar.cc/60?img=32">
+            <div><div class="who">user_sanan</div><div class="loc">İstanbul, Türkiye</div></div>
+            <div class="dots">⋯</div>
+          </div>
+          <div class="post-media">
+            <img src="https://images.unsplash.com/photo-1521119989659-a83eee488004?w=800&q=60">
+          </div>
+          <div class="ig-actions">
+            <div class="icon-act" onclick="toggleLike(this)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.8 4.6a5 5 0 00-7.1 0L12 6.3l-1.7-1.7a5 5 0 10-7.1 7.1L12 20.3l8.8-8.6a5 5 0 000-7.1z"/></svg>
+              Beğen
+            </div>
+            <div class="icon-act" onclick="toggleCommentBox(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.4 8.4 0 01-1.1 4.2L21 21l-5.4-1a8.5 8.5 0 11-.6-.4z"/></svg>Yorum</div>
+            <div class="icon-act" onclick="openShareSheet(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>Paylaş</div>
+            <div class="spacer"></div>
+            <div class="icon-act" onclick="toggleSave(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h12v18l-6-4-6 4V3z"/></svg>Kaydet</div>
+          </div>
+          <div class="like-count"><span class="likeNum">128</span> beğenme</div>
+          <div class="caption"><b>user_sanan</b>Bugün harika bir gündü ☀️</div>
+          <div class="commentsList"></div>
+          <div class="view-comments"><span class="commentCount">4</span> yorumun tümünü gör</div>
+          <div class="emoji-row">
+            <button onclick="quickEmoji(this, '❤️')">❤️</button>
+            <button onclick="quickEmoji(this, '😂')">😂</button>
+            <button onclick="quickEmoji(this, '🔥')">🔥</button>
+            <button onclick="quickEmoji(this, '🙌')">🙌</button>
+          </div>
+          <div class="comment-compose">
+            <input type="text" placeholder="Yorum yaz..." onkeydown="if(event.key==='Enter') submitComment(this)">
+            <button class="comment-send-btn" onclick="submitComment(this.previousElementSibling)" title="Gönder">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 11l18-8-8 18-2-8-8-2z"/></svg>
+            </button>
+          </div>
+          <div class="post-timestamp">3 gün önce</div>
+        </div>
+
+        <div class="post" data-post-id="p2" data-post-img="https://images.unsplash.com/photo-1493612276216-ee3925520721?w=400&q=60">
+          <div class="post-head">
+            <img src="https://i.pravatar.cc/60?img=47">
+            <div><div class="who">user_sanan</div><div class="loc"></div></div>
+            <div class="dots">⋯</div>
+          </div>
+          <div class="post-media">
+            <video controls poster="https://images.unsplash.com/photo-1493612276216-ee3925520721?w=800&q=60"></video>
+          </div>
+          <div class="ig-actions">
+            <div class="icon-act" onclick="toggleLike(this)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.8 4.6a5 5 0 00-7.1 0L12 6.3l-1.7-1.7a5 5 0 10-7.1 7.1L12 20.3l8.8-8.6a5 5 0 000-7.1z"/></svg>
+              Beğen
+            </div>
+            <div class="icon-act" onclick="toggleCommentBox(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.4 8.4 0 01-1.1 4.2L21 21l-5.4-1a8.5 8.5 0 11-.6-.4z"/></svg>Yorum</div>
+            <div class="icon-act" onclick="openShareSheet(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>Paylaş</div>
+            <div class="spacer"></div>
+            <div class="icon-act" onclick="toggleSave(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h12v18l-6-4-6 4V3z"/></svg>Kaydet</div>
+          </div>
+          <div class="like-count"><span class="likeNum">56</span> beğenme</div>
+          <div class="caption"><b>user_sanan</b>Yeni video 🎬</div>
+          <div class="commentsList"></div>
+          <div class="view-comments"><span class="commentCount">1</span> yorumun tümünü gör</div>
+          <div class="emoji-row">
+            <button onclick="quickEmoji(this, '❤️')">❤️</button>
+            <button onclick="quickEmoji(this, '😂')">😂</button>
+            <button onclick="quickEmoji(this, '🔥')">🔥</button>
+            <button onclick="quickEmoji(this, '🙌')">🙌</button>
+          </div>
+          <div class="comment-compose">
+            <input type="text" placeholder="Yorum yaz..." onkeydown="if(event.key==='Enter') submitComment(this)">
+            <button class="comment-send-btn" onclick="submitComment(this.previousElementSibling)" title="Gönder">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 11l18-8-8 18-2-8-8-2z"/></svg>
+            </button>
+          </div>
+          <div class="post-timestamp">5 gün önce</div>
+        </div>
+      </div>
+      </div>
+    </div>
+
+    <!-- ================= EKRAN 3: MESAJLAR ================= -->
+    <div class="screen" id="screenMessages">
+      <div class="dmWrap" id="dmWrap">
+        <div class="list">
+          <div class="list-head" style="display:block;">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <button class="back-btn" style="display:inline-flex;" onclick="exitChatToFeed()" title="Ana Akışa Dön">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 19l-7-7 7-7"/></svg>
+              </button>
+              <h1 style="margin:0;">Mesajlar</h1>
+            </div>
+            <div class="search" style="margin-top:10px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg> Kullanıcı ara</div>
+            <div class="dm-tabs">
+              <span class="dm-tab active">Mesajlar</span>
+              <span class="dm-tab">İstekler</span>
+            </div>
+          </div>
+          <div class="list-body">
+            <div class="chat-item active"><img src="https://i.pravatar.cc/60?img=32"><div class="meta"><div class="name">KullanıcıA</div><div class="preview">Tamam, anlaştık o zaman 👍</div></div><span class="chat-time">2dk</span></div>
+            <div class="chat-item"><img src="https://i.pravatar.cc/60?img=47"><div class="meta"><div class="name">KullanıcıB</div><div class="preview">Fotoğrafı gönderdim, bak</div></div><span class="chat-time">14dk</span></div>
+            <div class="chat-item"><img src="https://i.pravatar.cc/60?img=15"><div class="meta"><div class="name">Neme</div><div class="preview">Online</div></div><span class="chat-time">1sa</span></div>
+          </div>
+        </div>
+        <div class="chatcol">
+          <div class="chat-head"><button class="back-btn" onclick="exitChatThread()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 19l-7-7 7-7"/></svg></button>
+            <img src="https://i.pravatar.cc/60?img=32"><div><div class="name" id="chatName">KullanıcıA</div><div class="status">Çevrimiçi</div></div></div>
+          <div class="messages" id="messagesBox">
+            <div class="msg them">Selam! Nasılsın? <span class="time">10:02</span></div>
+            <div class="msg me">İyiyim, sen nasılsın? <span class="time">10:03</span></div>
+            <div class="msg them">Şu gönderiyi gördün mü, çok iyiydi <span class="time">10:05</span></div>
+            <div class="msg-media"><img src="https://images.unsplash.com/photo-1493612276216-ee3925520721?w=400&q=60"></div>
+            <div class="msg me">Evet gördüm, harika olmuş 🙌 <span class="time">10:07</span></div>
+            <div class="msg them">Tamam, anlaştık o zaman 👍 <span class="time">10:08</span></div>
+          </div>
+          <div class="emoji-row">
+            <button onclick="quickEmojiMsg('❤️')">❤️</button>
+            <button onclick="quickEmojiMsg('😂')">😂</button>
+            <button onclick="quickEmojiMsg('🔥')">🔥</button>
+            <button onclick="quickEmojiMsg('🙌')">🙌</button>
+          </div>
+          <div class="composer">
+            <button class="icon-btn" onclick="document.getElementById('dmFile').click()" title="Fotoğraf / Galeri">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 011 1v10a1 1 0 01-1 1H4a1 1 0 01-1-1V9a1 1 0 011-1z"/><circle cx="12" cy="13" r="3.5"/></svg>
+            </button>
+            <input type="file" id="dmFile" accept="image/*,video/*" onchange="sendMedia(event)">
+            <input type="text" id="msgInput" placeholder="Mesaj yaz..." onkeydown="if(event.key==='Enter') sendMsg()">
+            <button class="send" onclick="sendMsg()" title="Gönder"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 11l18-8-8 18-2-8-8-2z"/></svg></button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= EKRAN 4: ADMIN ================= -->
+    <div class="screen" id="screenAdmin">
+      <div class="ahead screen-header" style="padding:12px 20px;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span class="mark" style="font-family:'JetBrains Mono',monospace;color:var(--accent);font-size:13px;border:1px solid var(--accent-dim);padding:5px 9px;border-radius:7px;">&lt;/&gt;</span>
+          <div><h1>Admin Yönetim Paneli</h1><div class="sub">NeXT</div></div>
+        </div>
+        <div class="pill"><span class="dot"></span> Açık</div>
+      </div>
+      <div class="screen-body">
+      <div class="adminWrap" style="padding-top:8px;">
+        <div class="stats">
+          <div class="stat"><div class="num" id="statTotal">128</div><div class="lbl">Toplam Üye</div></div>
+          <div class="stat"><div class="num">3</div><div class="lbl">Bekleyen Şikayet</div></div>
+          <div class="stat"><div class="num">2</div><div class="lbl">Engelli Üye</div></div>
+        </div>
+        <div class="section">
+          <div class="section-title">Üyeler Listesi</div>
+          <p class="section-sub">Tüm kayıtlı kullanıcıları görüntüle, engelle ya da sil.</p>
+          <div class="panel">
+            <div class="search-row"><input type="text" placeholder="Kullanıcı adı veya e-posta ara..." id="memberSearch" onkeyup="filterMembers()"></div>
+            <table>
+              <thead><tr><th>Kullanıcı Adı</th><th>E-posta</th><th>Durum</th><th>İşlemler</th></tr></thead>
+              <tbody id="memberTable">
+                <tr id="memberTableEmpty"><td colspan="4" style="text-align:center;color:var(--muted);padding:24px 16px;">Yükleniyor...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="section">
+          <div class="section-title">Uygunsuz İçerik Denetimi</div>
+          <p class="section-sub">Genel akış denetimi ve kullanıcı şikayetleri.</p>
+          <div class="report-grid">
+            <div class="report-card"><h3>Genel Akış Denetimi</h3><p>Yapay zeka tüm yeni gönderileri otomatik tarar.</p><div class="count countgood">0</div><p style="margin:2px 0 0;color:var(--accent);">bekleyen sorun</p><button onclick="alert('Demo: tüm akış yeniden taranıyor...')">Akışı Yeniden Tara</button></div>
+            <div class="report-card"><h3>Kullanıcı Şikayetleri</h3><p>Kullanıcıların bildirdiği raporlar.</p><div class="count">3</div><p style="margin:2px 0 0;">incelenmeyi bekliyor</p><button onclick="document.getElementById('flaggedList').scrollIntoView({behavior:'smooth'})">Şikayetleri Görüntüle</button></div>
+          </div>
+          <div class="flagged-list" id="flaggedList">
+            <div class="flagged-item"><img src="https://images.unsplash.com/photo-1521119989659-a83eee488004?w=120&q=60"><div class="info"><div class="who">User Şanan — gönderi şikayeti</div><div class="why">Sebep: "Uygunsuz yorum içeriyor"</div></div><div class="acts"><button class="actbtn success" onclick="resolveReport(this)">Onayla</button><button class="actbtn danger" onclick="resolveReport(this)">Kaldır</button></div></div>
+            <div class="flagged-item"><img src="https://images.unsplash.com/photo-1493612276216-ee3925520721?w=120&q=60"><div class="info"><div class="who">KullanıcıB — mesaj şikayeti</div><div class="why">Sebep: "Taciz / spam"</div></div><div class="acts"><button class="actbtn success" onclick="resolveReport(this)">Onayla</button><button class="actbtn danger" onclick="resolveReport(this)">Kaldır</button></div></div>
+          </div>
+        </div>
+      </div>
+      </div>
+    </div>
+
+    <!-- ================= ORTAK MODÜL: FOTOĞRAF KIRPMA ================= -->
+    <!-- Hem kayıt akışında (profil fotoğrafı adımı) hem Bio'da "Fotoğrafı Değiştir"
+         dediğinde AYNI ekran açılır. Hangi akıştan açıldığını cropContext
+         ('register' | 'edit') değişkeni tutar. -->
+    <div class="screen" id="screenCrop">
+      <div class="crop-topbar">
+        <button class="crop-text-btn" onclick="cancelCrop()">İptal</button>
+        <span class="crop-title">Fotoğrafı Düzenle</span>
+        <button class="crop-text-btn crop-done" id="cropDoneBtn" onclick="confirmCrop()">Bitti</button>
+      </div>
+      <div class="crop-stage" id="cropStage">
+        <img id="cropImage" draggable="false" alt="">
+        <div class="crop-circle-mask"></div>
+      </div>
+      <div class="crop-controls">
+        <button class="crop-rotate-btn" onclick="rotateCrop()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 1 2.6 6.3M3 12V6m0 6h6"/></svg>
+          Döndür
+        </button>
+        <div class="crop-slider-row">
+          <label>Yakınlaştır</label>
+          <input type="range" id="cropScaleSlider" min="100" max="300" value="100" oninput="onScaleSlider(this.value)">
+        </div>
+        <div class="crop-slider-row">
+          <label>Hizala</label>
+          <input type="range" id="cropAlignSlider" min="-100" max="100" value="0" oninput="onAlignSlider(this.value)">
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= EKRAN 5: BIO / PROFİL ================= -->
+    <div class="screen" id="screenProfile">
+      <div class="bio-header screen-header">
+        <h1 class="bio-header-left">Bio</h1>
+        <div class="bio-header-center" onclick="openAccountSwitcher()" title="Hesap Değiştir">
+          <img src="NeXT.PNG" alt="NeXT" class="bio-header-logo-img" onerror="this.style.display='none';this.nextElementSibling.style.display='block';">
+          <span class="bio-header-logo-fallback">NeXT</span>
+        </div>
+        <button class="icon-btn bio-header-right" onclick="openDrawer()" title="Menü">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+      </div>
+
+      <!-- SAĞDAN AÇILAN YAN MENÜ (DRAWER) -->
+      <div class="drawer-overlay hidden" id="drawerOverlay" onclick="closeDrawer()"></div>
+      <div class="side-drawer" id="sideDrawer">
+        <div class="drawer-title">Menü</div>
+
+        <div class="drawer-theme-row">
+          <span>🌙 Karanlık Mod</span>
+          <label class="switch">
+            <input type="checkbox" id="themeToggle" onchange="toggleTheme()">
+            <span class="switch-slider"></span>
+          </label>
+        </div>
+
+        <button class="drawer-btn" onclick="closeDrawer();goToRegisterScreen()">Kayıt Ekranını Yeniden Aç</button>
+        <button class="drawer-btn danger" onclick="closeDrawer();logoutAccount()">Çıkış Yap</button>
+      </div>
+
+      <div class="screen-body">
+      <div class="profileWrap">
+        <img class="avatarBig" id="profileAvatar" src="https://i.pravatar.cc/120?img=68">
+        <h2 id="profileName">Misafir</h2>
+        <div class="uemail" id="profileEmail">—</div>
+
+        <div class="statsRow">
+          <div class="statItem"><div class="statNum" id="statPosts">0</div><div class="statLbl">Gönderi</div></div>
+          <div class="statItem"><div class="statNum" id="statFollowers">0</div><div class="statLbl">Takipçi</div></div>
+          <div class="statItem"><div class="statNum" id="statFollowing">0</div><div class="statLbl">Takip</div></div>
+        </div>
+
+        <button class="btn btn-ghost" style="width:100%;margin-bottom:14px;" onclick="toggleEditUsername()">✏️ Kullanıcı Adı / Fotoğrafı Düzenle</button>
+
+        <div id="editUsernamePanel" class="hidden" style="background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:18px;text-align:left;">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
+            <img id="editPreviewImg" src="https://i.pravatar.cc/120?img=68" style="width:54px;height:54px;border-radius:50%;object-fit:cover;border:1px solid var(--line);">
+            <label class="actbtn" style="cursor:pointer;" onclick="document.getElementById('editPhotoInput').click()">Fotoğrafı Değiştir</label>
+            <input type="file" id="editPhotoInput" accept="image/*" onchange="onEditPhotoChosen(event)">
+          </div>
+          <label style="font-size:12px;color:var(--muted);margin-bottom:6px;display:block;">Kullanıcı Adı</label>
+          <input type="text" id="editUsernameInput" style="margin-bottom:12px;">
+          <button class="btn btn-primary" style="width:100%;" onclick="saveProfileEdit()">Değişiklikleri Kaydet</button>
+        </div>
+
+        <label style="display:block;font-size:12px;color:var(--muted);margin-bottom:6px;text-align:left;">NeXT Bio</label>
+        <textarea id="bioText" placeholder="Kendinden bahset...">Merhaba, ben buradayım 👋</textarea>
+        <button class="btn btn-primary" style="width:100%;margin-bottom:22px;" onclick="saveBio()">Kaydet</button>
+
+        <div style="text-align:left;margin-bottom:14px;">
+          <div style="font-size:12.5px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.4px;">Paylaşımların</div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:18px;">
+          <div style="aspect-ratio:1/1;border-radius:10px;overflow:hidden;"><img src="https://images.unsplash.com/photo-1521119989659-a83eee488004?w=300&q=50" style="width:100%;height:100%;object-fit:cover;"></div>
+          <div style="aspect-ratio:1/1;border-radius:10px;overflow:hidden;position:relative;"><img src="https://images.unsplash.com/photo-1493612276216-ee3925520721?w=300&q=50" style="width:100%;height:100%;object-fit:cover;"><span style="position:absolute;top:6px;right:6px;font-size:11px;background:rgba(0,0,0,.5);color:#fff;padding:2px 5px;border-radius:5px;">▶</span></div>
+          <div style="aspect-ratio:1/1;border-radius:10px;overflow:hidden;background:var(--surface-2);display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:11px;">+ Yeni</div>
+        </div>
+
+        <button class="btn btn-ghost" style="width:100%;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;" onclick="openSavedScreen()">
+          <span>🔖 Kaydedilenler</span><span style="color:var(--muted);">›</span>
+        </button>
+        <button class="btn btn-ghost" style="width:100%;margin-bottom:24px;display:flex;align-items:center;justify-content:space-between;" onclick="openLikedScreen()">
+          <span>❤️ Beğenilenler</span><span style="color:var(--muted);">›</span>
+        </button>
+      </div>
+      </div>
+    </div>
+
+    <!-- ================= EKRAN: KAYDEDİLENLER ================= -->
+    <div class="screen" id="screenSaved">
+      <div class="topbar screen-header">
+        <button class="back-btn" style="display:inline-flex;" onclick="showScreen('profile')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 19l-7-7 7-7"/></svg></button>
+        <h1>Kaydedilenler</h1>
+      </div>
+      <div class="screen-body">
+        <div id="savedEmpty" style="text-align:center;color:var(--muted);font-size:13px;padding:40px 20px;">Henüz kaydettiğin bir gönderi yok. Ana Akış'ta bir gönderiyi "Kaydet" ile buraya ekleyebilirsin.</div>
+        <div id="savedGrid" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;padding:16px;"></div>
+      </div>
+    </div>
+
+    <!-- ================= EKRAN: BEĞENİLENLER ================= -->
+    <div class="screen" id="screenLiked">
+      <div class="topbar screen-header">
+        <button class="back-btn" style="display:inline-flex;" onclick="showScreen('profile')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 19l-7-7 7-7"/></svg></button>
+        <h1>Beğenilenler</h1>
+      </div>
+      <div class="screen-body">
+        <div id="likedEmpty" style="text-align:center;color:var(--muted);font-size:13px;padding:40px 20px;">Henüz beğendiğin bir gönderi yok. Ana Akış'ta bir gönderiyi beğenince buraya eklenir.</div>
+        <div id="likedGrid" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;padding:16px;"></div>
+      </div>
+    </div>
+
+    <!-- ================= EKRAN: BAŞKA KULLANICI PROFİLİ ================= -->
+    <div class="screen" id="screenOtherProfile">
+      <div class="topbar screen-header">
+        <button class="back-btn" style="display:inline-flex;" onclick="closeOtherProfile()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 19l-7-7 7-7"/></svg></button>
+        <h1 id="otherProfileTitle">Profil</h1>
+      </div>
+      <div class="screen-body">
+        <div class="profileWrap">
+          <img class="avatarBig" id="otherProfileAvatar" src="https://i.pravatar.cc/120?img=68">
+          <h2 id="otherProfileName">@kullanici</h2>
+          <div class="uemail" id="otherProfileEmail">—</div>
+
+          <div class="statsRow">
+            <div class="statItem"><div class="statNum" id="otherStatPosts">0</div><div class="statLbl">Gönderi</div></div>
+            <div class="statItem"><div class="statNum" id="otherStatFollowers">0</div><div class="statLbl">Takipçi</div></div>
+            <div class="statItem"><div class="statNum" id="otherStatFollowing">0</div><div class="statLbl">Takip</div></div>
+          </div>
+
+          <div class="row">
+            <button class="btn btn-primary" id="otherFollowBtn" style="flex:1;" onclick="toggleFollowOther()">Takip Et</button>
+            <button class="btn btn-ghost" style="flex:1;" onclick="messageOtherUser()">Mesaj Gönder</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /main -->
+</div><!-- /appShell -->
+
+<!-- HESAP DEĞİŞTİRİCİ (Bottom Sheet) -->
+<div class="bottomsheet-overlay hidden" id="accountSwitcherOverlay" onclick="if(event.target===this) closeAccountSwitcher()">
+  <div class="bottomsheet" id="accountSwitcherSheet">
+    <div class="bottomsheet-handle"></div>
+    <div class="bottomsheet-title">Hesap Değiştir</div>
+    <div id="accountList"></div>
+    <button class="drawer-btn" style="margin-top:10px;text-align:center;" onclick="closeAccountSwitcher();goToRegisterScreen()">+ Başka Hesap Ekle</button>
+  </div>
+</div>
+
+<!-- PAYLAŞIM PENCERESİ (Share Sheet) -->
+<div class="overlay hidden" id="shareSheet" onclick="if(event.target===this) closeShareSheet()">
+  <div class="contract-card" style="max-width:380px;">
+    <div class="contract-head">
+      <div class="eyebrow">Paylaş</div>
+      <h2>Gönderiyi Paylaş</h2>
+    </div>
+    <div style="padding:0 18px 18px;display:flex;flex-direction:column;gap:8px;">
+      <button class="share-option" onclick="shareAction('Bağlantı kopyalandı ✅')">🔗 Bağlantıyı Kopyala</button>
+      <button class="share-option" onclick="shareAction('Mesaj olarak paylaşıldı ✅')">💬 Mesajla Paylaş</button>
+      <button class="share-option" onclick="shareAction('Hikayene eklendi ✅')">⭐ Hikayene Ekle</button>
+      <button class="share-option" onclick="closeShareSheet()" style="color:var(--muted);">Vazgeç</button>
+    </div>
+  </div>
+</div>
+
+<!-- ALTTAN ÇIKAN SİSTEM MESAJI (TOAST) -->
+<div class="toast" id="toast"></div>
+
+<!-- ZORUNLU SÖZLEŞME + ONAY VİDEOSU -->
+<div class="overlay hidden" id="contractOverlay">
+
+  <!-- AŞAMA 1: SÖZLEŞME METNİ -->
+  <div class="contract-card" id="contractAgreeStage">
+    <div class="contract-head">
+      <div class="eyebrow">İlk Giriş · Zorunlu</div>
+      <h2>Kullanım Sözleşmesi</h2>
+    </div>
+    <div class="contract-text">
+      NeXT'i kullanarak topluluk kurallarına uymayı kabul ediyorsun: başka kullanıcılara saygılı davranmak,
+      +18/uygunsuz içerik paylaşmamak, gerçek bilgilerinle hareket etmek ve admin ekibinin aldığı moderasyon
+      kararlarına uymak. Bu kuralları ihlal eden hesaplar engellenebilir veya silinebilir.
+    </div>
+    <div class="contract-foot">
+      <button class="btn btn-primary" style="width:100%" onclick="agreeToContract()">Okudum, Kabul Ediyorum</button>
+    </div>
+  </div>
+
+  <!-- AŞAMA 2: ONAY VİDEOSU -->
+  <div class="contract-card video-stage-card hidden" id="contractVideoStage">
+    <div class="video-stage-head">
+      <div class="video-stage-eyebrow">İlk Giriş · Zorunlu</div>
+      <h2>Sözleşme Onay Videosu</h2>
+    </div>
+    <div class="video-wrap">
+      <video id="contractVideo" poster="https://images.unsplash.com/photo-1551836022-d5d88e9218df?w=700&q=60" playsinline preload="auto">
+        <source src="Onay_videosu.mp4.mov" type="video/quicktime">
+        <source src="Onay_videosu.mp4.mov" type="video/mp4">
+        <source src="Onay_videosu.mp4" type="video/mp4">
+      </video>
+      <div class="video-glow-top"></div>
+      <div class="playbtn hidden" id="playBtn" onclick="playVideo()"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="11" fill="rgba(0,0,0,.35)"/><path d="M10 8l6 4-6 4V8z" fill="#fff"/></svg></div>
+    </div>
+    <div class="video-stage-foot">
+      <div class="progress-row"><div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div><div class="progress-label" id="progressLabel">İZLENMEDİ — 0%</div></div>
+      <button class="btn btn-primary" id="continueBtn" disabled style="width:100%" onclick="continueToFeed()">Devam Et →</button>
+      <div class="btn-hint">Bu video bu cihazda yalnızca bir defa gösterilir.</div>
+    </div>
+  </div>
+</div>
+
+<style>
+.regstep{display:none;}
+.regstep.active{display:block;}
+</style>
+
 <script>
 /* ===== KAYIT AKIŞI ===== */
+/* ============================================================
+   ADMIN HESABI — bu e-posta + şifre ile kayıt olan/giriş yapan
+   kullanıcı otomatik olarak ADMIN sayılır. Buraya kendi admin
+   bilgilerini yazabilirsin:
+   ============================================================ */
 const ADMIN_EMAIL = "talhakuru00@gmail.com";
 const ADMIN_PASSWORD = "101455";
+
 let fakeCode = String(Math.floor(100000 + Math.random()*900000));
 let uploadedImageOk = false;
 let savedProfilePhoto = null;
@@ -399,29 +1156,1300 @@ let savedUsername = '';
 let savedEmail = '';
 let savedPassword = '';
 let savedIsAdmin = false;
+/* Kayıt akışı (şifre oluşturma → e-posta doğrulama → fotoğraf) sürerken
+   true olur. Bu süre boyunca Firebase'in otomatik oturum dinleyicisi
+   (onAuthStateChanged) araya girip kullanıcıyı Ana Akış'a fırlatmaz. */
 let registrationInProgress = false;
 
-/* EKLEME: Çalışmayan "Tekrar E-posta Gönder" butonunun fonksiyonu */
-function resendVerificationLink() {
-  if (!fbReady || !fbAuth) {
+/* ============================================================
+   OTURUM (SESSION) KONTROLÜ
+   GitHub Pages'e yüklendiğinde tarayıcı hafızasında (localStorage)
+   basit bir oturum bilgisi tutulur. Sayfa her açıldığında önce bu
+   kontrol edilir: oturum varsa direkt Ana Akış, yoksa Giriş/Kayıt
+   ekranı gösterilir. (Not: Claude'un kendi önizlemesinde bu hafıza
+   çalışmayabilir — gerçek bir web adresinde, örn. GitHub Pages'te,
+   tarayıcı bunu normal şekilde saklar.)
+   ============================================================ */
+function saveSession(){
+  try{
+    localStorage.setItem('next_session', JSON.stringify({
+      username: savedUsername, email: savedEmail, photo: savedProfilePhoto, isAdmin: savedIsAdmin
+    }));
+  }catch(e){ /* localStorage kullanılamıyorsa sessizce geç */ }
+  upsertAccount({username: savedUsername, email: savedEmail, photo: savedProfilePhoto, isAdmin: savedIsAdmin});
+}
+
+function clearSession(){
+  try{ localStorage.removeItem('next_session'); }catch(e){}
+}
+
+/* ===== HESAP DEĞİŞTİRİCİ (Account Switcher) =====
+   Tarayıcıda, bu cihazda daha önce giriş yapılmış hesapların listesini tutar.
+   Instagram'daki gibi, logout olmadan hesaplar arası anında geçiş içindir. */
+function getAccountsList(){
+  try{ const list = JSON.parse(localStorage.getItem('next_accounts')); return Array.isArray(list) ? list : []; }
+  catch(e){ return []; }
+}
+function saveAccountsList(list){
+  try{ localStorage.setItem('next_accounts', JSON.stringify(list)); }catch(e){}
+}
+function upsertAccount(acc){
+  if(!acc.email) return;
+  const list = getAccountsList();
+  const idx = list.findIndex(a => a.email.toLowerCase() === acc.email.toLowerCase());
+  if(idx > -1) list[idx] = acc; else list.push(acc);
+  saveAccountsList(list);
+}
+
+function openAccountSwitcher(){
+  renderAccountList();
+  document.getElementById('accountSwitcherOverlay').classList.remove('hidden');
+  setTimeout(()=>document.getElementById('accountSwitcherSheet').classList.add('open'), 10);
+}
+function closeAccountSwitcher(){
+  document.getElementById('accountSwitcherSheet').classList.remove('open');
+  setTimeout(()=>document.getElementById('accountSwitcherOverlay').classList.add('hidden'), 300);
+}
+function renderAccountList(){
+  const list = getAccountsList();
+  const box = document.getElementById('accountList');
+  if(!list.length){
+    box.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:12.5px;padding:18px 0;">Henüz kayıtlı başka hesap yok. Yeni bir hesap eklemek için aşağıdaki butonu kullan.</div>';
+    return;
+  }
+  box.innerHTML = list.map(acc => `
+    <div class="account-row" onclick="switchToAccount('${acc.email.replace(/'/g, "\\'")}')">
+      <img src="${acc.photo || 'https://i.pravatar.cc/80?img=68'}">
+      <div><div class="acc-name">${acc.username}</div><div class="acc-email">${acc.email}</div></div>
+      ${acc.email.toLowerCase() === (savedEmail||'').toLowerCase() ? '<span class="active-badge">● Aktif</span>' : ''}
+    </div>
+  `).join('');
+}
+function switchToAccount(email){
+  closeAccountSwitcher();
+  showToast('Güvenlik için şifreni tekrar girmen gerekiyor');
+  const goToLogin = ()=>{
+    document.querySelectorAll('#main .screen').forEach(s=>s.classList.remove('active'));
+    document.getElementById('screenRegister').classList.add('active');
+    switchAuthTab('login');
+    document.getElementById('island').classList.add('hidden');
+    const loginEmailInput = document.getElementById('loginEmail');
+    if(loginEmailInput) loginEmailInput.value = email;
+  };
+  if(!fbReady || !fbAuth){ goToLogin(); return; }
+  fbAuth.signOut().finally(goToLogin);
+}
+
+function initAuthState(){
+  // Firebase kontrol sonucu gelene kadar (genelde yarım saniyeden az) açılış
+  // splash'i zaten ekranda — bu yüzden burada görünür bir "flaş" olmaz.
+  document.querySelectorAll('#main .screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screenRegister').classList.add('active');
+  document.getElementById('island').classList.add('hidden');
+  switchAuthTab('login');
+
+  if(!fbReady || !fbAuth){
+    // Firebase SDK'sı bu ortamda yüklenemedi (genelde internet/ağ kısıtlaması).
+    // Site çökmesin, en azından Giriş/Kayıt ekranı görünsün.
     showToast('Bağlantı kurulamadı — internetini kontrol et');
     return;
   }
-  const user = fbAuth.currentUser;
-  if (user) {
-    user.sendEmailVerification(getVerificationActionSettings())
-      .then(() => {
-        showToast('Doğrulama e-postası tekrar gönderildi!');
-      })
-      .catch((err) => {
-        showToast('Hata: ' + err.message);
-      });
+
+  fbAuth.onAuthStateChanged((user)=>{
+    // Kullanıcı şu an aktif olarak kayıt akışının ortasındaysa (şifre/foto adımı vb.)
+    // bu otomatik dinleyici ARAYA GİRİP onu Ana Akış'a fırlatmasın — akışın
+    // kendi "Doğruladım" / "Profili Tamamla" butonları yönlendirmeyi yönetir.
+    if(registrationInProgress) return;
+
+    if(user && user.emailVerified){
+      loadUserProfileAndEnter(user);
+    } else if(user && !user.emailVerified){
+      // Hesabı var ama e-postasını henüz doğrulamamış: doğrulama adımına götür
+      savedEmail = user.email;
+      document.querySelectorAll('#main .screen').forEach(s=>s.classList.remove('active'));
+      document.getElementById('screenRegister').classList.add('active');
+      document.getElementById('emailEcho').textContent = savedEmail + ' adresine';
+      switchAuthTab('signup');
+      goReg(3);
+      document.getElementById('island').classList.add('hidden');
+    } else {
+      document.querySelectorAll('#main .screen').forEach(s=>s.classList.remove('active'));
+      document.getElementById('screenRegister').classList.add('active');
+      switchAuthTab('login');
+      document.getElementById('island').classList.add('hidden');
+    }
+  });
+}
+
+/* ===== KLAVYE AÇILDIĞINDA ALT ADAYI KLAVYENİN ÜSTÜNE KALDIR =====
+   Mobil tarayıcılarda klavye açılınca görünür alan (visualViewport) kısalır.
+   Bu farkı ölçüp alt adayı o kadar yukarı kaydırıyoruz; üst başlık zaten
+   sabit (flex-shrink:0) olduğu için yerinden oynamıyor. */
+if(window.visualViewport){
+  window.visualViewport.addEventListener('resize', ()=>{
+    const keyboardHeight = window.innerHeight - window.visualViewport.height;
+    const island = document.getElementById('island');
+    island.style.bottom = (keyboardHeight > 80 ? keyboardHeight + 14 : 18) + 'px';
+  });
+}
+
+function goReg(n){
+  document.querySelectorAll('.regstep').forEach(p=>p.classList.remove('active'));
+  document.getElementById('reg'+n).classList.add('active');
+  document.querySelectorAll('.rail .seg').forEach((s,i)=>s.classList.toggle('on', i < n));
+  document.getElementById('stepLabel').textContent = 'ADIM '+n+' / 4';
+}
+
+function switchAuthTab(which){
+  document.getElementById('authpanelLogin').classList.toggle('active', which==='login');
+  document.getElementById('authpanelSignup').classList.toggle('active', which==='signup');
+}
+
+/* ADIM 1: sadece e-postayı doğrula ve şifre/kullanıcı adı adımına geç */
+function goToPasswordStep(){
+  const e = document.getElementById('email');
+  const eOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e.value.trim());
+  document.getElementById('err-email').style.display = eOk ? 'none' : 'block';
+  if(!eOk) return;
+  savedEmail = e.value.trim();
+  goReg(2);
+}
+
+/* Şifre zorunlu değil ama önerilir: büyük harf, küçük harf, özel karakter kullanımı
+   isteğe bağlı — sadece dinamik güçlülük göstergesi için puanlanıyor. */
+function passwordScore(pass){
+  let score = 0;
+  if(pass.length >= 4) score++;
+  if(pass.length >= 8) score++;
+  if(/[a-z]/.test(pass) && /[A-Z]/.test(pass)) score++;
+  if(/[!@#$%^&*(),.?":{}|<>]/.test(pass)) score++;
+  return score; // 0-4
+}
+function updatePasswordStrength(pass){
+  const fill = document.getElementById('strengthFill');
+  const label = document.getElementById('strengthLabel');
+  if(!pass){
+    fill.style.width = '0%'; fill.style.background = 'var(--danger)';
+    label.textContent = 'Şifre yaz'; label.style.color = 'var(--muted)';
+    return;
+  }
+  const score = passwordScore(pass);
+  const steps = [
+    {w:'20%',  c:'var(--danger)', t:'Çok zayıf'},
+    {w:'40%',  c:'var(--danger)', t:'Zayıf'},
+    {w:'65%',  c:'var(--warn)',   t:'Orta — şifreniz güçleniyor'},
+    {w:'85%',  c:'#7ed957',       t:'Güçlü — şifreniz daha güçlü oldu!'},
+    {w:'100%', c:'var(--accent)', t:'Çok güçlü 💪'}
+  ][score];
+  fill.style.width = steps.w; fill.style.background = steps.c;
+  label.textContent = steps.t; label.style.color = steps.c;
+}
+
+function firebaseErrorMessage(err){
+  const map = {
+    'auth/email-already-in-use': 'Bu e-posta adresi zaten kayıtlı. "Zaten hesabın var mı?" linkinden giriş yap.',
+    'auth/weak-password': 'Şifre en az 6 karakter olmalı.',
+    'auth/invalid-email': 'Geçersiz e-posta adresi.',
+    'auth/network-request-failed': 'İnternet bağlantısı sorunu, tekrar dene.',
+    'auth/user-not-found': 'Bu e-posta ile kayıtlı bir hesap bulunamadı.',
+    'auth/wrong-password': 'Şifre hatalı.',
+    'auth/invalid-credential': 'E-posta veya şifre hatalı.',
+    'auth/too-many-requests': 'Çok fazla deneme yapıldı, biraz sonra tekrar dene.'
+  };
+  return map[err.code] || ('Bir hata oluştu: ' + err.message);
+}
+
+/* ADIM 2: Şifre + kullanıcı adı — burada GERÇEK Firebase hesabı oluşturulur
+   ve gerçek doğrulama e-postası gönderilir. Kullanıcı adı, Realtime
+   Database'deki "usernames/" listesine karşı GERÇEKTEN kontrol edilir. */
+/* Firebase yüklenememişse (internet/ağ sorunu) kullanıcıyı bilgilendirip
+   fonksiyonun devam etmesini durdurur — sayfa asla çökmez. */
+function requireFirebase(){
+  if(!fbReady || !fbAuth || !fbDb){
+    showToast('Bağlantı kurulamadı — internetini kontrol edip tekrar dene');
+    return false;
+  }
+  return true;
+}
+
+/* E-postadaki linke tıklayınca Firebase'in açtığı sayfada "Siteye Geri Dön"
+   butonu çıkması için devam URL'i (continue URL) veriyoruz — bu, kullanıcının
+   doğruladıktan sonra kendi sitesine dönebilmesini sağlar. */
+function getVerificationActionSettings(){
+  return { url: window.location.href.split('#')[0] };
+}
+
+/* Doğrulama ekranında gösterilen, her kullanıcıya özel rastgele kod —
+   gerçek doğrulama bu koda bağlı DEĞİL (gerçek doğrulama e-postadaki linkle
+   yapılıyor), bu sadece sembolik/bilgi amaçlı bir referans numarasıdır. */
+function generateSymbolicCode(){
+  const code = String(Math.floor(100000 + Math.random()*900000));
+  const el = document.getElementById('symbolicCode');
+  if(el) el.textContent = code;
+  return code;
+}
+
+function createAccountAndSendVerification(){
+  if(!requireFirebase()) return;
+  const p = document.getElementById('password'), u = document.getElementById('username');
+  const passVal = p.value.trim();
+  const userVal = u.value.trim().replace(/^@/,'');
+
+  const pOk = passVal.length >= 6; // Firebase'in minimum şifre şartı
+  const uOk = userVal.length >= 3;
+
+  document.getElementById('err-password').style.display = pOk ? 'none' : 'block';
+  document.getElementById('err-username').textContent = 'Kullanıcı adı en az 3 karakter olmalı.';
+  document.getElementById('err-username').style.display = uOk ? 'none' : 'block';
+  if(!pOk || !uOk) return;
+
+  const btn = document.getElementById('createAccountBtn');
+  btn.disabled = true; btn.textContent = 'Kontrol ediliyor...';
+  const usernameKey = userVal.toLowerCase();
+
+  fbDb.ref('usernames/' + usernameKey).once('value').then((snap)=>{
+    if(snap.exists()){
+      btn.disabled = false; btn.textContent = 'Hesabı Oluştur';
+      document.getElementById('err-username').textContent = 'Bu kullanıcı adı zaten alınmış, başka bir ad dene.';
+      document.getElementById('err-username').style.display = 'block';
+      return;
+    }
+    fbAuth.createUserWithEmailAndPassword(savedEmail, passVal).then((cred)=>{
+      registrationInProgress = true; // akış bitene kadar otomatik yönlendirme devre dışı
+      savedPassword = passVal;
+      savedUsername = '@' + userVal;
+      savedIsAdmin = (savedEmail.toLowerCase() === ADMIN_EMAIL.toLowerCase() && passVal === ADMIN_PASSWORD);
+      document.getElementById('emailEcho').textContent = savedEmail + ' adresine';
+      generateSymbolicCode();
+      return cred.user.sendEmailVerification(getVerificationActionSettings());
+    }).then(()=>{
+      btn.disabled = false; btn.textContent = 'Hesabı Oluştur';
+      goReg(3);
+    }).catch((err)=>{
+      btn.disabled = false; btn.textContent = 'Hesabı Oluştur';
+      document.getElementById('err-password').textContent = firebaseErrorMessage(err);
+      document.getElementById('err-password').style.display = 'block';
+    });
+  }).catch(()=>{
+    btn.disabled = false; btn.textContent = 'Hesabı Oluştur';
+    document.getElementById('err-username').textContent = 'Kullanıcı adı kontrol edilemedi, internetini kontrol et.';
+    document.getElementById('err-username').style.display = 'block';
+  });
+}
+
+function resendVerificationLink(){
+  if(!requireFirebase()) return;
+  if(!fbAuth.currentUser){ showToast('Önce hesap oluşturman gerekiyor.'); return; }
+  generateSymbolicCode();
+  fbAuth.currentUser.sendEmailVerification(getVerificationActionSettings())
+    .then(()=> showToast('Doğrulama linki tekrar gönderildi 📩'))
+    .catch(()=> showToast('Gönderilemedi, az sonra tekrar dene.'));
+}
+
+/* ===== ŞİFRE GÖSTER/GİZLE ===== */
+function togglePwdVisibility(inputId, btn){
+  const input = document.getElementById(inputId);
+  const showing = input.type === 'text';
+  input.type = showing ? 'password' : 'text';
+  btn.classList.toggle('showing', !showing);
+}
+
+/* ===== ŞİFREMİ UNUTTUM (gerçek Firebase şifre sıfırlama e-postası) ===== */
+function forgotPassword(){
+  const emailInput = document.getElementById('loginEmail');
+  const email = emailInput.value.trim();
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
+    showToast('Önce e-posta kutusuna geçerli bir adres yaz');
+    return;
+  }
+  if(!requireFirebase()) return;
+  fbAuth.sendPasswordResetEmail(email, getVerificationActionSettings())
+    .then(()=> showToast('Şifre sıfırlama linki e-postana gönderildi 📩'))
+    .catch((err)=> showToast(firebaseErrorMessage(err)));
+}
+
+function manualCheckVerified(){
+  if(!requireFirebase()) return;
+  if(!fbAuth.currentUser){
+    document.getElementById('err-code').style.display = 'block';
+    return;
+  }
+  fbAuth.currentUser.reload().then(()=>{
+    if(fbAuth.currentUser.emailVerified){
+      document.getElementById('err-code').style.display = 'none';
+      playSuccessAnimation(()=>{ goReg(4); });
+    } else {
+      document.getElementById('err-code').style.display = 'block';
+      const boxes = [...document.querySelectorAll('#reg3 .digit')];
+      boxes.forEach(b=>{ b.classList.add('shake'); setTimeout(()=>b.classList.remove('shake'),350); });
+    }
+  }).catch(()=>{
+    document.getElementById('err-code').style.display = 'block';
+  });
+}
+
+/* O sevilen kutu animasyonu — artık yazılan bir kod değil, GERÇEK doğrulama
+   onaylandığında otomatik oynuyor. */
+function playSuccessAnimation(onDone){
+  const boxes = [...document.querySelectorAll('#reg3 .digit')];
+  boxes.forEach((b,i)=>{
+    setTimeout(()=>b.classList.add('filled','success'), i*90);
+  });
+  setTimeout(()=>{
+    document.getElementById('verifyCheck').classList.add('show');
+  }, boxes.length*90 + 200);
+  setTimeout(()=>{ onDone && onDone(); }, boxes.length*90 + 1100);
+}
+document.querySelectorAll('.digit').forEach((inp, idx, list)=>{
+  inp.addEventListener('input', ()=>{
+    inp.classList.toggle('filled', !!inp.value);
+    if(inp.value && idx<list.length-1) list[idx+1].focus();
+  });
+  inp.addEventListener('keydown', (e)=>{
+    if(e.key === 'Backspace' && !inp.value && idx > 0){
+      e.preventDefault();
+      const prev = list[idx-1];
+      prev.value = '';
+      prev.classList.remove('filled');
+      prev.focus();
+    }
+  });
+});
+
+function validatePhotoFile(file){
+  const allowedTypes = ['image/jpeg','image/jpg','image/png'];
+  const maxBytes = 5 * 1024 * 1024; // 5 MB
+  if(!allowedTypes.includes(file.type)){
+    return 'Sadece JPG veya PNG formatında fotoğraf yükleyebilirsin.';
+  }
+  if(file.size > maxBytes){
+    return 'Fotoğraf en fazla 5 MB olabilir. Bu dosya: ' + (file.size/1024/1024).toFixed(1) + ' MB.';
+  }
+  return null;
+}
+
+/* Fotoğrafı otomatik olarak ortadan kare (1:1) kırpar — profil fotoğrafı
+   her zaman düzgün bir kare olsun, sonra CSS bunu yuvarlak gösterir. */
+/* ============================================================
+   ORTAK MODÜL: FOTOĞRAF KIRPMA EKRANI
+   isRegistering (cropContext='register') ve isEditing (cropContext='edit')
+   durumlarının HER İKİSİNDE de aynı ekran, aynı kod kullanılır.
+   ============================================================ */
+let cropContext = null;          // 'register' | 'edit'
+let cropImgNaturalW = 0, cropImgNaturalH = 0;
+let cropOffsetX = 0, cropOffsetY = 0;
+let cropUserScale = 1;           // 1.0 = %100
+let cropRotate = 0;              // derece
+const CROP_FRAME = 280;          // .crop-circle-mask çapı (CSS px) ile aynı
+
+function openCropScreen(dataUrl, context){
+  cropContext = context;
+  cropOffsetX = 0; cropOffsetY = 0; cropUserScale = 1; cropRotate = 0;
+  document.getElementById('cropScaleSlider').value = 100;
+  document.getElementById('cropAlignSlider').value = 0;
+  document.getElementById('cropDoneBtn').textContent = (context === 'register') ? 'İleri' : 'Bitti';
+
+  const img = document.getElementById('cropImage');
+  img.onload = () => {
+    cropImgNaturalW = img.naturalWidth;
+    cropImgNaturalH = img.naturalHeight;
+    renderCropTransform();
+  };
+  img.src = dataUrl;
+
+  // Hem kayıt hem profil düzenleme akışında: bu ekran açıkken
+  // Yüzen Ada NAVİGASYONU kesinlikle görünmez.
+  document.getElementById('island').classList.add('chat-fullscreen-hide');
+  showScreen('crop');
+}
+
+function renderCropTransform(){
+  const img = document.getElementById('cropImage');
+  if(!cropImgNaturalW) return;
+  const baseScale = CROP_FRAME / Math.min(cropImgNaturalW, cropImgNaturalH);
+  const combined = baseScale * cropUserScale;
+  img.style.width = cropImgNaturalW + 'px';
+  img.style.height = cropImgNaturalH + 'px';
+  img.style.transform =
+    `translate(-50%,-50%) translate(${cropOffsetX}px, ${cropOffsetY}px) rotate(${cropRotate}deg) scale(${combined})`;
+}
+
+function rotateCrop(){
+  cropRotate = (cropRotate + 90) % 360;
+  renderCropTransform();
+}
+function onScaleSlider(val){
+  cropUserScale = Math.max(1, parseInt(val) / 100);
+  renderCropTransform();
+}
+function onAlignSlider(val){
+  cropOffsetX = parseInt(val);
+  renderCropTransform();
+}
+
+/* Sürükleyerek (pan) konumlandırma — fare ve dokunma için ortak (Pointer Events) */
+(function setupCropDrag(){
+  const stage = document.getElementById('cropStage');
+  let dragging = false, startX = 0, startY = 0, baseX = 0, baseY = 0;
+
+  stage.addEventListener('pointerdown', (e)=>{
+    dragging = true; startX = e.clientX; startY = e.clientY;
+    baseX = cropOffsetX; baseY = cropOffsetY;
+    stage.setPointerCapture(e.pointerId);
+  });
+  stage.addEventListener('pointermove', (e)=>{
+    if(!dragging) return;
+    cropOffsetX = baseX + (e.clientX - startX);
+    cropOffsetY = baseY + (e.clientY - startY);
+    document.getElementById('cropAlignSlider').value = Math.max(-100, Math.min(100, cropOffsetX));
+    renderCropTransform();
+  });
+  ['pointerup','pointercancel','pointerleave'].forEach(evt=>{
+    stage.addEventListener(evt, ()=>{ dragging = false; });
+  });
+
+  /* İki parmakla yakınlaştırma (Pinch-to-Zoom) */
+  let pinchStartDist = 0, pinchStartScale = 1;
+  stage.addEventListener('touchstart', (e)=>{
+    if(e.touches.length === 2){
+      pinchStartDist = touchDistance(e.touches);
+      pinchStartScale = cropUserScale;
+    }
+  }, {passive:true});
+  stage.addEventListener('touchmove', (e)=>{
+    if(e.touches.length === 2 && pinchStartDist > 0){
+      const newDist = touchDistance(e.touches);
+      let scale = pinchStartScale * (newDist / pinchStartDist);
+      scale = Math.max(1, Math.min(3, scale));
+      cropUserScale = scale;
+      document.getElementById('cropScaleSlider').value = Math.round(scale * 100);
+      renderCropTransform();
+    }
+  }, {passive:true});
+  function touchDistance(touches){
+    const dx = touches[0].clientX - touches[1].clientX;
+    const dy = touches[0].clientY - touches[1].clientY;
+    return Math.hypot(dx, dy);
+  }
+})();
+
+function cancelCrop(){
+  document.getElementById('island').classList.remove('chat-fullscreen-hide');
+  if(cropContext === 'register'){
+    showScreen('register');
+    switchAuthTab('signup');
+    goReg(4);
+    // Kayıt akışında ana sayfaya henüz geçilmediği için ada zaten gizli kalacak.
+    document.getElementById('island').classList.add('chat-fullscreen-hide');
   } else {
-    showToast('Aktif bir kullanıcı bulunamadı, lütfen tekrar giriş yapmayı deneyin.');
+    showScreen('profile');
   }
 }
 
-/* Kodun geri kalan tüm orijinal fonksiyonları ve Firebase mantığı burada aynen devam etmektedir */
+function confirmCrop(){
+  const OUT = 480;
+  const canvas = document.createElement('canvas');
+  canvas.width = OUT; canvas.height = OUT;
+  const ctx = canvas.getContext('2d');
+  const img = document.getElementById('cropImage');
+  const baseScale = CROP_FRAME / Math.min(cropImgNaturalW, cropImgNaturalH);
+  const combined = baseScale * cropUserScale;
+  const ratio = OUT / CROP_FRAME;
+
+  ctx.save();
+  ctx.translate(OUT/2, OUT/2);
+  ctx.scale(ratio, ratio);
+  ctx.translate(cropOffsetX, cropOffsetY);
+  ctx.rotate(cropRotate * Math.PI/180);
+  ctx.scale(combined, combined);
+  ctx.drawImage(img, -cropImgNaturalW/2, -cropImgNaturalH/2, cropImgNaturalW, cropImgNaturalH);
+  ctx.restore();
+
+  const resultDataUrl = canvas.toDataURL('image/jpeg', 0.92);
+
+  if(cropContext === 'register'){
+    const dz = document.getElementById('dropzone');
+    dz.classList.add('has-img');
+    dz.innerHTML = `<img src="${resultDataUrl}">`;
+    showScreen('register');
+    switchAuthTab('signup');
+    goReg(4);
+    analyzePhoto(resultDataUrl, 'image/jpeg');
+  } else {
+    document.getElementById('editPreviewImg').src = resultDataUrl;
+    document.getElementById('editPreviewImg').dataset.pending = resultDataUrl;
+    document.getElementById('island').classList.remove('chat-fullscreen-hide');
+    showScreen('profile');
+  }
+}
+
+function cropImageToSquare(dataUrl){
+  return new Promise((resolve)=>{
+    const img = new Image();
+    img.onload = ()=>{
+      const side = Math.min(img.width, img.height);
+      const sx = (img.width - side) / 2;
+      const sy = (img.height - side) / 2;
+      const canvas = document.createElement('canvas');
+      const outSize = 480; // yeterince yüksek çözünürlük
+      canvas.width = outSize; canvas.height = outSize;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, sx, sy, side, side, 0, 0, outSize, outSize);
+      resolve(canvas.toDataURL('image/jpeg', 0.9));
+    };
+    img.onerror = ()=> resolve(dataUrl); // kırpma başarısız olursa orijinali kullan
+    img.src = dataUrl;
+  });
+}
+
+function onFileChosen(ev){
+  const file = ev.target.files[0]; if(!file) return;
+  const error = validatePhotoFile(file);
+  const box = document.getElementById('analysisBox');
+  if(error){
+    box.className = 'analysis-box bad';
+    box.innerHTML = `⚠️ ${error}`;
+    document.getElementById('finishBtn').disabled = true;
+    ev.target.value = '';
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = function(e){
+    openCropScreen(e.target.result, 'register');
+  };
+  reader.readAsDataURL(file);
+}
+
+async function analyzePhoto(dataUrl, mimeType){
+  const box = document.getElementById('analysisBox');
+  const finishBtn = document.getElementById('finishBtn');
+  finishBtn.disabled = true; uploadedImageOk = false; savedProfilePhoto = null;
+  box.className = 'analysis-box loading';
+  box.innerHTML = `<div class="spinner"></div><span>+18 içerik kontrolü yapılıyor…</span>`;
+  const base64Data = dataUrl.split(',')[1];
+  try{
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-6", max_tokens: 300,
+        messages: [{ role: "user", content: [
+          { type: "image", source: { type: "base64", media_type: mimeType || "image/jpeg", data: base64Data } },
+          { type: "text", text: "Bu bir profil fotoğrafı olarak yüklenmiş. Sadece şu JSON formatında, başka hiçbir şey yazmadan cevap ver: {\"uygun\": true veya false, \"sebep\": \"kısa Türkçe açıklama (en fazla 14 kelime)\"}. SADECE şunu kontrol et: fotoğrafta +18/cinsel içerik, çıplaklık veya çok ağır şiddet var mı? Varsa uygun:false yap. Bunların DIŞINDA hiçbir kriter uygulama." }
+        ]}]
+      })
+    });
+    const data = await response.json();
+    const text = data.content.map(b => b.text || "").join("");
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if(!jsonMatch) throw new Error("JSON bulunamadı");
+    const result = JSON.parse(jsonMatch[0]);
+    if(result.uygun){
+      box.className = 'analysis-box ok';
+      box.innerHTML = `✅ <b>Profil fotoğrafı ayarlandı.</b>`;
+      uploadedImageOk = true; savedProfilePhoto = dataUrl; finishBtn.disabled = false;
+    } else {
+      box.className = 'analysis-box bad';
+      box.innerHTML = `⚠️ <b>Bu fotoğraf kullanılamaz.</b><br>${result.sebep}<br><span style="opacity:.8">Lütfen başka bir fotoğraf seç.</span>`;
+      finishBtn.disabled = true;
+    }
+  } catch(err){
+    // Kontrol yapılamadıysa kullanıcıyı sonsuza kadar bloklamıyoruz —
+    // fotoğrafı kabul edip devam etmesine izin veriyoruz (demo/fail-safe davranış).
+    box.className = 'analysis-box ok';
+    box.innerHTML = `✅ <b>Profil fotoğrafı ayarlandı.</b> <span style="opacity:.7">(kontrol şu an yapılamadı, devam edebilirsin)</span>`;
+    uploadedImageOk = true; savedProfilePhoto = dataUrl; finishBtn.disabled = false;
+  }
+}
+
+function finishRegistration(){
+  if(!uploadedImageOk || !savedProfilePhoto) return;
+  if(!fbReady || !fbAuth || !fbDb){
+    // Firebase yoksa en azından kullanıcıyı bekletmeyelim, demo modunda ilerlesin.
+    registrationInProgress = false;
+    addMemberToAdminTable();
+    showToast(savedUsername + ', profilin hazır! (bağlantı kısıtlı, demo modu)');
+    setTimeout(()=>{
+      document.getElementById('screenRegister').classList.remove('active');
+      showContractAgree();
+    }, 900);
+    return;
+  }
+  const btn = document.getElementById('finishBtn');
+  btn.disabled = true; btn.textContent = 'Kaydediliyor...';
+
+  const usernameKey = savedUsername.replace(/^@/,'').toLowerCase();
+  const uid = fbAuth.currentUser ? fbAuth.currentUser.uid : null;
+  const profileData = {
+    username: savedUsername, email: savedEmail, photo: savedProfilePhoto,
+    isAdmin: savedIsAdmin, postsCount, followersCount, followingCount,
+    createdAt: Date.now()
+  };
+
+  const writes = [fbDb.ref('usernames/' + usernameKey).set(uid || true)];
+  if(uid) writes.push(fbDb.ref('users/' + uid).set(profileData));
+
+  Promise.all(writes).then(finishRegistrationUI).catch((err)=>{
+    console.error('Profil veritabanına kaydedilemedi:', err);
+    showToast('Not: profil bilgisi sunucuya tam kaydedilemedi, internetini kontrol et');
+    finishRegistrationUI();
+  });
+
+  function finishRegistrationUI(){
+    registrationInProgress = false; // kayıt tamamlandı, normal oturum takibi devam edebilir
+    addMemberToAdminTable();
+    showToast(savedUsername + ', profilin hazır!');
+    setTimeout(()=>{
+      document.getElementById('screenRegister').classList.remove('active');
+      showContractAgree();
+    }, 900);
+  }
+}
+
+/* Artık admin tablosuna sahte/yerel satır eklemiyoruz — bu fonksiyon geriye
+   dönük uyumluluk için boş bırakıldı, gerçek liste loadAdminUsers() ile gelir. */
+function addMemberToAdminTable(){ /* no-op: gerçek liste Firebase'den geliyor */ }
+
+/* ===== ADMIN PANELİ: GERÇEK KULLANICI LİSTESİ =====
+   Realtime Database'deki users/ düğümünden TÜM gerçek kayıtlı kullanıcıları
+   çeker ve tabloyu onunla doldurur. */
+/* ===== BAŞKA KULLANICI PROFİLİ — GERÇEK TAKİP ET / MESAJ GÖNDER =====
+   Firebase veri modeli:
+     follows/{benimUid}/{onlarınUid}   = true   (kimi takip ediyorum)
+     followers/{onlarınUid}/{benimUid} = true   (kimler beni takip ediyor)
+   Takipçi/takip sayıları bu düğümlerin GERÇEK çocuk sayısından hesaplanır. */
+let viewingOtherUid = null;
+
+function viewOtherProfile(uid){
+  if(!requireFirebase()) return;
+  viewingOtherUid = uid;
+  showScreen('otherProfile');
+
+  fbDb.ref('users/' + uid).once('value').then((snap)=>{
+    const u = snap.val() || {};
+    document.getElementById('otherProfileTitle').textContent = u.username || 'Profil';
+    document.getElementById('otherProfileName').textContent = u.username || '@kullanici';
+    document.getElementById('otherProfileEmail').textContent = u.email || '—';
+    document.getElementById('otherProfileAvatar').src = u.photo || 'https://i.pravatar.cc/120?img=68';
+    document.getElementById('otherStatPosts').textContent = formatStatNumber(u.postsCount || 0);
+    refreshOtherFollowCounts(uid);
+    refreshFollowButtonState(uid);
+  });
+}
+
+function closeOtherProfile(){
+  viewingOtherUid = null;
+  showScreen('admin');
+}
+
+function refreshOtherFollowCounts(uid){
+  fbDb.ref('followers/' + uid).once('value').then(snap=>{
+    document.getElementById('otherStatFollowers').textContent = formatStatNumber(snap.numChildren());
+  });
+  fbDb.ref('follows/' + uid).once('value').then(snap=>{
+    document.getElementById('otherStatFollowing').textContent = formatStatNumber(snap.numChildren());
+  });
+}
+
+function refreshFollowButtonState(uid){
+  const me = fbAuth.currentUser;
+  const btn = document.getElementById('otherFollowBtn');
+  if(!me || me.uid === uid){ btn.style.display = 'none'; return; }
+  btn.style.display = '';
+  fbDb.ref('follows/' + me.uid + '/' + uid).once('value').then(snap=>{
+    const following = snap.exists();
+    btn.textContent = following ? 'Takip Ediliyor ✓' : 'Takip Et';
+    btn.className = following ? 'btn btn-ghost' : 'btn btn-primary';
+    btn.style.flex = '1';
+  });
+}
+
+function toggleFollowOther(){
+  if(!requireFirebase() || !viewingOtherUid) return;
+  const me = fbAuth.currentUser;
+  if(!me) return;
+  const targetUid = viewingOtherUid;
+  const followRef = fbDb.ref('follows/' + me.uid + '/' + targetUid);
+  const followerRef = fbDb.ref('followers/' + targetUid + '/' + me.uid);
+
+  followRef.once('value').then(snap=>{
+    const alreadyFollowing = snap.exists();
+    const writes = alreadyFollowing
+      ? [followRef.remove(), followerRef.remove()]
+      : [followRef.set(true), followerRef.set(true)];
+    Promise.all(writes).then(()=>{
+      refreshFollowButtonState(targetUid);
+      refreshOtherFollowCounts(targetUid);
+      if(me.uid) refreshOwnFollowCounts(me.uid);
+      showToast(alreadyFollowing ? 'Takibi bıraktın' : 'Takip ediyorsun ✓');
+    });
+  });
+}
+
+function messageOtherUser(){
+  showToast('Mesajlar ekranına yönlendiriliyorsun');
+  goNav('messages', document.getElementById('navMsg'));
+}
+
+/* Kendi profilimin (Bio) takipçi/takip sayılarını GERÇEK verilerle güncelle */
+function refreshOwnFollowCounts(uid){
+  if(!uid || !fbDb) return;
+  fbDb.ref('followers/' + uid).once('value').then(snap=>{
+    followersCount = snap.numChildren();
+    const el = document.getElementById('statFollowers');
+    if(el) el.textContent = formatStatNumber(followersCount);
+  });
+  fbDb.ref('follows/' + uid).once('value').then(snap=>{
+    followingCount = snap.numChildren();
+    const el = document.getElementById('statFollowing');
+    if(el) el.textContent = formatStatNumber(followingCount);
+  });
+}
+
+function loadAdminUsers(){
+  const tbody = document.getElementById('memberTable');
+  if(!requireFirebase()){
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:24px 16px;">Bağlantı yok, liste yüklenemedi.</td></tr>';
+    return;
+  }
+  fbDb.ref('users').once('value').then((snap)=>{
+    const data = snap.val() || {};
+    const uids = Object.keys(data);
+    document.getElementById('statTotal').textContent = uids.length;
+
+    if(!uids.length){
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:24px 16px;">Henüz kayıtlı kullanıcı yok.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = uids.map((uid)=>{
+      const u = data[uid] || {};
+      const name = u.username || '@kullanici';
+      const email = u.email || '—';
+      const blocked = !!u.blocked;
+      const photo = u.photo || 'https://i.pravatar.cc/60?img=68';
+      return `
+        <tr data-uid="${uid}" data-name="${name.toLowerCase()}" data-email="${email.toLowerCase()}">
+          <td><div class="user-cell" style="cursor:pointer;" onclick="viewOtherProfile('${uid}')"><img src="${photo}">${name}</div></td>
+          <td class="email">${email}</td>
+          <td><span class="badge ${blocked ? 'blocked' : 'active'}">${blocked ? '● Engelli' : '● Aktif'}</span></td>
+          <td><div class="actions-cell">
+            <button class="actbtn ${blocked ? 'success' : ''}" onclick="toggleBlock(this)">${blocked ? 'Kaldır' : 'Engelle'}</button>
+            <button class="actbtn danger" onclick="removeRow(this)">Sil</button>
+          </div></td>
+        </tr>`;
+    }).join('');
+  }).catch(()=>{
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:24px 16px;">Liste yüklenirken hata oluştu.</td></tr>';
+  });
+}
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2400);
+}
+
+/* ===== SÖZLEŞME: ÖNCE METİN, SONRA VİDEO ===== */
+function showContractAgree(){
+  document.getElementById('contractOverlay').classList.remove('hidden');
+  document.getElementById('contractAgreeStage').classList.remove('hidden');
+  document.getElementById('contractVideoStage').classList.add('hidden');
+}
+function agreeToContract(){
+  document.getElementById('contractAgreeStage').classList.add('hidden');
+  document.getElementById('contractVideoStage').classList.remove('hidden');
+  const video = document.getElementById('contractVideo');
+  const playBtn = document.getElementById('playBtn');
+
+  // Video dosyası hiç yüklenemiyorsa (format desteklenmiyor, dosya bulunamadı vb.)
+  // kullanıcıyı sonsuza kadar bekletmeyelim — otomatik olarak simülasyon moduna düş.
+  if(video.error || video.networkState === 3){
+    startDemoSimulation();
+    return;
+  }
+
+  // Bu fonksiyon kullanıcının "Okudum, Kabul Ediyorum" tıklamasıyla (gerçek bir
+  // kullanıcı etkileşimi) tetiklendiği için tarayıcılar genelde SESLİ otomatik
+  // oynatmaya izin verir. video.load() ÇAĞIRMIYORUZ — video sayfa açılır
+  // açılmaz (preload="auto") arka planda zaten yükleniyordu, load() çağırmak
+  // bu ilerlemeyi sıfırlayıp gecikmeye sebep oluyordu. Şimdi direkt oynat.
+  try{ video.currentTime = 0; }catch(e){}
+  video.muted = false;
+
+  const tryPlay = () => video.play();
+
+  tryPlay().catch(()=>{
+    // Sesli oynatma engellendiyse sessize alıp tekrar dene
+    video.muted = true;
+    tryPlay().catch(()=>{
+      // O da olmazsa kullanıcı oynat butonuna basabilsin
+      playBtn.classList.remove('hidden');
+    });
+  });
+}
+
+/* ===== UYGULAMAYA GİRİŞ (sözleşme videosu bittikten sonra) ===== */
+function enterApp(){
+  applyAccountToUI();
+  document.getElementById('island').classList.remove('hidden');
+  goNav('feed', document.getElementById('navFeed'));
+  saveSession();
+  if(fbAuth && fbAuth.currentUser) refreshOwnFollowCounts(fbAuth.currentUser.uid);
+}
+
+/* Profil istatistikleri — gönderi sayısı kayıt sırasında belirlenir,
+   takipçi/takip sayıları GERÇEK verilerle refreshOwnFollowCounts() tarafından
+   Firebase'den çekilip üzerine yazılır (bkz. loadUserProfileAndEnter). */
+let postsCount = 0;
+let followersCount = 0;
+let followingCount = 0;
+
+function formatStatNumber(n){
+  if(n >= 1000) return (n/1000).toFixed(1).replace('.0','') + 'K';
+  return String(n);
+}
+
+function applyAccountToUI(){
+  document.getElementById('feedAvatar').src = savedProfilePhoto || 'https://i.pravatar.cc/60?img=68';
+  document.getElementById('profileAvatar').src = savedProfilePhoto || 'https://i.pravatar.cc/120?img=68';
+  document.getElementById('profileName').textContent = savedUsername || 'Misafir';
+  document.getElementById('profileEmail').textContent = savedEmail || '—';
+  document.getElementById('editUsernameInput').value = savedUsername;
+  document.getElementById('statPosts').textContent = formatStatNumber(postsCount);
+  document.getElementById('statFollowers').textContent = formatStatNumber(followersCount);
+  document.getElementById('statFollowing').textContent = formatStatNumber(followingCount);
+  // Admin değilse "Admin Paneli" simgesi adada görünmesin, sadece Bio görünsün.
+  document.getElementById('navAdmin').style.display = savedIsAdmin ? 'flex' : 'none';
+}
+
+function goToRegisterScreen(){
+  document.querySelectorAll('#main .screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screenRegister').classList.add('active');
+  switchAuthTab('signup');
+  document.getElementById('island').classList.add('hidden');
+}
+
+function logoutAccount(){
+  if(!fbReady || !fbAuth){
+    clearSession();
+    document.querySelectorAll('#main .screen').forEach(s=>s.classList.remove('active'));
+    document.getElementById('screenRegister').classList.add('active');
+    switchAuthTab('login');
+    document.getElementById('island').classList.add('hidden');
+    return;
+  }
+  fbAuth.signOut().finally(()=>{
+    clearSession();
+    document.querySelectorAll('#main .screen').forEach(s=>s.classList.remove('active'));
+    document.getElementById('screenRegister').classList.add('active');
+    switchAuthTab('login');
+    document.getElementById('island').classList.add('hidden');
+  });
+}
+
+function loginReturning(){
+  if(!requireFirebase()) return;
+  const email = document.getElementById('loginEmail').value.trim();
+  const pass = document.getElementById('loginPassword').value.trim();
+  if(!email || !pass) return;
+
+  const btn = event.target;
+  const original = btn.textContent;
+  btn.disabled = true; btn.textContent = 'Giriş yapılıyor...';
+
+  fbAuth.signInWithEmailAndPassword(email, pass).then((cred)=>{
+    btn.disabled = false; btn.textContent = original;
+    if(!cred.user.emailVerified){
+      savedEmail = email;
+      document.getElementById('emailEcho').textContent = savedEmail + ' adresine';
+      switchAuthTab('signup');
+      goReg(3);
+      return;
+    }
+    loadUserProfileAndEnter(cred.user);
+  }).catch((err)=>{
+    btn.disabled = false; btn.textContent = original;
+    alert(firebaseErrorMessage(err));
+  });
+}
+
+function loadUserProfileAndEnter(user){
+  fbDb.ref('users/' + user.uid).once('value').then((snap)=>{
+    const data = snap.val() || {};
+
+    if(data.blocked){
+      fbAuth.signOut();
+      document.querySelectorAll('#main .screen').forEach(s=>s.classList.remove('active'));
+      document.getElementById('screenRegister').classList.add('active');
+      switchAuthTab('login');
+      document.getElementById('island').classList.add('hidden');
+      showToast('Bu hesap admin tarafından engellenmiş.');
+      return;
+    }
+
+    savedUsername = data.username || '@kullanici';
+    savedEmail = user.email;
+    savedProfilePhoto = data.photo || 'https://i.pravatar.cc/120?img=68';
+    savedIsAdmin = !!data.isAdmin;
+    if(data.postsCount != null) postsCount = data.postsCount;
+    enterAppFromAuth();
+    refreshOwnFollowCounts(user.uid);
+  }).catch(()=>{
+    savedEmail = user.email;
+    enterAppFromAuth();
+  });
+}
+
+function enterAppFromAuth(){
+  document.querySelectorAll('#main .screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screenFeed').classList.add('active');
+  applyAccountToUI();
+  document.getElementById('island').classList.remove('hidden');
+  document.querySelectorAll('.island button').forEach(b=>b.classList.remove('active'));
+  document.getElementById('navFeed').classList.add('active');
+  saveSession();
+}
+
+/* ===== SAĞDAN AÇILAN YAN MENÜ (DRAWER) ===== */
+function openDrawer(){
+  document.getElementById('sideDrawer').classList.add('open');
+  document.getElementById('drawerOverlay').classList.remove('hidden');
+}
+function closeDrawer(){
+  document.getElementById('sideDrawer').classList.remove('open');
+  document.getElementById('drawerOverlay').classList.add('hidden');
+}
+
+/* ===== KARANLIK / AYDINLIK MOD ===== */
+function applyTheme(mode){
+  const isLight = mode === 'light';
+  document.body.classList.toggle('light-mode', isLight);
+  const toggle = document.getElementById('themeToggle');
+  if(toggle) toggle.checked = !isLight; // anahtar "Karanlık Mod" açık = checked
+  try{ localStorage.setItem('next_theme', mode); }catch(e){}
+}
+function toggleTheme(){
+  const wantsDark = document.getElementById('themeToggle').checked;
+  applyTheme(wantsDark ? 'dark' : 'light');
+}
+function initTheme(){
+  let mode = 'dark';
+  try{ mode = localStorage.getItem('next_theme') || 'dark'; }catch(e){}
+  applyTheme(mode);
+}
+
+function saveBio(){
+  const btn = event.target;
+  const original = btn.textContent;
+  btn.textContent = 'Kaydedildi ✓';
+  setTimeout(()=>btn.textContent = original, 1400);
+}
+
+/* Kullanıcı adı / profil fotoğrafı düzenleme */
+function toggleEditUsername(){
+  const panel = document.getElementById('editUsernamePanel');
+  panel.classList.toggle('hidden');
+  if(!panel.classList.contains('hidden')){
+    document.getElementById('editPreviewImg').src = savedProfilePhoto || 'https://i.pravatar.cc/120?img=68';
+    document.getElementById('editPreviewImg').dataset.pending = '';
+    document.getElementById('editUsernameInput').value = savedUsername;
+  }
+}
+function onEditPhotoChosen(ev){
+  const file = ev.target.files[0]; if(!file) return;
+  const error = validatePhotoFile(file);
+  if(error){
+    alert(error);
+    ev.target.value = '';
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = function(e){
+    openCropScreen(e.target.result, 'edit');
+  };
+  reader.readAsDataURL(file);
+}
+function saveProfileEdit(){
+  const oldName = savedUsername;
+  const newName = document.getElementById('editUsernameInput').value.trim();
+  const pending = document.getElementById('editPreviewImg').dataset.pending;
+  if(newName) savedUsername = newName;
+  if(pending) savedProfilePhoto = pending;
+  applyAccountToUI();
+  // Admin panelindeki üye listesi varsa, oradaki kaydı da güncelle
+  const row = document.querySelector(`#memberTable tr[data-name="${oldName.toLowerCase()}"]`);
+  if(row){
+    row.dataset.name = savedUsername.toLowerCase();
+    row.querySelector('.user-cell img').src = savedProfilePhoto;
+    row.querySelector('.user-cell').lastChild.textContent = savedUsername;
+  }
+  document.getElementById('editUsernamePanel').classList.add('hidden');
+}
+
+function goNav(name, btnEl){
+  showScreen(name);
+  document.querySelectorAll('.island button').forEach(b=>b.classList.remove('active','pulse'));
+  btnEl.classList.add('active');
+  btnEl.classList.add('pulse');
+  setTimeout(()=>btnEl.classList.remove('pulse'), 320);
+
+  // Mesaj LİSTESİ ekranında ada görünür kalır. Ada sadece kullanıcı bir
+  // sohbetin İÇİNE girdiğinde (dmWrap.view-chat) gizlenir — bunu ayrı
+  // bir yerde (chat-item tıklama / geri butonu) yönetiyoruz.
+  document.getElementById('island').classList.remove('chat-fullscreen-hide');
+
+  if(name === 'admin') loadAdminUsers();
+}
+
+function exitChatToFeed(){
+  goNav('feed', document.getElementById('navFeed'));
+}
+
+function showScreen(name){
+  document.querySelectorAll('#main .screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen'+name.charAt(0).toUpperCase()+name.slice(1)).classList.add('active');
+}
+
+/* SÖZLEŞME VİDEOSU (demo: 6 saniyelik simülasyon) */
+const cVideo = document.getElementById('contractVideo');
+const playBtn = document.getElementById('playBtn');
+const fill = document.getElementById('progressFill');
+const label = document.getElementById('progressLabel');
+const continueBtn = document.getElementById('continueBtn');
+let demoSeconds = 0; const demoDuration = 6; let demoTimer = null;
+
+/* Video dosyası HİÇ açılamıyorsa (404, format desteklenmiyor vb.) kullanıcıyı
+   bekletmeyelim: otomatik olarak simülasyon moduna geçip uyarı verelim. */
+let videoFailed = false;
+cVideo.addEventListener('error', ()=>{
+  videoFailed = true;
+  document.getElementById('progressLabel').textContent = 'Video açılamadı — devam ediliyor';
+  startDemoSimulation();
+});
+
+function playVideo(){
+  playBtn.style.display = 'none';
+  // Önce gerçek videoyu (kullanıcı tıklamasıyla, bu kesin izinlidir) oynatmayı dene.
+  const realPlay = cVideo.play();
+  if(realPlay && realPlay.then){
+    realPlay.then(()=>{ /* gerçek video oynuyor, timeupdate ilerlemeyi takip edecek */ })
+      .catch(()=>{ startDemoSimulation(); });
+  } else {
+    startDemoSimulation();
+  }
+}
+function startDemoSimulation(){
+  if(demoTimer) return;
+  demoTimer = setInterval(()=>{
+    demoSeconds += 0.2;
+    const pct = Math.min(100, Math.round((demoSeconds/demoDuration)*100));
+    fill.style.width = pct + '%';
+    label.textContent = (pct<100?'İZLENİYOR — ':'TAMAMLANDI — ')+pct+'%';
+    if(pct>=100){ clearInterval(demoTimer); continueBtn.disabled = false; }
+  }, 200);
+}
+function continueToFeed(){
+  document.getElementById('contractOverlay').classList.add('hidden');
+  enterApp();
+}
+cVideo.addEventListener('timeupdate', ()=>{
+  if(!cVideo.duration) return;
+  const pct = Math.round((cVideo.currentTime/cVideo.duration)*100);
+  fill.style.width = pct+'%'; label.textContent=(pct<100?'İZLENİYOR — ':'TAMAMLANDI — ')+pct+'%';
+  if(pct>=99) continueBtn.disabled = false;
+});
+
+/* ===== ANA AKIŞ ETKİLEŞİMLERİ ===== */
+let likedPosts = [];  // [{id, img}]
+let savedPosts = [];  // [{id, img}]
+
+function toggleLike(el){
+  el.classList.toggle('liked');
+  const post = el.closest('.post');
+  const numEl = post.querySelector('.likeNum');
+  let n = parseInt(numEl.textContent.replace(/\./g,''));
+  numEl.textContent = (el.classList.contains('liked') ? n+1 : n-1);
+
+  const id = post.dataset.postId, img = post.dataset.postImg;
+  if(el.classList.contains('liked')){
+    if(!likedPosts.find(p=>p.id===id)) likedPosts.push({id, img});
+  } else {
+    likedPosts = likedPosts.filter(p=>p.id!==id);
+  }
+  renderLikedGrid();
+}
+
+function toggleSave(el){
+  el.classList.toggle('saved');
+  const post = el.closest('.post');
+  const id = post.dataset.postId, img = post.dataset.postImg;
+  if(el.classList.contains('saved')){
+    if(!savedPosts.find(p=>p.id===id)) savedPosts.push({id, img});
+  } else {
+    savedPosts = savedPosts.filter(p=>p.id!==id);
+  }
+  renderSavedGrid();
+}
+
+function quickEmoji(btn, emoji){
+  const post = btn.closest('.post');
+  const input = post.querySelector('.comment-compose input');
+  input.value += emoji;
+  input.focus();
+}
+function quickEmojiMsg(emoji){
+  const input = document.getElementById('msgInput');
+  input.value += emoji;
+  input.focus();
+}
+
+function openShareSheet(el){
+  document.getElementById('shareSheet').classList.remove('hidden');
+}
+function closeShareSheet(){
+  document.getElementById('shareSheet').classList.add('hidden');
+}
+function shareAction(message){
+  closeShareSheet();
+  showToast(message);
+}
+
+function toggleCommentBox(el){
+  const post = el.closest('.post');
+  const box = post.querySelector('.comment-compose');
+  box.classList.toggle('show');
+  if(box.classList.contains('show')) box.querySelector('input').focus();
+}
+
+function submitComment(inputEl){
+  const text = inputEl.value.trim();
+  if(!text) return;
+  const post = inputEl.closest('.post');
+  const list = post.querySelector('.commentsList');
+  const line = document.createElement('div');
+  line.className = 'comment-line';
+  line.innerHTML = `<b>${savedUsername || '@misafir'}</b>${text}`;
+  list.appendChild(line);
+  const countEl = post.querySelector('.commentCount');
+  countEl.textContent = parseInt(countEl.textContent) + 1;
+  inputEl.value = '';
+}
+
+function renderSavedGrid(){
+  const grid = document.getElementById('savedGrid');
+  const empty = document.getElementById('savedEmpty');
+  if(!grid) return;
+  grid.innerHTML = savedPosts.map(p=>`<div class="gridThumb"><img src="${p.img}"></div>`).join('');
+  empty.style.display = savedPosts.length ? 'none' : 'block';
+}
+
+function renderLikedGrid(){
+  const grid = document.getElementById('likedGrid');
+  const empty = document.getElementById('likedEmpty');
+  if(!grid) return;
+  grid.innerHTML = likedPosts.map(p=>`<div class="gridThumb"><img src="${p.img}"></div>`).join('');
+  empty.style.display = likedPosts.length ? 'none' : 'block';
+}
+
+function openSavedScreen(){ showScreen('saved'); renderSavedGrid(); }
+function openLikedScreen(){ showScreen('liked'); renderLikedGrid(); }
+
+function nowTime(){ const d=new Date(); return d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0'); }
+function sendMsg(){
+  const input = document.getElementById('msgInput'); const text = input.value.trim(); if(!text) return;
+  const box = document.getElementById('messagesBox');
+  const div = document.createElement('div'); div.className='msg me';
+  div.innerHTML = text + ` <span class="time">${nowTime()}</span>`;
+  box.appendChild(div); box.scrollTop = box.scrollHeight; input.value='';
+}
+function sendMedia(ev){
+  const file = ev.target.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e){
+    const box = document.getElementById('messagesBox');
+    const wrap = document.createElement('div'); wrap.className='msg-media'; wrap.style.alignSelf='flex-end';
+    wrap.innerHTML = file.type.startsWith('video') ? `<video src="${e.target.result}" controls></video>` : `<img src="${e.target.result}">`;
+    box.appendChild(wrap); box.scrollTop = box.scrollHeight;
+  };
+  reader.readAsDataURL(file);
+}
+document.querySelectorAll('#screenMessages .chat-item').forEach(item=>{
+  item.addEventListener('click', ()=>{
+    document.querySelectorAll('#screenMessages .chat-item').forEach(i=>i.classList.remove('active'));
+    item.classList.add('active');
+    document.getElementById('chatName').textContent = item.querySelector('.name').textContent;
+    document.querySelector('#screenMessages .chat-head img').src = item.querySelector('img').src;
+    document.getElementById('dmWrap').classList.add('view-chat');
+    // Birebir sohbetin İÇİNE girildi: ada tamamen gizlenir.
+    document.getElementById('island').classList.add('chat-fullscreen-hide');
+  });
+});
+
+function exitChatThread(){
+  document.getElementById('dmWrap').classList.remove('view-chat');
+  // Mesaj listesine geri dönüldü: ada tekrar görünür olur.
+  document.getElementById('island').classList.remove('chat-fullscreen-hide');
+}
+
+/* ===== ADMIN ===== */
+function toggleBlock(btn){
+  const row = btn.closest('tr'); const badge = row.querySelector('.badge');
+  const uid = row.dataset.uid;
+  const blocking = btn.textContent.trim() === 'Engelle';
+
+  if(blocking){ badge.className='badge blocked'; badge.textContent='● Engelli'; btn.className='actbtn success'; btn.textContent='Kaldır'; }
+  else { badge.className='badge active'; badge.textContent='● Aktif'; btn.className='actbtn'; btn.textContent='Engelle'; }
+
+  if(uid && requireFirebase()){
+    fbDb.ref('users/' + uid + '/blocked').set(blocking).catch(()=>{
+      showToast('Durum veritabanına kaydedilemedi');
+    });
+  }
+}
+function removeRow(btn){
+  if(!confirm('Bu üyeyi silmek istediğine emin misin? Bu işlem geri alınamaz.')) return;
+  const row = btn.closest('tr');
+  const uid = row.dataset.uid;
+  const name = row.dataset.name;
+  row.remove();
+  document.getElementById('statTotal').textContent = Math.max(0, parseInt(document.getElementById('statTotal').textContent) - 1);
+
+  if(uid && requireFirebase()){
+    fbDb.ref('users/' + uid).remove();
+    if(name) fbDb.ref('usernames/' + name).remove();
+    // Not: Firebase Authentication kaydı (gerçek giriş hesabı) sadece sunucu
+    // tarafından (Admin SDK / Cloud Functions) silinebilir; bu, istemci
+    // tarafından (bu site) güvenlik nedeniyle yapılamaz. Bu yüzden kullanıcı
+    // burada "silinmiş" görünür ama login hesabı Firebase Authentication'da
+    // kalır — tamamen silmek istersen Firebase konsolünden manuel silebilirsin.
+  }
+}
+function resolveReport(btn){ btn.closest('.flagged-item').remove(); }
+function filterMembers(){
+  const q = document.getElementById('memberSearch').value.toLowerCase();
+  document.querySelectorAll('#memberTable tr').forEach(row=>{
+    row.style.display = (row.dataset.name.includes(q) || row.dataset.email.includes(q)) ? '' : 'none';
+  });
+}
+
+/* Sayfa her açıldığında: önce NeXT logosu kısa süre görünür, sonra oturum kontrolü yapılıp doğru ekran gösterilir */
+function bootApp(){
+  initTheme();
+  try{
+    initAuthState();
+  }catch(err){
+    console.error('initAuthState hatası:', err);
+    document.getElementById('screenFeed').classList.add('active');
+    document.getElementById('island').classList.remove('hidden');
+  }
+  const splash = document.getElementById('appSplash');
+  setTimeout(()=>{
+    splash.classList.add('hide');
+    setTimeout(()=>splash.remove(), 550);
+  }, 900);
+}
+bootApp();
 </script>
 </body>
 </html>
