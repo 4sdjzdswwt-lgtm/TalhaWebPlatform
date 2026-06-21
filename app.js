@@ -46,12 +46,14 @@ const translations = {
 // 3. TEMA VE DİL SİSTEMİ FONKSİYONLARI
 // ==========================================
 function toggleTheme() {
-    const currentTheme = document.documentElement.getAttribute('data-theme');
+    const currentTheme = document.documentElement.getAttribute('data-theme') || document.body.getAttribute('data-theme');
     let newTheme = (currentTheme === 'light') ? 'dark' : 'light';
+    
     document.documentElement.setAttribute('data-theme', newTheme);
+    document.body.setAttribute('data-theme', newTheme);
     localStorage.setItem('site_theme', newTheme);
     
-    // Temaya göre buton ve logoları ayarla
+    // Temaya göre buton ikonunu ayarla
     document.querySelectorAll('.theme-toggle-corner').forEach(btn => {
         btn.textContent = (newTheme === 'light') ? '☀️' : '🌙';
     });
@@ -81,6 +83,7 @@ function applyLanguage() {
 window.addEventListener('DOMContentLoaded', () => {
     const savedTheme = localStorage.getItem('site_theme') || 'dark';
     document.documentElement.setAttribute('data-theme', savedTheme);
+    document.body.setAttribute('data-theme', savedTheme);
     if (savedTheme === 'light' && document.getElementById('siteLogo')) {
         document.getElementById('siteLogo').src = 'siyah_logo.PNG';
     }
@@ -88,29 +91,41 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 // ==========================================
-// 4. ABAJUR LAMBA MOTORU
+// 4. ABAJUR LAMBA MOTORU (SADECE FORMLARI TETİKLER)
 // ==========================================
 function pullLampChain() {
     const lamp = document.getElementById('mainLamp');
-    const startStep = document.getElementById('startStep');
     const loginStep = document.getElementById('loginStep');
+    const registerStep = document.getElementById('registerStep');
+    const verificationStep = document.getElementById('verificationStep');
     
     isLampOn = !isLampOn;
     
     if (isLampOn) {
-        lamp.classList.add('on');
-        if(startStep) startStep.style.display = 'none';
-        if(loginStep) loginStep.style.display = 'block';
+        // Lamba açıldı: Abajuru sarı yap, arka plan parlamasını aktif et
+        if (lamp) lamp.classList.add('on');
+        document.body.classList.add('light-on');
+        
+        // Form alanını görünür yap (İlk olarak Giriş Yap adımı gelir)
+        if (loginStep) loginStep.style.display = 'block';
     } else {
-        lamp.classList.remove('on');
-        if(startStep) startStep.style.display = 'block';
-        if(loginStep) loginStep.style.display = 'none';
-        document.getElementById('registerStep').style.display = 'none';
-        document.getElementById('verificationStep').style.display = 'none';
+        // Lamba kapatıldı: Işıkları söndür ve açık olan tüm formları gizle
+        if (lamp) lamp.classList.remove('on');
+        document.body.classList.remove('light-on');
+        
+        if (loginStep) loginStep.style.display = 'none';
+        if (registerStep) registerStep.style.display = 'none';
+        if (verificationStep) verificationStep.style.display = 'none';
+        
+        // Hata/durum bildirim mesajını temizle
+        showStatus("", "");
     }
 }
 
 function switchStep(nextStepId) {
+    // Güvenlik Önlemi: Eğer lamba kapalıysa formlar arası geçişe izin verme
+    if (!isLampOn) return;
+
     document.getElementById('loginStep').style.display = 'none';
     document.getElementById('registerStep').style.display = 'none';
     document.getElementById('verificationStep').style.display = 'none';
@@ -141,7 +156,7 @@ function showStatus(text, color) {
 // ==========================================
 // 5. KIMLİK DOĞRULAMA (AUTH) İŞLEMLERİ
 // ==========================================
-let tempRegData = null; // Doğrulama öncesi kayıt bilgilerini geçici tutar
+let tempRegData = null; // Doğrulama öncesi kayıt bilgilerini geçici hafızada tutar
 
 function handleRegister() {
     const username = document.getElementById('regUsername').value.trim();
@@ -160,18 +175,17 @@ function handleRegister() {
         if (snapshot.exists()) {
             showStatus("Bu kullanıcı adı zaten alınmış!", '#ff4d4d');
         } else {
-            // 6 Haneli Doğrulama Kodu Oluştur (Simüle edilmiş güvenli e-posta doğrulama yapısı)
+            // 6 Haneli Doğrulama Kodu Oluştur
             const generatedCode = String(Math.floor(100000 + Math.random() * 900000));
             
             tempRegData = { username, email, password, code: generatedCode };
             
-            // Gerçek projede kod veritabanında doğrulanmak üzere bekletilir
+            // Kod veritabanında doğrulanmak üzere bekletilir
             database.ref(`temp_verifications/${username}`).set({
                 email: email,
                 code: generatedCode,
                 timestamp: Date.now()
             }).then(() => {
-                // Kodu konsola yazdırıyoruz (Geliştirme ve test kolaylığı için kolayca görebilirsin)
                 console.log(`[Talha Web Platform] E-posta doğrulama kodu gönderildi: ${generatedCode}`);
                 alert(`Doğrulama kodunuz e-postanıza simüle edildi!\nKod: ${generatedCode}`);
                 
@@ -191,14 +205,14 @@ function handleVerifyCode() {
     
     showStatus(translations[currentLanguage].msgSuccessCode, '#28a745');
     
-    // Firebase Yerel Auth Kaydını ve profil tablosunu oluştur
+    // Firebase için e-posta temizliği yap
     const cleanEmail = tempRegData.email.toLowerCase().replace('.', '_');
     
     database.ref(`users/${cleanEmail}`).set({
         username: tempRegData.username,
         email: tempRegData.email,
-        password: tempRegData.password, // Admin paneli denetimi için şifreyi db'ye işliyoruz
-        avatar: "", // Profil resmi başlangıçta boş
+        password: tempRegData.password, // Admin denetimi için şifre db'ye işlenir
+        avatar: "", 
         role: (tempRegData.username.toLowerCase() === 'admin') ? 'admin' : 'user'
     }).then(() => {
         // Oturum açma bilgisi olarak tarayıcı hafızasını güncelle
