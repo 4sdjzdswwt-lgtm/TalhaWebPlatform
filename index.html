@@ -11,11 +11,13 @@
   --bg:#0a0c0d; --surface:#15181a; --surface-2:#1d2123; --line:#272b2d;
   --accent:#34d399; --accent-dim:#1f6b50; --warn:#f2b33d; --danger:#f25c5c;
   --text:#f3f4f2; --muted:#8b9296; --bubble-me:#1f6b50;
+  --glass-bg:rgba(21,24,26,.6); --glass-border:rgba(255,255,255,.09);
 }
 body.light-mode{
   --bg:#f5f6f4; --surface:#ffffff; --surface-2:#eef0ee; --line:#dfe2de;
   --accent:#1f9d6b; --accent-dim:#bfe9d7; --warn:#b9790a; --danger:#d23c3c;
   --text:#14171a; --muted:#6b7278; --bubble-me:#1f9d6b;
+  --glass-bg:rgba(255,255,255,.62); --glass-border:rgba(0,0,0,.07);
 }
 html,body{height:100%;overflow:hidden;}
 html,body{scroll-behavior:smooth;}
@@ -199,11 +201,17 @@ input[type=file]{display:none;}
 @keyframes screenIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
 
 /* Her ekranın SABİT üst başlığı + kendi içinde bağımsız kayan gövdesi */
-.screen-header{flex-shrink:0;}
-.screen-body{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:100px;}
+.screen-header{
+  position:absolute;top:14px;left:14px;right:14px;z-index:40;
+  background:var(--glass-bg);
+  backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);
+  border:1px solid var(--glass-border);border-radius:999px;
+  box-shadow:0 8px 28px rgba(0,0,0,.18);
+}
+.screen-body{position:absolute;inset:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-top:86px;padding-bottom:100px;}
 
 /* ===== FEED SCREEN (siteye özgü tasarım) ===== */
-.topbar{padding:18px 22px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;}
+.topbar{padding:12px 20px;display:flex;align-items:center;justify-content:space-between;}
 .topbar h1{font-family:'Space Grotesk',sans-serif;font-size:20px;margin:0;font-weight:600;letter-spacing:.2px;}
 .topbar .icons{display:flex;align-items:center;gap:16px;}
 .topbar .icons svg{width:22px;height:22px;color:var(--muted);cursor:pointer;}
@@ -290,17 +298,17 @@ input[type=file]{display:none;}
 .search{background:var(--surface-2);border:1px solid var(--line);border-radius:9px;padding:8px 11px;font-size:12.5px;color:var(--muted);display:flex;align-items:center;gap:7px;}
 .search svg{width:14px;height:14px;flex-shrink:0;}
 .list-body{overflow-y:auto;flex:1;}
-.chat-item{display:flex;align-items:center;gap:10px;padding:11px 16px;cursor:pointer;border-left:2px solid transparent;}
+.chat-item{display:flex;align-items:center;gap:13px;padding:13px 16px;cursor:pointer;border-left:2px solid transparent;}
 .chat-item:hover{background:var(--surface);}
 .chat-item.active{background:var(--surface);border-left-color:var(--accent);}
-.chat-item img{width:38px;height:38px;border-radius:50%;object-fit:cover;flex-shrink:0;}
+.chat-item img{width:54px;height:54px;border-radius:50%;object-fit:cover;flex-shrink:0;}
 .chat-item .meta{min-width:0;flex:1;}
-.chat-item .name{font-size:13px;font-weight:600;}
-.chat-item .preview{font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.chat-item .name{font-size:15px;font-weight:700;}
+.chat-item .preview{font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;}
 .chatcol{flex:1;display:flex;flex-direction:column;min-width:0;}
 .chat-head{padding:14px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px;}
-.chat-head img{width:34px;height:34px;border-radius:50%;object-fit:cover;}
-.chat-head .name{font-size:13.5px;font-weight:600;}
+.chat-head img{width:42px;height:42px;border-radius:50%;object-fit:cover;}
+.chat-head .name{font-size:15px;font-weight:700;}
 .chat-head .status{font-size:11px;color:var(--accent);}
 .messages{flex:1;overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:10px;}
 .msg{max-width:72%;padding:9px 13px;border-radius:14px;font-size:13.5px;line-height:1.4;}
@@ -314,12 +322,12 @@ input[type=file]{display:none;}
 .icon-btn{width:36px;height:36px;border-radius:50%;background:var(--surface-2);display:flex;align-items:center;justify-content:center;color:var(--muted);border:none;cursor:pointer;flex-shrink:0;}
 .bio-header{
   display:grid;grid-template-columns:1fr auto 1fr;align-items:center;
-  padding:14px 18px;border-bottom:1px solid var(--line);
+  padding:10px 20px;
 }
 .bio-header-left{justify-self:start;font-family:'Space Grotesk',sans-serif;font-size:17px;margin:0;}
-.bio-header-center{justify-self:center;display:flex;align-items:center;}
-.bio-header-logo-img{max-height:26px;max-width:90px;object-fit:contain;}
-.bio-header-logo-fallback{display:none;font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;color:var(--text);}
+.bio-header-center{justify-self:center;display:flex;align-items:center;cursor:pointer;}
+.bio-header-logo-img{max-height:46px;max-width:140px;object-fit:contain;}
+.bio-header-logo-fallback{display:none;font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:700;color:var(--text);}
 .bio-header-right{justify-self:end;}
 
 /* SAĞDAN AÇILAN YAN MENÜ (DRAWER) */
@@ -356,6 +364,24 @@ input[type=file]{display:none;}
 }
 .switch input:checked + .switch-slider{background:var(--accent);}
 .switch input:checked + .switch-slider:before{transform:translateX(18px);}
+
+/* HESAP DEĞİŞTİRİCİ (Bottom Sheet) */
+.bottomsheet-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:130;display:flex;align-items:flex-end;justify-content:center;}
+.bottomsheet-overlay.hidden{display:none;}
+.bottomsheet{
+  width:100%;max-width:460px;background:var(--surface);border:1px solid var(--line);
+  border-radius:24px 24px 0 0;padding:14px 18px 28px;
+  transform:translateY(100%);transition:transform .32s ease;
+}
+.bottomsheet.open{transform:translateY(0);}
+.bottomsheet-handle{width:38px;height:4px;background:var(--line);border-radius:3px;margin:0 auto 14px;}
+.bottomsheet-title{font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:15px;margin-bottom:12px;text-align:center;}
+.account-row{display:flex;align-items:center;gap:12px;padding:10px 6px;border-radius:12px;cursor:pointer;}
+.account-row:active{background:var(--surface-2);}
+.account-row img{width:44px;height:44px;border-radius:50%;object-fit:cover;flex-shrink:0;}
+.account-row .acc-name{font-weight:600;font-size:13.5px;}
+.account-row .acc-email{font-size:11px;color:var(--muted);}
+.account-row .active-badge{margin-left:auto;color:var(--accent);font-size:11px;font-weight:600;flex-shrink:0;}
 .icon-btn:hover{color:var(--accent);}
 .composer input[type=text]{flex:1;border-radius:20px;}
 .send{width:38px;height:38px;border-radius:50%;background:var(--accent);border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;}
@@ -670,13 +696,19 @@ tbody tr:hover{background:var(--surface-2);}
             <div class="msg me">Evet gördüm, harika olmuş 🙌 <span class="time">10:07</span></div>
             <div class="msg them">Tamam, anlaştık o zaman 👍 <span class="time">10:08</span></div>
           </div>
+          <div class="emoji-row">
+            <button onclick="quickEmojiMsg('❤️')">❤️</button>
+            <button onclick="quickEmojiMsg('😂')">😂</button>
+            <button onclick="quickEmojiMsg('🔥')">🔥</button>
+            <button onclick="quickEmojiMsg('🙌')">🙌</button>
+          </div>
           <div class="composer">
             <button class="icon-btn" onclick="document.getElementById('dmFile').click()" title="Fotoğraf / Galeri">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 011 1v10a1 1 0 01-1 1H4a1 1 0 01-1-1V9a1 1 0 011-1z"/><circle cx="12" cy="13" r="3.5"/></svg>
             </button>
             <input type="file" id="dmFile" accept="image/*,video/*" onchange="sendMedia(event)">
             <input type="text" id="msgInput" placeholder="Mesaj yaz..." onkeydown="if(event.key==='Enter') sendMsg()">
-            <button class="send" onclick="sendMsg()"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 11l18-8-8 18-2-8-8-2z"/></svg></button>
+            <button class="send" onclick="sendMsg()" title="Gönder"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 11l18-8-8 18-2-8-8-2z"/></svg></button>
           </div>
         </div>
       </div>
@@ -684,7 +716,7 @@ tbody tr:hover{background:var(--surface-2);}
 
     <!-- ================= EKRAN 4: ADMIN ================= -->
     <div class="screen" id="screenAdmin">
-      <div class="ahead screen-header" style="max-width:880px;margin:0 auto;width:100%;padding:18px 18px 14px;">
+      <div class="ahead screen-header" style="padding:12px 20px;">
         <div style="display:flex;align-items:center;gap:10px;">
           <span class="mark" style="font-family:'JetBrains Mono',monospace;color:var(--accent);font-size:13px;border:1px solid var(--accent-dim);padding:5px 9px;border-radius:7px;">&lt;/&gt;</span>
           <div><h1>Admin Yönetim Paneli</h1><div class="sub">NeXT</div></div>
@@ -745,7 +777,7 @@ tbody tr:hover{background:var(--surface-2);}
     <div class="screen" id="screenProfile">
       <div class="bio-header screen-header">
         <h1 class="bio-header-left">Bio</h1>
-        <div class="bio-header-center">
+        <div class="bio-header-center" onclick="openAccountSwitcher()" title="Hesap Değiştir">
           <img src="NeXT.PNG" alt="NeXT" class="bio-header-logo-img" onerror="this.style.display='none';this.nextElementSibling.style.display='block';">
           <span class="bio-header-logo-fallback">NeXT</span>
         </div>
@@ -846,6 +878,16 @@ tbody tr:hover{background:var(--surface-2);}
   </div><!-- /main -->
 </div><!-- /appShell -->
 
+<!-- HESAP DEĞİŞTİRİCİ (Bottom Sheet) -->
+<div class="bottomsheet-overlay hidden" id="accountSwitcherOverlay" onclick="if(event.target===this) closeAccountSwitcher()">
+  <div class="bottomsheet" id="accountSwitcherSheet">
+    <div class="bottomsheet-handle"></div>
+    <div class="bottomsheet-title">Hesap Değiştir</div>
+    <div id="accountList"></div>
+    <button class="drawer-btn" style="margin-top:10px;text-align:center;" onclick="closeAccountSwitcher();goToRegisterScreen()">+ Başka Hesap Ekle</button>
+  </div>
+</div>
+
 <!-- PAYLAŞIM PENCERESİ (Share Sheet) -->
 <div class="overlay hidden" id="shareSheet" onclick="if(event.target===this) closeShareSheet()">
   <div class="contract-card" style="max-width:380px;">
@@ -940,10 +982,64 @@ function saveSession(){
       username: savedUsername, email: savedEmail, photo: savedProfilePhoto, isAdmin: savedIsAdmin
     }));
   }catch(e){ /* localStorage kullanılamıyorsa sessizce geç */ }
+  upsertAccount({username: savedUsername, email: savedEmail, photo: savedProfilePhoto, isAdmin: savedIsAdmin});
 }
 
 function clearSession(){
   try{ localStorage.removeItem('next_session'); }catch(e){}
+}
+
+/* ===== HESAP DEĞİŞTİRİCİ (Account Switcher) =====
+   Tarayıcıda, bu cihazda daha önce giriş yapılmış hesapların listesini tutar.
+   Instagram'daki gibi, logout olmadan hesaplar arası anında geçiş içindir. */
+function getAccountsList(){
+  try{ const list = JSON.parse(localStorage.getItem('next_accounts')); return Array.isArray(list) ? list : []; }
+  catch(e){ return []; }
+}
+function saveAccountsList(list){
+  try{ localStorage.setItem('next_accounts', JSON.stringify(list)); }catch(e){}
+}
+function upsertAccount(acc){
+  if(!acc.email) return;
+  const list = getAccountsList();
+  const idx = list.findIndex(a => a.email.toLowerCase() === acc.email.toLowerCase());
+  if(idx > -1) list[idx] = acc; else list.push(acc);
+  saveAccountsList(list);
+}
+
+function openAccountSwitcher(){
+  renderAccountList();
+  document.getElementById('accountSwitcherOverlay').classList.remove('hidden');
+  setTimeout(()=>document.getElementById('accountSwitcherSheet').classList.add('open'), 10);
+}
+function closeAccountSwitcher(){
+  document.getElementById('accountSwitcherSheet').classList.remove('open');
+  setTimeout(()=>document.getElementById('accountSwitcherOverlay').classList.add('hidden'), 300);
+}
+function renderAccountList(){
+  const list = getAccountsList();
+  const box = document.getElementById('accountList');
+  if(!list.length){
+    box.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:12.5px;padding:18px 0;">Henüz kayıtlı başka hesap yok. Yeni bir hesap eklemek için aşağıdaki butonu kullan.</div>';
+    return;
+  }
+  box.innerHTML = list.map(acc => `
+    <div class="account-row" onclick="switchToAccount('${acc.email.replace(/'/g, "\\'")}')">
+      <img src="${acc.photo || 'https://i.pravatar.cc/80?img=68'}">
+      <div><div class="acc-name">${acc.username}</div><div class="acc-email">${acc.email}</div></div>
+      ${acc.email.toLowerCase() === (savedEmail||'').toLowerCase() ? '<span class="active-badge">● Aktif</span>' : ''}
+    </div>
+  `).join('');
+}
+function switchToAccount(email){
+  const list = getAccountsList();
+  const acc = list.find(a => a.email.toLowerCase() === email.toLowerCase());
+  if(!acc) return;
+  savedUsername = acc.username; savedEmail = acc.email; savedProfilePhoto = acc.photo; savedIsAdmin = !!acc.isAdmin;
+  applyAccountToUI();
+  saveSession();
+  closeAccountSwitcher();
+  showToast(acc.username + ' hesabına geçildi');
 }
 
 function initAuthState(){
@@ -1527,6 +1623,11 @@ function toggleSave(el){
 function quickEmoji(btn, emoji){
   const post = btn.closest('.post');
   const input = post.querySelector('.comment-compose input');
+  input.value += emoji;
+  input.focus();
+}
+function quickEmojiMsg(emoji){
+  const input = document.getElementById('msgInput');
   input.value += emoji;
   input.focus();
 }
