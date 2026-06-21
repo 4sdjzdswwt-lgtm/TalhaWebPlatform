@@ -188,8 +188,8 @@ label{display:block;font-size:12px;color:var(--muted);margin:0 0 6px;font-weight
 .accent-text{color:var(--accent);font-weight:600;}
 .analysis-box{margin-top:14px;border-radius:12px;padding:14px;font-size:13px;line-height:1.5;display:none;border:1px solid var(--line);}
 .analysis-box.loading{display:flex;align-items:center;gap:10px;color:var(--muted);background:var(--surface-2);}
-.analysis-box.ok{display:block;background:rgba(0,149,246,.08);border-color:var(--accent-dim);color:#cfe8ff;}
-.analysis-box.bad{display:block;background:rgba(242,92,92,.08);border-color:#5c2a2a;color:#ffc6c6;}
+.analysis-box.ok{display:block;background:rgba(0,149,246,.1);border-color:var(--accent);color:var(--accent);}
+.analysis-box.bad{display:block;background:rgba(237,73,86,.1);border-color:var(--danger);color:var(--danger);}
 .spinner{width:14px;height:14px;border-radius:50%;border:2px solid var(--line);border-top-color:var(--accent);animation:spin .7s linear infinite;flex-shrink:0;}
 @keyframes spin{to{transform:rotate(360deg);}}
 .success{text-align:center;padding:10px 0 4px;}
@@ -326,6 +326,28 @@ input[type=file]{display:none;}
 .contract-head p{font-size:12.5px;color:var(--muted);margin:0 0 14px;line-height:1.5;}
 .video-wrap{position:relative;background:#000;aspect-ratio:9/16;max-height:62vh;margin:0 18px;border-radius:12px;overflow:hidden;}
 .video-wrap video{width:100%;height:100%;object-fit:contain;display:block;background:#000;}
+
+/* ===== ONAY VİDEOSU EKRANI — videoyu öne çıkaran, daha geniş şık tema ===== */
+.video-stage-card{
+  max-width:480px;display:flex;flex-direction:column;
+  background:linear-gradient(180deg, var(--surface) 0%, var(--bg) 100%);
+}
+.video-stage-head{padding:20px 22px 12px;text-align:center;}
+.video-stage-eyebrow{
+  font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--accent);
+  letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;
+}
+.video-stage-head h2{font-family:'Space Grotesk',sans-serif;font-size:18px;margin:0;color:var(--text);}
+.video-stage-card .video-wrap{
+  margin:4px 16px 0;max-height:58vh;aspect-ratio:9/16;
+  border:1px solid var(--line);box-shadow:0 14px 34px rgba(0,0,0,.35);
+}
+.video-glow-top{
+  position:absolute;top:0;left:0;right:0;height:46px;
+  background:linear-gradient(180deg, rgba(0,0,0,.45), transparent);pointer-events:none;
+}
+.video-stage-foot{padding:16px 22px 22px;}
+.video-stage-foot .progress-row{padding:0;margin-bottom:14px;}
 .playbtn{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.25);cursor:pointer;}
 .playbtn svg{width:54px;height:54px;color:#fff;}
 .progress-row{padding:14px 20px 4px;}
@@ -928,7 +950,7 @@ tbody tr:hover{background:var(--surface-2);}
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:18px;">
           <div style="aspect-ratio:1/1;border-radius:10px;overflow:hidden;"><img src="https://images.unsplash.com/photo-1521119989659-a83eee488004?w=300&q=50" style="width:100%;height:100%;object-fit:cover;"></div>
-          <div style="aspect-ratio:1/1;border-radius:10px;overflow:hidden;position:relative;"><img src="https://images.unsplash.com/photo-1493612276216-ee3925520721?w=300&q=50" style="width:100%;height:100%;object-fit:cover;"><span style="position:absolute;top:6px;right:6px;font-size:11px;background:rgba(0,0,0,.5);padding:2px 5px;border-radius:5px;">▶</span></div>
+          <div style="aspect-ratio:1/1;border-radius:10px;overflow:hidden;position:relative;"><img src="https://images.unsplash.com/photo-1493612276216-ee3925520721?w=300&q=50" style="width:100%;height:100%;object-fit:cover;"><span style="position:absolute;top:6px;right:6px;font-size:11px;background:rgba(0,0,0,.5);color:#fff;padding:2px 5px;border-radius:5px;">▶</span></div>
           <div style="aspect-ratio:1/1;border-radius:10px;overflow:hidden;background:var(--surface-2);display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:11px;">+ Yeni</div>
         </div>
 
@@ -1018,11 +1040,10 @@ tbody tr:hover{background:var(--surface-2);}
   </div>
 
   <!-- AŞAMA 2: ONAY VİDEOSU -->
-  <div class="contract-card hidden" id="contractVideoStage">
-    <div class="contract-head">
-      <div class="eyebrow">İlk Giriş · Zorunlu</div>
+  <div class="contract-card video-stage-card hidden" id="contractVideoStage">
+    <div class="video-stage-head">
+      <div class="video-stage-eyebrow">İlk Giriş · Zorunlu</div>
       <h2>Sözleşme Onay Videosu</h2>
-      <p>Devam etmeden önce site kurallarını anlatan kısa videoyu izlemen gerekiyor.</p>
     </div>
     <div class="video-wrap">
       <video id="contractVideo" poster="https://images.unsplash.com/photo-1551836022-d5d88e9218df?w=700&q=60" playsinline preload="auto">
@@ -1030,10 +1051,14 @@ tbody tr:hover{background:var(--surface-2);}
         <source src="Onay_videosu.mp4.mov" type="video/mp4">
         <source src="Onay_videosu.mp4" type="video/mp4">
       </video>
+      <div class="video-glow-top"></div>
       <div class="playbtn hidden" id="playBtn" onclick="playVideo()"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="11" fill="rgba(0,0,0,.35)"/><path d="M10 8l6 4-6 4V8z" fill="#fff"/></svg></div>
     </div>
-    <div class="progress-row"><div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div><div class="progress-label" id="progressLabel">İZLENMEDİ — 0%</div></div>
-    <div class="contract-foot"><button class="btn btn-primary" id="continueBtn" disabled style="width:100%" onclick="continueToFeed()">Devam Et →</button><div class="btn-hint">Bu video bu cihazda yalnızca bir defa gösterilir.</div></div>
+    <div class="video-stage-foot">
+      <div class="progress-row"><div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div><div class="progress-label" id="progressLabel">İZLENMEDİ — 0%</div></div>
+      <button class="btn btn-primary" id="continueBtn" disabled style="width:100%" onclick="continueToFeed()">Devam Et →</button>
+      <div class="btn-hint">Bu video bu cihazda yalnızca bir defa gösterilir.</div>
+    </div>
   </div>
 </div>
 
