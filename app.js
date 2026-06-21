@@ -1,7 +1,22 @@
 // ==========================================
-// 1. FIREBASE BAĞLANTI AYARLARI (UYUMLU SÜRÜM)
+// 1. FIREBASE BAĞLANTI AYARLARI (GÜNCELLENDİ)
 // ==========================================
-// Projenizin yapısına tam uyumlu (compat) Firebase Auth bağlantısı
+const firebaseConfig = {
+    apiKey: "AIzaSyCsGmCLBb0cqpnHrcn66PIHhIr5RSaRSFY",
+    authDomain: "talhaweb-c5e40.firebaseapp.com",
+    projectId: "talhaweb-c5e40",
+    storageBucket: "talhaweb-c5e40.firebasestorage.app",
+    messagingSenderId: "286141336960",
+    appId: "1:286141336960:web:92e80c38865665d6b80565",
+    measurementId: "G-T5147XWHL5",
+    databaseURL: "https://chat-ee35e-default-rtdb.europe-west1.firebasedatabase.app/"
+};
+
+// Eğer Firebase başlatılmamışsa başlat
+if (!firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig);
+}
+
 const auth = firebase.auth();
 const database = firebase.database();
 const storage = firebase.storage();
@@ -10,7 +25,6 @@ const googleProvider = new firebase.auth.GoogleAuthProvider();
 // ==========================================
 // 2. GLOBAL DEĞİŞKENLER VE DİL MOTORU
 // ==========================================
-let isLampOn = false;
 let currentLanguage = localStorage.getItem('site_lang') || 'tr';
 
 const translations = {
@@ -18,18 +32,14 @@ const translations = {
         langLbl: "EN",
         txtHeroDesc: "Hoş geldiniz, geleceğin web sitesine. Lütfen abajuru açtıktan sonra hesabınız yoksa kaydolun varsa giriş yapınız.",
         errFields: "Lütfen tüm alanları eksiksiz doldurun!",
-        errCodeWrong: "Hatalı veya eksik doğrulama kodu!",
         msgSending: "İşlem yapılıyor...",
-        msgSuccessCode: "Başarıyla giriş yapıldı! Yönlendiriliyorsunuz...",
         msgLoginSuccess: "Giriş başarılı! Yönlendiriliyorsunuz..."
     },
     en: {
         langLbl: "TR",
         txtHeroDesc: "Welcome to the website of the future. Please turn on the lamp and register if you don't have an account, or login if you do.",
         errFields: "Please fill in all fields completely!",
-        errCodeWrong: "Incorrect or missing verification code!",
         msgSending: "Processing...",
-        msgSuccessCode: "Successfully logged in! Redirecting...",
         msgLoginSuccess: "Login successful! Redirecting..."
     }
 };
@@ -51,14 +61,13 @@ const themeGifs = [
 ];
 let currentThemeIndex = parseInt(localStorage.getItem('talha_theme_idx')) || 0;
 
-// SAYFA YÜKLENDİĞİNDE ÇALIŞACAK AYARLAR
 window.addEventListener('load', () => {
     applyLanguage(currentLanguage);
     applyTheme(currentThemeIndex);
 });
 
 // ==========================================
-// 3. TEMA VE GÖRSEL EFEKT MOTORLARI (ORİJİNAL)
+// 3. TEMA VE DİL FONKSİYONLARI
 // ==========================================
 function toggleLanguage() {
     currentLanguage = currentLanguage === 'tr' ? 'en' : 'tr';
@@ -66,10 +75,13 @@ function toggleLanguage() {
     applyLanguage(currentLanguage);
 }
 
+// Global scope'a ekliyoruz ki HTML butonları okuyabilsin
+window.toggleLanguage = toggleLanguage;
+window.nextTheme = nextTheme;
+
 function applyLanguage(lang) {
     const btn = document.getElementById('langToggleBtn');
     if(btn) btn.innerText = translations[lang].langLbl;
-    
     const desc = document.getElementById('heroDescription');
     if(desc) desc.innerText = translations[lang].txtHeroDesc;
 }
@@ -98,7 +110,7 @@ function showStatus(text, color) {
 }
 
 // ==========================================
-// 4. FIREBASE AUTHENTICATION (GERÇEK SİSTEM)
+// 4. GERÇEK FIREBASE AUTHENTICATION SİSTEMİ
 // ==========================================
 
 // GİRİŞ YAPMA FONKSİYONU
@@ -113,7 +125,6 @@ function handleLogin() {
     
     showStatus(translations[currentLanguage].msgSending, '#3a3b3c');
 
-    // Firebase Auth ile giriş doğrulaması
     auth.signInWithEmailAndPassword(email, password)
         .then((userCredential) => {
             const user = userCredential.user;
@@ -123,13 +134,14 @@ function handleLogin() {
             sessionStorage.setItem('active_user_name', user.email.split('@')[0]);
             
             setTimeout(() => {
-                window.location.href = 'feed.html'; // Doğru sayfaya yönlendirme
+                window.location.href = 'feed.html';
             }, 1200);
         })
         .catch((error) => {
             showStatus("Giriş Başarısız: " + error.message, '#ff4d4d');
         });
 }
+window.handleLogin = handleLogin;
 
 // KAYIT OLMA FONKSİYONU
 function handleRegister() {
@@ -149,12 +161,10 @@ function handleRegister() {
 
     showStatus(translations[currentLanguage].msgSending, '#3a3b3c');
 
-    // Firebase Auth ile gerçek kullanıcı kaydı oluşturma
     auth.createUserWithEmailAndPassword(email, password)
         .then((userCredential) => {
             const user = userCredential.user;
             
-            // Kullanıcı profil bilgisini Realtime Database'e kaydetme
             const cleanEmail = email.toLowerCase().replace(/\./g, '_');
             database.ref(`users/${cleanEmail}`).set({
                 username: username,
@@ -175,8 +185,9 @@ function handleRegister() {
             showStatus("Kayıt Hatası: " + error.message, '#ff4d4d');
         });
 }
+window.handleRegister = handleRegister;
 
-// GOOGLE İLE GİRİŞ YAPMA FONKSİYONU
+// GOOGLE İLE GİRİŞ FONKSİYONU
 function handleGoogleLogin() {
     auth.signInWithPopup(googleProvider)
         .then((result) => {
@@ -194,3 +205,4 @@ function handleGoogleLogin() {
             showStatus("Google Giriş Hatası: " + error.message, '#ff4d4d');
         });
 }
+window.handleGoogleLogin = handleGoogleLogin;
