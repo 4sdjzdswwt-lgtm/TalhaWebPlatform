@@ -39,7 +39,7 @@
             <p id="heroDescription" class="hero-subtitle">Hoş geldiniz, geleceğin web sitesine. Lütfen abajuru açtıktan sonra hesabınız yoksa kaydolun varsa giriş yapınız.</p>
         </div>
 
-        <div id="loginStep" class="step-card" style="display: none;">
+        <div id="loginStep" class="step-card">
             <h2 class="step-title">Giriş Yap</h2>
             <form class="auth-form" onsubmit="return false;">
                 <div class="input-wrapper">
@@ -52,7 +52,7 @@
                 </div>
                 <button type="button" onclick="handleLogin()" class="btn btn-primary">Giriş Yap</button>
                 
-                <button type="button" onclick="handleGoogleLogin()" class="btn btn-secondary" style="background:#fff; color:#000; margin-top:10px; border: 1px solid #ddd;"><img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" width="16" style="vertical-align:middle; margin-right:8px;"> Google ile Giriş</button>
+                <button type="button" onclick="handleGoogleLogin()" class="btn btn-secondary" style="background:#fff; color:#000; margin-top:10px; border:1px solid #ddd; border-radius:50px;"><img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" width="16" style="vertical-align:middle; margin-right:8px;"> Google ile Giriş</button>
                 
                 <div class="step-footer-links">
                     <span onclick="switchStep('registerStep')">Hesabınız yok mu? <b>Kaydolun</b></span>
@@ -60,7 +60,7 @@
             </form>
         </div>
 
-        <div id="registerStep" class="step-card" style="display: none;">
+        <div id="registerStep" class="step-card">
             <h2 class="step-title">Hesap Oluştur</h2>
             <form class="auth-form" onsubmit="return false;">
                 <div class="input-wrapper">
@@ -77,8 +77,6 @@
                 </div>
                 <button type="button" onclick="handleRegister()" class="btn btn-secondary">Kayıt Ol</button>
                 
-                <button type="button" onclick="handleGoogleLogin()" class="btn btn-secondary" style="background:#fff; color:#000; margin-top:10px; border: 1px solid #ddd;"><img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" width="16" style="vertical-align:middle; margin-right:8px;"> Google ile Kaydol</button>
-                
                 <div class="step-footer-links">
                     <span onclick="switchStep('loginStep')">Zaten üye misiniz? <b>Giriş Yapın</b></span>
                 </div>
@@ -90,8 +88,6 @@
     <script src="app.js"></script>
 
     <script>
-        let isLampOn = false;
-
         function pullLampChain() {
             const body = document.body;
             const startStep = document.getElementById('startStep');
