@@ -22,7 +22,7 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:'Inter',sans-se
 .btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--line);}
 .row{display:flex;gap:10px;}
 .row .btn{flex:1;width:auto;}
-input[type=text],input[type=email]{
+input[type=text],input[type=email],input[type=password]{
   width:100%;background:var(--surface-2);border:1px solid var(--line);color:var(--text);
   padding:12px 13px;border-radius:10px;font-size:14px;outline:none;font-family:'Inter',sans-serif;
 }
@@ -92,7 +92,12 @@ label{display:block;font-size:12px;color:var(--muted);margin:0 0 6px;font-weight
 .field{margin-bottom:16px;}
 .err{font-size:11.5px;color:var(--danger);margin-top:6px;display:none;}
 .codeRow{display:flex;gap:8px;}
-.codeRow input{text-align:center;font-family:'JetBrains Mono',monospace;font-size:18px;padding:12px 0;transition:border-color .2s, background .2s, transform .15s, box-shadow .2s;}
+.codeRow input{
+  flex:1;width:0;background:var(--surface-2);border:1px solid var(--line);color:var(--text);
+  border-radius:10px;outline:none;
+  text-align:center;font-family:'JetBrains Mono',monospace;font-size:18px;padding:12px 0;
+  transition:border-color .2s, background .2s, transform .15s, box-shadow .2s;
+}
 .codeRow input.filled{border-color:var(--accent-dim);background:rgba(52,211,153,.06);transform:scale(1.06);}
 .codeRow input.success{
   border-color:var(--accent);background:rgba(52,211,153,.2);color:var(--accent);
@@ -739,6 +744,8 @@ document.getElementById('main').addEventListener('touchend', (e)=>{
     goNav('feed', document.getElementById('navFeed'));
   }
 }, {passive:true});
+
+function goReg(n){
   document.querySelectorAll('.regstep').forEach(p=>p.classList.remove('active'));
   document.getElementById('reg'+n).classList.add('active');
   document.querySelectorAll('.rail .seg').forEach((s,i)=>s.classList.toggle('on', i < n));
@@ -1103,7 +1110,14 @@ function filterMembers(){
 }
 
 /* Sayfa her açıldığında en son: oturum var mı kontrol et, doğru ekranı göster */
-initAuthState();
+try{
+  initAuthState();
+}catch(err){
+  // Beklenmedik bir hata olsa bile site kapkara kalmasın, en azından Ana Akış görünsün.
+  console.error('initAuthState hatası:', err);
+  document.getElementById('screenFeed').classList.add('active');
+  document.getElementById('island').classList.remove('hidden');
+}
 </script>
 </body>
 </html>
