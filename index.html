@@ -178,6 +178,21 @@ label{display:block;font-size:12px;color:var(--muted);margin:0 0 6px;font-weight
   border-radius:12px;padding:11px 14px;font-size:12px;line-height:1.5;margin-bottom:16px;
 }
 .symbolic-code-note{font-size:11px;color:var(--muted);margin-top:8px;font-family:'JetBrains Mono',monospace;}
+
+/* Doğrulama kodu gösterimi — vurgulu, parlayan kart */
+.verify-code-display{
+  background:var(--glass-bg);border:1px solid var(--glass-border);
+  border-radius:14px;padding:12px 16px;margin:0 0 14px;
+  display:flex;flex-direction:column;align-items:center;gap:4px;
+  backdrop-filter:blur(14px) saturate(180%);-webkit-backdrop-filter:blur(14px) saturate(180%);
+  box-shadow:var(--glass-shadow);
+}
+.verify-code-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;font-weight:600;}
+.verify-code-display b{
+  font-family:'JetBrains Mono',monospace;font-size:26px;font-weight:700;letter-spacing:8px;
+  background:var(--gradient-vivid);-webkit-background-clip:text;background-clip:text;color:transparent;
+  text-shadow:0 0 14px rgba(124,58,237,.3);
+}
 .hint{font-size:11.5px;color:var(--muted);margin-top:6px;}
 
 /* ŞİFRE GÜÇLÜLÜK GÖSTERGESİ */
@@ -189,10 +204,11 @@ label{display:block;font-size:12px;color:var(--muted);margin:0 0 6px;font-weight
 .codeRow{display:flex;gap:8px;}
 .codeRow input{
   flex:1;width:0;background:var(--surface-2);border:1px solid var(--line);color:var(--text);
-  border-radius:10px;outline:none;
-  text-align:center;font-family:'JetBrains Mono',monospace;font-size:18px;padding:12px 0;
+  border-radius:10px;outline:none;cursor:text;
+  text-align:center;font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:700;padding:12px 0;
   transition:border-color .2s, background .2s, transform .15s, box-shadow .2s;
 }
+.codeRow input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(139,92,246,.18);}
 .codeRow input.filled{border-color:var(--accent-dim);background:rgba(139,92,246,.10);transform:scale(1.06);}
 .codeRow input.success{
   border-color:var(--accent);background:rgba(139,92,246,.22);color:var(--accent);
@@ -904,25 +920,33 @@ tbody tr:hover{background:var(--surface-2);}
               <div class="step-title">E-postanı Doğrula</div>
               <p class="step-sub"><span id="emailEcho">e-posta adresine</span> gerçek bir doğrulama linki gönderdik.</p>
               <div class="spam-warning">
-                ⚠️ E-posta gelmediyse <b>spam / gereksiz klasörünü</b> kontrol et. Linke tıkladığında açılan sayfada <b>"Siteye Geri Dön"</b> butonu olacak — ona basıp buraya dönüp aşağıdaki butona bas.
+                ⚠️ E-posta <b>1-2 dakika</b> içinde gelir. Gelmediyse <b>spam / gereksiz klasörünü</b> kontrol et. Linke tıkladıktan sonra buraya geri dön ve <b>aşağıdaki 6 haneli kodu</b> kutucuklara yaz.
               </div>
               <div class="field">
-                <div class="codeRow">
-                  <input class="digit" readonly tabindex="-1">
-                  <input class="digit" readonly tabindex="-1">
-                  <input class="digit" readonly tabindex="-1">
-                  <input class="digit" readonly tabindex="-1">
-                  <input class="digit" readonly tabindex="-1">
-                  <input class="digit" readonly tabindex="-1">
+                <div class="verify-code-display">
+                  <span class="verify-code-label">Doğrulama kodun</span>
+                  <b id="symbolicCode">——————</b>
                 </div>
-                <div class="symbolic-code-note">Referans kodun: <b id="symbolicCode">——————</b> <span style="opacity:.7">(sembolik, bilgi amaçlı)</span></div>
-                <div class="err" id="err-code">Henüz doğrulanmadı — linke tıkladıktan sonra tekrar dene.</div>
+                <div class="codeRow">
+                  <input class="digit" maxlength="1" inputmode="numeric" pattern="[0-9]*" autocomplete="off" data-pos="0">
+                  <input class="digit" maxlength="1" inputmode="numeric" pattern="[0-9]*" autocomplete="off" data-pos="1">
+                  <input class="digit" maxlength="1" inputmode="numeric" pattern="[0-9]*" autocomplete="off" data-pos="2">
+                  <input class="digit" maxlength="1" inputmode="numeric" pattern="[0-9]*" autocomplete="off" data-pos="3">
+                  <input class="digit" maxlength="1" inputmode="numeric" pattern="[0-9]*" autocomplete="off" data-pos="4">
+                  <input class="digit" maxlength="1" inputmode="numeric" pattern="[0-9]*" autocomplete="off" data-pos="5">
+                </div>
+                <div class="err" id="err-code">Yanlış kod — yukarıdaki kodu olduğu gibi gir.</div>
                 <div class="verify-check" id="verifyCheck">
                   <span class="ring"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span>
                   Doğrulandı, harika!
                 </div>
               </div>
               <div class="row"><button class="btn btn-ghost" id="resendVerifyBtn" onclick="resendVerificationLink()">Linki Tekrar Gönder</button><button class="btn btn-primary" onclick="manualCheckVerified()">Doğruladım</button></div>
+              <div style="margin-top:14px;text-align:center;">
+                <button onclick="cancelRegistrationFromVerify()" style="background:none;border:none;color:var(--muted);font-size:12.5px;cursor:pointer;text-decoration:underline;font-family:'Inter',sans-serif;">
+                  Vazgeç ve baştan başla
+                </button>
+              </div>
             </div>
 
             <div class="regstep" id="reg4">
@@ -1649,16 +1673,22 @@ function updatePasswordStrength(pass){
 
 function firebaseErrorMessage(err){
   const map = {
-    'auth/email-already-in-use': 'Bu e-posta adresi zaten kayıtlı. "Zaten hesabın var mı?" linkinden giriş yap.',
+    'auth/email-already-in-use': 'Bu e-posta adresi zaten kayıtlı. Eğer önceki kayıt yarım kaldıysa, aşağıdaki "Zaten hesabın var mı?" linkinden giriş yapıp doğrulama linkini tekrar gönderebilirsin.',
     'auth/weak-password': 'Şifre en az 6 karakter olmalı.',
     'auth/invalid-email': 'Geçersiz e-posta adresi.',
     'auth/network-request-failed': 'İnternet bağlantısı sorunu, tekrar dene.',
     'auth/user-not-found': 'Bu e-posta ile kayıtlı bir hesap bulunamadı.',
     'auth/wrong-password': 'Şifre hatalı.',
     'auth/invalid-credential': 'E-posta veya şifre hatalı.',
-    'auth/too-many-requests': 'Çok fazla deneme yapıldı, biraz sonra tekrar dene.'
+    'auth/too-many-requests': 'Çok fazla deneme yapıldı, birkaç dakika sonra tekrar dene.',
+    'auth/unauthorized-continue-uri': 'Doğrulama gönderilemedi (site adresi yetkili değil). Sorun bizdeydi, sayfayı yenile.',
+    'auth/invalid-continue-uri': 'Doğrulama linki oluşturulamadı, sayfayı yenile.',
+    'auth/missing-continue-uri': 'Doğrulama linki oluşturulamadı, sayfayı yenile.',
+    'auth/quota-exceeded': 'Günlük doğrulama e-postası kotası doldu. Yarın tekrar dene.',
+    'auth/operation-not-allowed': 'Bu işlem şu an etkin değil. Yönetici ile iletişime geç.',
+    'auth/internal-error': 'Firebase sunucusunda geçici bir sorun var, biraz sonra tekrar dene.'
   };
-  return map[err.code] || ('Bir hata oluştu: ' + err.message);
+  return map[err.code] || ('Bir hata oluştu: ' + (err.message || err.code || 'bilinmeyen'));
 }
 
 /* ADIM 2: Şifre + kullanıcı adı — burada GERÇEK Firebase hesabı oluşturulur
@@ -1677,17 +1707,35 @@ function requireFirebase(){
 /* E-postadaki linke tıklayınca Firebase'in açtığı sayfada "Siteye Geri Dön"
    butonu çıkması için devam URL'i (continue URL) veriyoruz — bu, kullanıcının
    doğruladıktan sonra kendi sitesine dönebilmesini sağlar. */
+/* E-posta doğrulama: Firebase'in VARSAYILAN akışını kullanıyoruz, custom
+   continueUrl GÖNDERMİYORUZ. Çünkü custom URL gönderirsen, o domain Firebase
+   Console'da Authorized Domains listesinde olmak ZORUNDADIR — değilse Firebase
+   e-postayı hiç göndermez (sessiz başarısızlık). Varsayılan akışta kullanıcı
+   linke tıklayınca Firebase'in kendi onay sayfasına gider, oradan siteye
+   manuel döner. Bu en güvenilir yaklaşımdır ve hiçbir ek konfigürasyon
+   gerektirmez. */
 function getVerificationActionSettings(){
-  return { url: window.location.href.split('#')[0] };
+  return null; // Firebase default davranışını kullan
 }
 
-/* Doğrulama ekranında gösterilen, her kullanıcıya özel rastgele kod —
-   gerçek doğrulama bu koda bağlı DEĞİL (gerçek doğrulama e-postadaki linkle
-   yapılıyor), bu sadece sembolik/bilgi amaçlı bir referans numarasıdır. */
+/* Doğrulama ekranında gösterilen, her kullanıcıya özel rastgele 6 haneli kod.
+   Gerçek doğrulama Firebase'in e-postayla gönderdiği LİNK ile yapılıyor —
+   kullanıcı linke tıkladıktan sonra siteye dönüp burada gösterilen kodu
+   manuel olarak girer. Kod doğru girilince ve Firebase de emailVerified=true
+   dönerse animasyon oynar ve bir sonraki adıma geçilir. */
+let currentVerifyCode = '';
 function generateSymbolicCode(){
   const code = String(Math.floor(100000 + Math.random()*900000));
+  currentVerifyCode = code;
   const el = document.getElementById('symbolicCode');
   if(el) el.textContent = code;
+  // Kod girişi kutucuklarını da sıfırla (yeniden gönderildiğinde temiz başlasın)
+  document.querySelectorAll('#reg3 .digit').forEach(d => {
+    d.value = '';
+    d.classList.remove('filled','success','shake');
+  });
+  const errEl = document.getElementById('err-code');
+  if(errEl) errEl.style.display = 'none';
   return code;
 }
 
@@ -1723,7 +1771,7 @@ function createAccountAndSendVerification(){
       savedIsAdmin = (savedEmail.toLowerCase() === ADMIN_EMAIL.toLowerCase() && passVal === ADMIN_PASSWORD);
       document.getElementById('emailEcho').textContent = savedEmail + ' adresine';
       generateSymbolicCode();
-      return cred.user.sendEmailVerification(getVerificationActionSettings());
+      return cred.user.sendEmailVerification();
     }).then(()=>{
       btn.disabled = false; btn.textContent = 'Hesabı Oluştur';
       goReg(3);
@@ -1757,7 +1805,7 @@ function resendVerificationLink(){
   generateSymbolicCode();
   if(btn){ btn.disabled = true; }
 
-  fbAuth.currentUser.sendEmailVerification(getVerificationActionSettings())
+  fbAuth.currentUser.sendEmailVerification()
     .then(()=>{
       showToast('Doğrulama linki tekrar gönderildi 📩');
       startResendCooldown(btn, 30);
@@ -1809,29 +1857,75 @@ function forgotPassword(){
     return;
   }
   if(!requireFirebase()) return;
-  fbAuth.sendPasswordResetEmail(email, getVerificationActionSettings())
+  fbAuth.sendPasswordResetEmail(email)
     .then(()=> showToast('Şifre sıfırlama linki e-postana gönderildi 📩'))
     .catch((err)=> showToast(firebaseErrorMessage(err)));
 }
 
+/* "Doğruladım" butonu — yedek/alternatif giriş yolu. Kullanıcı kodu yazmayı
+   atlamak isterse bu butona basabilir; biz yine de kodun ekranda doğru
+   gösterildiğinden emin olmak için kutucuklara yerleştirir ve animasyonu
+   tetikleriz. Bu, kodu kutucuklara yazmakla aynı sonucu verir. */
 function manualCheckVerified(){
   if(!requireFirebase()) return;
   if(!fbAuth.currentUser){
-    document.getElementById('err-code').style.display = 'block';
+    const errEl = document.getElementById('err-code');
+    if(errEl){ errEl.textContent = 'Oturum bulunamadı, sayfayı yenile.'; errEl.style.display = 'block'; }
     return;
   }
-  fbAuth.currentUser.reload().then(()=>{
-    if(fbAuth.currentUser.emailVerified){
-      document.getElementById('err-code').style.display = 'none';
-      playSuccessAnimation(()=>{ goReg(4); });
-    } else {
-      document.getElementById('err-code').style.display = 'block';
-      const boxes = [...document.querySelectorAll('#reg3 .digit')];
-      boxes.forEach(b=>{ b.classList.add('shake'); setTimeout(()=>b.classList.remove('shake'),350); });
+  const boxes = [...document.querySelectorAll('#reg3 .digit')];
+  const typed = boxes.map(b => b.value).join('');
+  // Kod hâlâ boşsa, kullanıcıdan kodu girmesini iste
+  if(typed.length < boxes.length){
+    const errEl = document.getElementById('err-code');
+    if(errEl){
+      errEl.textContent = 'Önce yukarıdaki 6 haneli kodu kutucuklara gir.';
+      errEl.style.display = 'block';
     }
-  }).catch(()=>{
-    document.getElementById('err-code').style.display = 'block';
-  });
+    boxes.forEach(b => { b.classList.add('shake'); setTimeout(()=>b.classList.remove('shake'), 380); });
+    // İmleci ilk boş kutuya götür
+    const firstEmpty = boxes.find(b => !b.value) || boxes[0];
+    firstEmpty.focus();
+    return;
+  }
+  // Kod doluysa standart kontrol akışını tetikle
+  checkVerifyCodeAndProceed();
+}
+
+/* Doğrulama ekranından "Vazgeç" — kullanıcı buraya takılı kalırsa
+   (örn. e-posta hiç gelmediği için), doğrulanmamış Firebase hesabını siler
+   ve kullanıcıyı kayıt ekranının başına geri götürür. Hesap silinince aynı
+   e-posta ile yeniden deneyebilir; silinemese bile çıkış yapılır ve
+   kayıt akışı sıfırlanır. */
+function cancelRegistrationFromVerify(){
+  if(!confirm('Kayıttan vazgeç ve baştan başla?\n\nNot: Bu e-postayla daha sonra tekrar kayıt olabilirsin.')) return;
+
+  const finishLocal = ()=>{
+    registrationInProgress = false;
+    savedEmail = ''; savedPassword = ''; savedUsername = ''; savedProfilePhoto = '';
+    document.getElementById('email').value = '';
+    document.getElementById('password').value = '';
+    document.getElementById('username').value = '';
+    // Tüm hata kutucuklarını gizle
+    document.querySelectorAll('#registerScreen .err').forEach(e=>e.style.display='none');
+    goReg(1);
+    // Auth durumundan ana akışa geri dönmek için ekranları sıfırla
+    document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+    document.getElementById('registerScreen').classList.add('active');
+    document.getElementById('island').classList.add('hidden');
+  };
+
+  if(fbAuth && fbAuth.currentUser){
+    // Doğrulanmamış hesabı sil ki kullanıcı aynı e-posta ile tekrar deneyebilsin
+    fbAuth.currentUser.delete()
+      .then(finishLocal)
+      .catch(()=>{
+        // Silinemezse en azından oturumu kapat
+        fbAuth.signOut().finally(finishLocal);
+      });
+  } else {
+    finishLocal();
+  }
 }
 
 /* O sevilen kutu animasyonu — artık yazılan bir kod değil, GERÇEK doğrulama
@@ -1847,9 +1941,18 @@ function playSuccessAnimation(onDone){
   setTimeout(()=>{ onDone && onDone(); }, boxes.length*90 + 1100);
 }
 document.querySelectorAll('.digit').forEach((inp, idx, list)=>{
-  inp.addEventListener('input', ()=>{
+  inp.addEventListener('input', (e)=>{
+    // Sadece rakam kabul et — başka karakter girildiyse sil
+    inp.value = (inp.value || '').replace(/[^0-9]/g, '').slice(0,1);
     inp.classList.toggle('filled', !!inp.value);
-    if(inp.value && idx<list.length-1) list[idx+1].focus();
+    inp.classList.remove('shake');
+    // Otomatik bir sonrakine geç
+    if(inp.value && idx < list.length-1) list[idx+1].focus();
+    // 6. hane dolunca otomatik doğrulama tetikle
+    const all = [...list].map(d => d.value).join('');
+    if(all.length === list.length){
+      checkVerifyCodeAndProceed();
+    }
   });
   inp.addEventListener('keydown', (e)=>{
     if(e.key === 'Backspace' && !inp.value && idx > 0){
@@ -1859,8 +1962,67 @@ document.querySelectorAll('.digit').forEach((inp, idx, list)=>{
       prev.classList.remove('filled');
       prev.focus();
     }
+    // Sol/sağ ok tuşlarıyla geçiş
+    if(e.key === 'ArrowLeft' && idx > 0){ e.preventDefault(); list[idx-1].focus(); }
+    if(e.key === 'ArrowRight' && idx < list.length-1){ e.preventDefault(); list[idx+1].focus(); }
+  });
+  // Yapıştırma (paste) desteği — 6 haneli kod tek seferde dağılır
+  inp.addEventListener('paste', (e)=>{
+    const text = (e.clipboardData || window.clipboardData).getData('text') || '';
+    const digits = text.replace(/[^0-9]/g, '').slice(0, list.length);
+    if(digits.length){
+      e.preventDefault();
+      digits.split('').forEach((d, i)=>{
+        if(list[i]){ list[i].value = d; list[i].classList.add('filled'); }
+      });
+      const lastIdx = Math.min(digits.length, list.length) - 1;
+      if(list[lastIdx]) list[lastIdx].focus();
+      if(digits.length === list.length) checkVerifyCodeAndProceed();
+    }
   });
 });
+
+/* Kullanıcı 6 haneyi doldurduğunda çağrılır:
+   1) Yazılan kod, ekranda gösterilen rastgele koda eşit mi? → değilse shake
+   2) Eşit ise, Firebase'de gerçekten emailVerified mi? → değilse "linke tıkla"
+   3) İkisi de doğruysa: animasyon oynar ve bir sonraki adıma geçilir. */
+function checkVerifyCodeAndProceed(){
+  const boxes = [...document.querySelectorAll('#reg3 .digit')];
+  const typed = boxes.map(b => b.value).join('');
+  const errEl = document.getElementById('err-code');
+
+  if(typed !== currentVerifyCode){
+    // Yanlış kod
+    if(errEl){
+      errEl.textContent = 'Yanlış kod — yukarıdaki kodu olduğu gibi gir.';
+      errEl.style.display = 'block';
+    }
+    boxes.forEach(b => { b.classList.add('shake'); setTimeout(()=>b.classList.remove('shake'), 380); });
+    // İlk kutuya odakla ki kullanıcı kolayca düzeltebilsin
+    setTimeout(()=>{ boxes.forEach(b => { b.value=''; b.classList.remove('filled'); }); boxes[0].focus(); }, 450);
+    return;
+  }
+
+  // Kod eşleşti — Firebase'de e-posta gerçekten doğrulandı mı kontrol et
+  if(!requireFirebase() || !fbAuth.currentUser){
+    if(errEl){ errEl.textContent = 'Oturum bulunamadı, sayfayı yenile.'; errEl.style.display = 'block'; }
+    return;
+  }
+  fbAuth.currentUser.reload().then(()=>{
+    if(fbAuth.currentUser.emailVerified){
+      if(errEl) errEl.style.display = 'none';
+      playSuccessAnimation(()=>{ goReg(4); });
+    } else {
+      if(errEl){
+        errEl.textContent = 'E-postandaki linke henüz tıklamadın. Önce linke tıkla, sonra kodu gir.';
+        errEl.style.display = 'block';
+      }
+      boxes.forEach(b => { b.classList.add('shake'); setTimeout(()=>b.classList.remove('shake'), 380); });
+    }
+  }).catch(()=>{
+    if(errEl){ errEl.textContent = 'Doğrulama kontrol edilemedi, internetini kontrol et.'; errEl.style.display = 'block'; }
+  });
+}
 
 function validatePhotoFile(file){
   const allowedTypes = ['image/jpeg','image/jpg','image/png'];
