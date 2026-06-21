@@ -12,7 +12,7 @@ const firebaseConfig = {
     databaseURL: "https://chat-ee35e-default-rtdb.europe-west1.firebasedatabase.app/"
 };
 
-// Eğer Firebase başlatılmamışsa başlat
+// Eğer Firebase henüz başlatılmamışsa başlat
 if (!firebase.apps.length) {
     firebase.initializeApp(firebaseConfig);
 }
@@ -25,7 +25,7 @@ const googleProvider = new firebase.auth.GoogleAuthProvider();
 // ==========================================
 // 2. GLOBAL DEĞİŞKENLER VE DİL MOTORU
 // ==========================================
-let isLampOn = false; // Orijinal lamba değişkeniniz
+let isLampOn = false;
 let currentLanguage = localStorage.getItem('site_lang') || 'tr';
 
 const translations = {
@@ -45,7 +45,7 @@ const translations = {
     }
 };
 
-// Orijinal Tema GIF Listesi
+// Orijinal Tema GIF Listesi (Eski kodunuzdan korundu)
 const themeGifs = [
     'https://i.pinimg.com/originals/ba/8e/3c/ba8e3c15b991da0733cb17f699042b4d.gif',
     'https://i.pinimg.com/originals/5d/43/6e/5d436e2fbd6d0ef0413009fa3e764491.gif',
@@ -99,15 +99,16 @@ function showStatus(text, color) {
     }
 }
 
-// Global Erişimler İçin Window Nesnesine Atıyoruz
+// HTML butonlarının Javascript motoruna erişmesi için global scope eşitlemeleri
 window.toggleLanguage = toggleLanguage;
 window.nextTheme = nextTheme;
 window.isLampOn = isLampOn;
 
 // ==========================================
-// 4. GERÇEK FIREBASE AUTHENTICATION SİSTEMİ
+// 4. FIREBASE AUTHENTICATION İŞLEMLERİ
 // ==========================================
 
+// GİRİŞ MOTORU
 function handleLogin() {
     const email = document.getElementById('loginEmail').value.trim();
     const password = document.getElementById('loginPassword').value.trim();
@@ -137,6 +138,7 @@ function handleLogin() {
 }
 window.handleLogin = handleLogin;
 
+// KAYIT MOTORU
 function handleRegister() {
     const username = document.getElementById('regUsername').value.trim();
     const email = document.getElementById('regEmail').value.trim();
@@ -158,6 +160,7 @@ function handleRegister() {
         .then((userCredential) => {
             const user = userCredential.user;
             
+            // Kullanıcı profil verisini Realtime Database'e yazma mantığı (Eski kodunuzdaki gibi)
             const cleanEmail = email.toLowerCase().replace(/\./g, '_');
             database.ref(`users/${cleanEmail}`).set({
                 username: username,
@@ -165,7 +168,7 @@ function handleRegister() {
                 createdAt: firebase.database.ServerValue.TIMESTAMP
             });
 
-            showStatus("Hesabınız oluşturuldu! Giriş yapılıyor...", '#28a745');
+            showStatus("Hesabınız başarıyla oluşturuldu! Giriş yapılıyor...", '#28a745');
             
             sessionStorage.setItem('active_user_email', user.email);
             sessionStorage.setItem('active_user_name', username);
@@ -180,6 +183,7 @@ function handleRegister() {
 }
 window.handleRegister = handleRegister;
 
+// GOOGLE GİRİŞ MOTORU
 function handleGoogleLogin() {
     auth.signInWithPopup(googleProvider)
         .then((result) => {
