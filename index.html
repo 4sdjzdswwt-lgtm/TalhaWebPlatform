@@ -1110,6 +1110,10 @@ let savedUsername = '';
 let savedEmail = '';
 let savedPassword = '';
 let savedIsAdmin = false;
+/* Kayıt akışı (şifre oluşturma → e-posta doğrulama → fotoğraf) sürerken
+   true olur. Bu süre boyunca Firebase'in otomatik oturum dinleyicisi
+   (onAuthStateChanged) araya girip kullanıcıyı Ana Akış'a fırlatmaz. */
+let registrationInProgress = false;
 
 /* ============================================================
    OTURUM (SESSION) KONTROLÜ
@@ -1206,6 +1210,11 @@ function initAuthState(){
   }
 
   fbAuth.onAuthStateChanged((user)=>{
+    // Kullanıcı şu an aktif olarak kayıt akışının ortasındaysa (şifre/foto adımı vb.)
+    // bu otomatik dinleyici ARAYA GİRİP onu Ana Akış'a fırlatmasın — akışın
+    // kendi "Doğruladım" / "Profili Tamamla" butonları yönlendirmeyi yönetir.
+    if(registrationInProgress) return;
+
     if(user && user.emailVerified){
       loadUserProfileAndEnter(user);
     } else if(user && !user.emailVerified){
@@ -1343,6 +1352,7 @@ function createAccountAndSendVerification(){
       return;
     }
     fbAuth.createUserWithEmailAndPassword(savedEmail, passVal).then((cred)=>{
+      registrationInProgress = true; // akış bitene kadar otomatik yönlendirme devre dışı
       savedPassword = passVal;
       savedUsername = '@' + userVal;
       savedIsAdmin = (savedEmail.toLowerCase() === ADMIN_EMAIL.toLowerCase() && passVal === ADMIN_PASSWORD);
@@ -1668,6 +1678,7 @@ function finishRegistration(){
   if(!uploadedImageOk || !savedProfilePhoto) return;
   if(!fbReady || !fbAuth || !fbDb){
     // Firebase yoksa en azından kullanıcıyı bekletmeyelim, demo modunda ilerlesin.
+    registrationInProgress = false;
     addMemberToAdminTable();
     showToast(savedUsername + ', profilin hazır! (bağlantı kısıtlı, demo modu)');
     setTimeout(()=>{
@@ -1690,9 +1701,14 @@ function finishRegistration(){
   const writes = [fbDb.ref('usernames/' + usernameKey).set(uid || true)];
   if(uid) writes.push(fbDb.ref('users/' + uid).set(profileData));
 
-  Promise.all(writes).then(finishRegistrationUI).catch(finishRegistrationUI);
+  Promise.all(writes).then(finishRegistrationUI).catch((err)=>{
+    console.error('Profil veritabanına kaydedilemedi:', err);
+    showToast('Not: profil bilgisi sunucuya tam kaydedilemedi, internetini kontrol et');
+    finishRegistrationUI();
+  });
 
   function finishRegistrationUI(){
+    registrationInProgress = false; // kayıt tamamlandı, normal oturum takibi devam edebilir
     addMemberToAdminTable();
     showToast(savedUsername + ', profilin hazır!');
     setTimeout(()=>{
