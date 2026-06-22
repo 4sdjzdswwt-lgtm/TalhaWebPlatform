@@ -2351,7 +2351,15 @@ function createAccountAndSendVerification(){
       return;
     }
     btn.textContent = 'Hesap oluşturuluyor...';
-    fbAuth.createUserWithEmailAndPassword(savedEmail, passVal).then((cred)=>{
+    console.log('[NeXT] createUserWithEmailAndPassword çağrılıyor...', savedEmail);
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(()=> reject({ code:'next/timeout' }), 15000);
+    });
+    Promise.race([
+      fbAuth.createUserWithEmailAndPassword(savedEmail, passVal),
+      timeoutPromise
+    ]).then((cred)=>{
+      console.log('[NeXT] Hesap oluşturuldu:', cred.user.uid);
       registrationInProgress = true;
       savedPassword = passVal;
       savedUsername = '@' + userVal;
@@ -2362,18 +2370,32 @@ function createAccountAndSendVerification(){
       btn.textContent = 'E-posta gönderiliyor...';
       return cred.user.sendEmailVerification();
     }).then(()=>{
+      console.log('[NeXT] Doğrulama e-postası gönderildi.');
       resetBtn();
       goReg(3);
     }).catch((err)=>{
-      console.error('Hesap oluşturma/doğrulama hatası:', err);
+      console.error('[NeXT] Hesap oluşturma hatası:', err);
       resetBtn();
-      // Hesap zaten kayıtlı durumu için özel akış
+      if(err && err.code === 'next/timeout'){
+        alert('⚠️ Firebase 15 saniyede yanıt vermedi.\n\n' +
+          'Olası sebep: Firebase Console\'da Email/Password giriş yöntemi etkin değil.\n\n' +
+          'Çözüm: console.firebase.google.com → Authentication → Sign-in method → Email/Password → Enable.');
+        return;
+      }
       if(err && err.code === 'auth/email-already-in-use'){
         if(confirm('Bu e-posta zaten kayıtlı.\n\nGiriş yap sayfasına geçip oradan giriş yapmak ister misin?')){
           switchAuthTab('login');
           document.getElementById('loginEmail').value = savedEmail;
           document.getElementById('loginPassword').focus();
         }
+        return;
+      }
+      if(err && err.code === 'auth/operation-not-allowed'){
+        alert('⚠️ Firebase Console\'da Email/Password giriş yöntemi etkin değil.\n\n' +
+          'Açmak için:\n' +
+          '1. console.firebase.google.com → projeni seç\n' +
+          '2. Build → Authentication → Sign-in method\n' +
+          '3. Email/Password → Enable → Save');
         return;
       }
       alert(firebaseErrorMessage(err));
@@ -3435,14 +3457,27 @@ function loginReturning(){
   if(!email){ alert('E-posta adresi gir.'); return; }
   if(!pass){ alert('Şifreni gir.'); return; }
 
-  // Button referansını event'ten DEĞİL, direkt ID'den al (event global'i mobilde
-  // boş olabilir, o yüzden event.target çağrısı sayfayı dondururdu)
   const btn = document.getElementById('loginBtn');
   const original = btn ? btn.textContent : '';
   if(btn){ btn.disabled = true; btn.textContent = 'Giriş yapılıyor...'; }
   const resetBtn = () => { if(btn){ btn.disabled = false; btn.textContent = original; } };
 
-  fbAuth.signInWithEmailAndPassword(email, pass).then((cred)=>{
+  console.log('[NeXT] signInWithEmailAndPassword çağrılıyor...', email);
+
+  // 15 saniye timeout — Firebase yanıt vermezse otomatik iptal et. Bu Sayede
+  // Email/Password yöntemi Firebase Console'da kapalıysa veya başka bir
+  // konfigürasyon sorunu varsa, sonsuza kadar "Giriş yapılıyor..." takılı
+  // kalmak yerine kullanıcıya somut bir hata mesajı gösteriyoruz.
+  const timeoutMs = 15000;
+  const timeoutPromise = new Promise((_, reject) => {
+    setTimeout(()=> reject({ code:'next/timeout', message:'Firebase 15 saniyede yanıt vermedi.' }), timeoutMs);
+  });
+
+  Promise.race([
+    fbAuth.signInWithEmailAndPassword(email, pass),
+    timeoutPromise
+  ]).then((cred)=>{
+    console.log('[NeXT] Giriş başarılı:', cred.user.uid, 'verified=', cred.user.emailVerified);
     resetBtn();
     if(!cred.user.emailVerified){
       savedEmail = email;
@@ -3454,7 +3489,14 @@ function loginReturning(){
     loadUserProfileAndEnter(cred.user);
   }).catch((err)=>{
     resetBtn();
-    console.error('Giriş hatası:', err);
+    console.error('[NeXT] Giriş hatası:', err);
+    if(err && err.code === 'next/timeout'){
+      alert('⚠️ Firebase 15 saniyede yanıt vermedi.\n\n' +
+        'Olası sebep: Firebase Console\'da Email/Password giriş yöntemi etkin değil.\n\n' +
+        'Çözüm: console.firebase.google.com → Authentication → Sign-in method → Email/Password → Enable.\n\n' +
+        'Daha fazla bilgi için tarayıcı konsolunu (F12) kontrol et.');
+      return;
+    }
     alert(firebaseErrorMessage(err));
   });
 }
