@@ -417,6 +417,48 @@ input[type=file]{display:none;}
 .list-head{padding:16px 16px 0;}
 .list-head h1{font-family:'Space Grotesk',sans-serif;font-size:16px;margin:0 0 10px;}
 .search{background:var(--surface-2);border:1px solid var(--line);border-radius:9px;padding:8px 11px;font-size:12.5px;color:var(--muted);display:flex;align-items:center;gap:7px;}
+.search.has-input{padding:0;background:transparent;border:none;}
+.search.has-input svg{width:15px;height:15px;color:var(--muted);position:absolute;left:12px;top:50%;transform:translateY(-50%);pointer-events:none;z-index:2;}
+.search.has-input .search-input-wrap{position:relative;flex:1;width:100%;}
+.search.has-input input{
+  width:100%;padding:9px 11px 9px 34px;border-radius:10px;border:1px solid var(--line);
+  background:var(--surface-2);color:var(--text);font-size:13px;outline:none;font-family:'Inter',sans-serif;
+}
+.search.has-input input:focus{border-color:var(--accent);}
+.user-search-result{display:flex;align-items:center;gap:11px;padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--line);}
+.user-search-result:hover{background:var(--surface-2);}
+.user-search-result img{width:42px;height:42px;border-radius:50%;object-fit:cover;flex-shrink:0;}
+.user-search-result .info{flex:1;min-width:0;}
+.user-search-result .info .uname{font-size:13.5px;font-weight:600;color:var(--text);}
+.user-search-result .info .ubio{font-size:11.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px;}
+.user-search-empty{padding:24px 16px;text-align:center;color:var(--muted);font-size:12.5px;}
+
+/* Anı Yakala modalı/overlay'i açıkken alt navigasyon adasını gizle —
+   tıklama engeli oluşturmasın ve görsel olarak temiz kalsın */
+body.moment-active #island{display:none !important;}
+
+/* Yeşil "Takip Ediyor" butonu — kullanıcı zaten takip ediyorsa */
+.btn-following{
+  background:linear-gradient(135deg,#22c55e,#16a34a) !important;color:#fff !important;
+  box-shadow:0 4px 14px rgba(34,197,94,.4), 0 1px 0 rgba(255,255,255,.2) inset !important;
+}
+.btn-following:hover{filter:brightness(1.07);}
+
+/* Sosyal giriş butonları (Google + Apple) */
+.social-auth-row{display:flex;gap:10px;margin:14px 0;}
+.social-auth-btn{
+  flex:1;padding:11px 12px;border-radius:12px;border:1px solid var(--line);
+  background:var(--surface);color:var(--text);font-size:13px;font-weight:600;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:8px;font-family:'Inter',sans-serif;
+  transition:transform .15s ease, background .15s, border-color .15s;
+}
+.social-auth-btn:hover{background:var(--surface-2);border-color:var(--glass-border);}
+.social-auth-btn:active{transform:scale(.97);}
+.social-auth-btn svg{width:18px;height:18px;flex-shrink:0;}
+.social-auth-btn.apple svg{color:var(--text);}
+.auth-divider{display:flex;align-items:center;gap:10px;margin:12px 0;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:1px;}
+.auth-divider::before,.auth-divider::after{content:'';flex:1;height:1px;background:var(--line);}
+
 .search svg{width:14px;height:14px;flex-shrink:0;}
 .list-body{overflow-y:auto;flex:1;}
 .chat-item{display:flex;align-items:center;gap:13px;padding:13px 16px;cursor:pointer;border-left:2px solid transparent;}
@@ -477,6 +519,206 @@ input[type=file]{display:none;}
   padding:13px 14px;border-radius:11px;font-size:13.5px;text-align:left;cursor:pointer;font-family:'Inter',sans-serif;
 }
 .drawer-btn.danger{color:var(--danger);}
+.drawer-btn.danger:hover{background:rgba(237,73,86,.08);}
+
+/* ============================================================
+   GİRİŞ / KAYIT EKRANI — ŞIK GELİŞTİRİLMİŞ TASARIM
+   ============================================================ */
+
+/* Sosyal giriş butonları — Google AÇIK, Apple ŞİMDİLİK GİZLİ.
+   Apple Developer kurulumu (Service ID, Team ID, .p8 private key) tamamlanıp
+   Firebase Console'da Apple provider etkinleştirildikten sonra, aşağıdaki
+   tek satırı silerek (veya yorum içine alarak) Apple butonu da açılır.
+   Tüm Apple JavaScript kodu zaten yerinde duruyor. */
+#screenRegister .social-auth-btn.apple{display:none !important;}
+
+/* Auth ekranının arkasında yumuşak hareket eden parlayan mor-mavi küreler —
+   glassmorphism kart'a derinlik ve canlılık katar */
+#screenRegister{
+  position:relative;
+  background:radial-gradient(ellipse at top left, rgba(124,58,237,.18), transparent 55%),
+             radial-gradient(ellipse at bottom right, rgba(6,182,212,.14), transparent 55%),
+             var(--bg);
+  overflow:hidden;
+}
+#screenRegister::before, #screenRegister::after{
+  content:'';position:absolute;border-radius:50%;pointer-events:none;
+  filter:blur(60px);opacity:.55;z-index:0;
+  animation:authOrbFloat 14s ease-in-out infinite alternate;
+}
+#screenRegister::before{
+  width:340px;height:340px;top:-80px;left:-100px;
+  background:radial-gradient(circle, rgba(124,58,237,.7), rgba(99,102,241,.3) 60%, transparent 70%);
+}
+#screenRegister::after{
+  width:380px;height:380px;bottom:-120px;right:-120px;
+  background:radial-gradient(circle, rgba(6,182,212,.65), rgba(99,102,241,.25) 60%, transparent 70%);
+  animation-delay:-7s;animation-duration:18s;
+}
+@keyframes authOrbFloat{
+  0%{transform:translate(0,0) scale(1);}
+  50%{transform:translate(35px,-25px) scale(1.08);}
+  100%{transform:translate(-25px,30px) scale(.95);}
+}
+body.light-mode #screenRegister::before{opacity:.4;}
+body.light-mode #screenRegister::after{opacity:.4;}
+#screenRegisterInner{position:relative;z-index:1;}
+
+/* Auth kartı — tam glassmorphism + parlayan kenar */
+#screenRegister .card{
+  background:var(--glass-bg);
+  border:1px solid var(--glass-border);
+  backdrop-filter:blur(28px) saturate(190%);-webkit-backdrop-filter:blur(28px) saturate(190%);
+  box-shadow:0 20px 60px rgba(8,4,30,.4), 0 1px 0 var(--glass-shine) inset, 0 0 0 1px rgba(124,58,237,.08);
+  border-radius:24px;
+  position:relative;
+}
+body.light-mode #screenRegister .card{
+  box-shadow:0 20px 60px rgba(99,40,255,.18), 0 1px 0 rgba(255,255,255,.7) inset, 0 0 0 1px rgba(124,58,237,.06);
+}
+/* Kart üst kenarında ince mor-mavi gradient çizgi (parlama hissi) */
+#screenRegister .card::before{
+  content:'';position:absolute;top:0;left:24px;right:24px;height:1.5px;
+  background:linear-gradient(90deg, transparent, var(--grad-1), var(--grad-2), var(--grad-3), transparent);
+  opacity:.85;
+}
+
+/* Logo wrapper — slogan + gradient çizgi */
+#screenRegister .auth-logo-wrap{position:relative;gap:6px;}
+#screenRegister .auth-logo-img{
+  max-width:140px;max-height:54px;
+  filter:drop-shadow(0 4px 16px rgba(124,58,237,.45));
+}
+#screenRegister .auth-logo-fallback{
+  font-size:34px;font-weight:800;letter-spacing:-1px;
+  background:var(--gradient-vivid);-webkit-background-clip:text;background-clip:text;color:transparent;
+  text-shadow:0 0 30px rgba(124,58,237,.4);
+}
+#screenRegister .auth-logo-wrap::after{
+  content:'Anları yalnız değil, birlikte yakala';
+  font-family:'Inter',sans-serif;font-size:10.5px;font-weight:500;
+  color:var(--muted);letter-spacing:.5px;margin-top:2px;text-align:center;
+}
+
+/* Step başlık — mor-mavi gradient metin */
+#screenRegister .step-title{
+  font-size:24px;font-weight:700;letter-spacing:-.5px;margin:2px 0 6px;
+  background:linear-gradient(135deg, var(--text) 0%, var(--text) 60%, var(--accent) 100%);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+}
+#screenRegister .step-sub{font-size:13.5px;line-height:1.55;margin:0 0 22px;}
+
+/* Step progress rail — mor-mavi gradient ve animasyonlu dolma */
+#screenRegister .rail{padding:20px 24px 4px;gap:7px;}
+#screenRegister .rail .seg{height:4px;border-radius:4px;background:var(--line);transition:background .45s cubic-bezier(.4,0,.2,1), box-shadow .45s;}
+#screenRegister .rail .seg.on{
+  background:var(--gradient-vivid);
+  box-shadow:0 0 12px rgba(124,58,237,.55);
+}
+#screenRegister .steplabel{
+  background:var(--gradient-vivid);-webkit-background-clip:text;background-clip:text;color:transparent;
+  font-weight:700;letter-spacing:1.5px;padding-top:14px;font-size:10.5px;
+}
+
+/* Input alanları — focus'ta parlayan glow + label vurgusu */
+#screenRegister .field label{
+  display:block;font-size:11.5px;font-weight:600;color:var(--muted);
+  text-transform:uppercase;letter-spacing:1.2px;margin-bottom:8px;
+  transition:color .2s;
+}
+#screenRegister input[type=text],
+#screenRegister input[type=email],
+#screenRegister input[type=password]{
+  background:rgba(255,255,255,.04);border:1.5px solid var(--line);
+  padding:14px 14px;border-radius:12px;font-size:14.5px;font-weight:500;
+  transition:border-color .25s ease, box-shadow .25s ease, background .25s ease;
+}
+body.light-mode #screenRegister input[type=text],
+body.light-mode #screenRegister input[type=email],
+body.light-mode #screenRegister input[type=password]{
+  background:rgba(0,0,0,.025);
+}
+#screenRegister input:focus{
+  border-color:var(--accent);
+  background:rgba(124,58,237,.06) !important;
+  box-shadow:0 0 0 4px rgba(124,58,237,.13), 0 8px 22px rgba(124,58,237,.12);
+}
+#screenRegister .field:focus-within label{color:var(--accent);}
+
+/* Şifre güçlülük barı — gradient renkli, parıltı */
+#screenRegister .strength-bar{height:6px;background:rgba(255,255,255,.06);}
+body.light-mode #screenRegister .strength-bar{background:rgba(0,0,0,.05);}
+#screenRegister .strength-fill{
+  background:var(--gradient-vivid);box-shadow:0 0 10px rgba(124,58,237,.5);
+}
+#screenRegister .strength-fill.weak{background:linear-gradient(90deg,#ef4444,#f59e0b);box-shadow:0 0 8px rgba(239,68,68,.45);}
+#screenRegister .strength-fill.ok{background:linear-gradient(90deg,#f59e0b,#22d3ee);box-shadow:0 0 8px rgba(245,158,11,.4);}
+#screenRegister .strength-fill.strong{background:var(--gradient-vivid);box-shadow:0 0 12px rgba(124,58,237,.55);}
+
+/* Primary buton — kart içinde extra glow */
+#screenRegister .btn-primary{
+  padding:15px;border-radius:13px;font-size:14.5px;font-weight:700;letter-spacing:.2px;
+  box-shadow:0 8px 26px rgba(124,58,237,.45), 0 1px 0 rgba(255,255,255,.25) inset;
+}
+
+/* Auth switch link — "Hesabın yok mu? Kayıt Ol" — gradient hover */
+#screenRegister .auth-switch-link{
+  font-size:13px;margin-top:18px;transition:color .2s;
+}
+#screenRegister .auth-switch-link b{
+  background:var(--gradient-vivid);-webkit-background-clip:text;background-clip:text;color:transparent;
+  font-weight:700;position:relative;
+}
+#screenRegister .auth-switch-link:hover b{filter:brightness(1.15);}
+
+/* Theme corner butonları — auth ekranında glow */
+#screenRegister .theme-corner-btn{
+  background:rgba(255,255,255,.06);border-color:var(--glass-border);
+  box-shadow:0 4px 14px rgba(124,58,237,.25), 0 1px 0 rgba(255,255,255,.1) inset;
+}
+body.light-mode #screenRegister .theme-corner-btn{background:rgba(255,255,255,.6);}
+#screenRegister .theme-corner-btn:hover{transform:scale(1.05);}
+
+/* "Şifremi Unuttum" linki — gradient text */
+#screenRegister .auth-switch-link[onclick*="forgotPassword"]{
+  font-size:12px;margin-top:0;
+}
+
+/* Step geçiş animasyonu — daha smooth slide */
+#screenRegister .regstep.active{
+  animation:authStepIn .45s cubic-bezier(.16,1,.3,1) both;
+}
+@keyframes authStepIn{
+  from{opacity:0;transform:translateX(20px);}
+  to{opacity:1;transform:translateX(0);}
+}
+
+/* E-posta input'una yeşil ✓ ikonu — yazılan e-posta geçerliyse */
+#screenRegister .field-with-check{position:relative;}
+#screenRegister .field-with-check .field-check{
+  position:absolute;right:14px;top:50%;transform:translateY(-50%);
+  width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,#22c55e,#16a34a);
+  display:none;align-items:center;justify-content:center;color:#fff;
+  box-shadow:0 0 12px rgba(34,197,94,.5);
+  animation:checkPop .35s cubic-bezier(.16,1,.3,1);
+}
+#screenRegister .field-with-check.valid .field-check{display:flex;}
+#screenRegister .field-with-check .field-check svg{width:13px;height:13px;}
+@keyframes checkPop{0%{transform:translateY(-50%) scale(0);}70%{transform:translateY(-50%) scale(1.2);}100%{transform:translateY(-50%) scale(1);}}
+
+/* Spam uyarısı (doğrulama ekranında) — daha şık */
+#screenRegister .spam-warning{
+  background:linear-gradient(135deg, rgba(245,158,11,.12), rgba(99,102,241,.08));
+  border:1px solid rgba(245,158,11,.3);border-radius:14px;padding:14px 16px;
+  font-size:12.5px;line-height:1.55;color:var(--text);margin-bottom:18px;
+}
+body.light-mode #screenRegister .spam-warning{background:linear-gradient(135deg, rgba(245,158,11,.18), rgba(99,102,241,.06));}
+
+/* Mobile için padding ayarı */
+@media (max-width:480px){
+  #screenRegisterInner{padding:18px 12px !important;}
+  #screenRegister .step-title{font-size:21px;}
+}
 
 /* Tema değiştirme anahtarı (switch) */
 .switch{position:relative;display:inline-block;width:42px;height:24px;flex-shrink:0;}
@@ -860,7 +1102,23 @@ tbody tr:hover{background:var(--surface-2);}
           <div class="cardbody">
             <div class="step-title">Tekrar Hoş Geldin</div>
             <p class="step-sub">NeXT'e tekrar hoş geldin. Giriş yap, akışına geri dön.</p>
-            <div class="field"><label>E-posta</label><input type="email" id="loginEmail" placeholder="ornek@mail.com"></div>
+            <div class="social-auth-row">
+              <button class="social-auth-btn" onclick="signInWithGoogle()" title="Google ile giriş">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+                Google
+              </button>
+              <button class="social-auth-btn apple" onclick="signInWithApple()" title="Apple ile giriş">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.05 12.04c-.03-2.83 2.31-4.19 2.41-4.25-1.32-1.93-3.37-2.19-4.1-2.22-1.74-.18-3.4 1.03-4.29 1.03-.9 0-2.26-1.01-3.71-.98-1.91.03-3.67 1.11-4.65 2.81-1.98 3.43-.5 8.49 1.42 11.27.94 1.36 2.06 2.88 3.51 2.82 1.41-.06 1.94-.91 3.65-.91 1.7 0 2.18.91 3.66.88 1.51-.02 2.47-1.38 3.4-2.74 1.07-1.57 1.51-3.09 1.54-3.17-.03-.01-2.96-1.13-2.99-4.54zM14.27 3.65c.78-.94 1.3-2.25 1.16-3.55-1.12.05-2.47.74-3.27 1.68-.72.83-1.35 2.16-1.18 3.44 1.24.1 2.51-.63 3.29-1.57z"/></svg>
+                Apple
+              </button>
+            </div>
+            <div class="auth-divider">veya e-posta ile</div>
+            <div class="field"><label>E-posta</label>
+              <div class="field-with-check" id="loginEmailWrap">
+                <input type="email" id="loginEmail" placeholder="ornek@mail.com" oninput="validateEmailLive(this, 'loginEmailWrap')">
+                <span class="field-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span>
+              </div>
+            </div>
             <div class="field">
               <label>Şifre</label>
               <div class="pwd-wrap">
@@ -885,8 +1143,24 @@ tbody tr:hover{background:var(--surface-2);}
             <div class="regstep active" id="reg1">
               <div class="step-title">E-posta Adresin</div>
               <p class="step-sub">NeXT'e katılmak için gerçek e-posta adresini gir.</p>
-              <div class="field"><label>E-posta</label><input type="email" id="email" placeholder="ornek@mail.com">
-                <div class="err" id="err-email">Geçerli bir e-posta adresi gir.</div></div>
+              <div class="social-auth-row">
+                <button class="social-auth-btn" onclick="signInWithGoogle()" title="Google ile kayıt">
+                  <svg viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+                  Google
+                </button>
+                <button class="social-auth-btn apple" onclick="signInWithApple()" title="Apple ile kayıt">
+                  <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.05 12.04c-.03-2.83 2.31-4.19 2.41-4.25-1.32-1.93-3.37-2.19-4.1-2.22-1.74-.18-3.4 1.03-4.29 1.03-.9 0-2.26-1.01-3.71-.98-1.91.03-3.67 1.11-4.65 2.81-1.98 3.43-.5 8.49 1.42 11.27.94 1.36 2.06 2.88 3.51 2.82 1.41-.06 1.94-.91 3.65-.91 1.7 0 2.18.91 3.66.88 1.51-.02 2.47-1.38 3.4-2.74 1.07-1.57 1.51-3.09 1.54-3.17-.03-.01-2.96-1.13-2.99-4.54zM14.27 3.65c.78-.94 1.3-2.25 1.16-3.55-1.12.05-2.47.74-3.27 1.68-.72.83-1.35 2.16-1.18 3.44 1.24.1 2.51-.63 3.29-1.57z"/></svg>
+                  Apple
+                </button>
+              </div>
+              <div class="auth-divider">veya e-posta ile</div>
+              <div class="field"><label>E-posta</label>
+                <div class="field-with-check" id="signupEmailWrap">
+                  <input type="email" id="email" placeholder="ornek@mail.com" oninput="validateEmailLive(this, 'signupEmailWrap')">
+                  <span class="field-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span>
+                </div>
+                <div class="err" id="err-email">Geçerli bir e-posta adresi gir.</div>
+              </div>
               <button class="btn btn-primary" style="width:100%" onclick="goToPasswordStep()">İleri</button>
               <div class="auth-switch-link" onclick="switchAuthTab('login')">Zaten hesabın var mı? <b>Giriş Yap</b></div>
             </div>
@@ -1018,7 +1292,12 @@ tbody tr:hover{background:var(--surface-2);}
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
               </button>
             </div>
-            <div class="search" style="margin-top:10px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg> Kullanıcı ara</div>
+            <div class="search has-input" style="margin-top:10px;">
+              <div class="search-input-wrap">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
+                <input type="text" id="userSearchInput" placeholder="Kullanıcı ara..." oninput="onUserSearchInput()" autocomplete="off">
+              </div>
+            </div>
           </div>
           <div class="list-body" id="chatListBody">
             <div style="text-align:center;color:var(--muted);font-size:12.5px;padding:24px 16px;">Yükleniyor...</div>
@@ -1026,7 +1305,7 @@ tbody tr:hover{background:var(--surface-2);}
         </div>
         <div class="chatcol">
           <div class="chat-head"><button class="back-btn" onclick="exitChatThread()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 19l-7-7 7-7"/></svg></button>
-            <img id="chatHeadImg" src="https://i.pravatar.cc/60?img=32"><div><div class="name" id="chatName">Sohbet</div><div class="status" id="chatStatus"></div></div></div>
+            <img id="chatHeadImg" src="https://i.pravatar.cc/60?img=32" style="cursor:pointer;" onclick="openChatPeerProfile()" title="Profili görüntüle"><div style="cursor:pointer;flex:1;min-width:0;" onclick="openChatPeerProfile()" title="Profili görüntüle"><div class="name" id="chatName">Sohbet</div><div class="status" id="chatStatus"></div></div></div>
           <div class="messages" id="messagesBox">
             <div style="text-align:center;color:var(--muted);font-size:12.5px;padding:24px 16px;">Bir sohbet seç</div>
           </div>
@@ -1165,6 +1444,8 @@ tbody tr:hover{background:var(--surface-2);}
         </div>
 
         <button class="drawer-btn" onclick="closeDrawer();goToRegisterScreen()">Kayıt Ekranını Yeniden Aç</button>
+        <button class="drawer-btn" onclick="closeDrawer();freezeMyAccount()">❄️ Hesabımı Dondur</button>
+        <button class="drawer-btn danger" onclick="closeDrawer();deleteMyAccount()">🗑️ Hesabımı Sil</button>
         <button class="drawer-btn danger" onclick="closeDrawer();logoutAccount()">Çıkış Yap</button>
       </div>
 
@@ -1257,7 +1538,7 @@ tbody tr:hover{background:var(--surface-2);}
           </div>
 
           <div class="row">
-            <button class="btn btn-primary" id="otherFollowBtn" style="flex:1;" onclick="toggleFollowOther()">Takip Et</button>
+            <button class="btn btn-primary" id="otherFollowBtn" style="flex:1;">Takip Et</button>
             <button class="btn btn-ghost" style="flex:1;" onclick="messageOtherUser()">Mesaj Gönder</button>
           </div>
         </div>
@@ -1654,21 +1935,41 @@ function passwordScore(pass){
 function updatePasswordStrength(pass){
   const fill = document.getElementById('strengthFill');
   const label = document.getElementById('strengthLabel');
+  // Temiz başla — önceki class'ları ve inline background sızıntılarını kaldır
+  fill.classList.remove('weak','ok','strong');
+  fill.style.background = '';
   if(!pass){
-    fill.style.width = '0%'; fill.style.background = 'var(--danger)';
+    fill.style.width = '0%';
     label.textContent = 'Şifre yaz'; label.style.color = 'var(--muted)';
     return;
   }
   const score = passwordScore(pass);
   const steps = [
-    {w:'20%',  c:'var(--danger)', t:'Çok zayıf'},
-    {w:'40%',  c:'var(--danger)', t:'Zayıf'},
-    {w:'65%',  c:'var(--warn)',   t:'Orta — şifreniz güçleniyor'},
-    {w:'85%',  c:'#7ed957',       t:'Güçlü — şifreniz daha güçlü oldu!'},
-    {w:'100%', c:'var(--accent)', t:'Çok güçlü 💪'}
+    {w:'20%',  cls:'weak',   t:'Çok zayıf',                       color:'var(--danger)'},
+    {w:'40%',  cls:'weak',   t:'Zayıf',                            color:'var(--danger)'},
+    {w:'65%',  cls:'ok',     t:'Orta — şifreniz güçleniyor',       color:'var(--warn)'},
+    {w:'85%',  cls:'strong', t:'Güçlü — şifreniz daha güçlü oldu!', color:'#22d3ee'},
+    {w:'100%', cls:'strong', t:'Çok güçlü 💪',                    color:'var(--accent)'}
   ][score];
-  fill.style.width = steps.w; fill.style.background = steps.c;
-  label.textContent = steps.t; label.style.color = steps.c;
+  fill.style.width = steps.w;
+  fill.classList.add(steps.cls);
+  label.textContent = steps.t; label.style.color = steps.color;
+}
+
+/* E-posta canlı doğrulama — yazılan değer geçerli bir e-posta formatına
+   uyduğunda input'un yanında yeşil ✓ tiki gösterilir. Submit kontrolünden
+   bağımsızdır, sadece görsel geri bildirim sağlar. */
+function validateEmailLive(inputEl, wrapId){
+  const wrap = document.getElementById(wrapId);
+  if(!wrap) return;
+  const val = (inputEl.value || '').trim();
+  // RFC 5322'nin basitleştirilmiş bir versiyonu — günlük e-postaları yakalar
+  const re = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
+  if(re.test(val)){
+    wrap.classList.add('valid');
+  } else {
+    wrap.classList.remove('valid');
+  }
 }
 
 function firebaseErrorMessage(err){
@@ -2365,8 +2666,21 @@ function refreshFollowButtonState(uid){
   btn.style.display = '';
   fbDb.ref('follows/' + me.uid + '/' + uid).once('value').then(snap=>{
     const following = snap.exists();
-    btn.textContent = following ? 'Takip Ediliyor ✓' : 'Takip Et';
-    btn.className = following ? 'btn btn-ghost' : 'btn btn-primary';
+    if(following){
+      // Takip ediyor: yeşil parlayan buton, tıklayınca onayla → takipten çık
+      btn.textContent = '✓ Takip Ediyor';
+      btn.className = 'btn btn-following';
+      btn.onclick = function(){
+        if(confirm('Bu kullanıcıyı takip etmekten vazgeçmek istiyor musun?')){
+          toggleFollowOther();
+        }
+      };
+    } else {
+      // Takip etmiyor: birincil mor-mavi "Takip Et" butonu
+      btn.textContent = 'Takip Et';
+      btn.className = 'btn btn-primary';
+      btn.onclick = function(){ toggleFollowOther(); };
+    }
     btn.style.flex = '1';
   });
 }
@@ -2600,6 +2914,13 @@ function loadUserProfileAndEnter(user){
       return;
     }
 
+    // Hesap dondurulmuşsa, giriş yapınca otomatik aktifleştir (basit MVP)
+    if(data.frozen){
+      fbDb.ref('users/' + user.uid + '/frozen').set(false);
+      fbDb.ref('users/' + user.uid + '/frozenAt').remove();
+      showToast('Dondurulan hesabın yeniden aktifleştirildi 🎉');
+    }
+
     savedUsername = data.username || '@kullanici';
     savedEmail = user.email;
     savedProfilePhoto = data.photo || 'https://i.pravatar.cc/120?img=68';
@@ -2607,6 +2928,8 @@ function loadUserProfileAndEnter(user){
     if(data.postsCount != null) postsCount = data.postsCount;
     enterAppFromAuth();
     refreshOwnFollowCounts(user.uid);
+    // Gerçek post sayısını arka planda yeniden hesaplayıp DB'yi de senkronla
+    setTimeout(recomputeMyRealPostsCount, 250);
   }).catch(()=>{
     savedEmail = user.email;
     enterAppFromAuth();
@@ -3358,6 +3681,13 @@ function renderMyPostsGrid(){
   fbDb.ref('posts').orderByChild('uid').equalTo(uid).once('value').then((snap)=>{
     const data = snap.val() || {};
     const ids = Object.keys(data).sort((a,b)=>(data[b].ts||0)-(data[a].ts||0));
+    // Gerçek post sayısını ekranda ve DB'de güncelle (eski hatalı değer ne olursa olsun)
+    const realCount = ids.length;
+    postsCount = realCount;
+    const statEl = document.getElementById('statPosts');
+    if(statEl) statEl.textContent = formatStatNumber(realCount);
+    fbDb.ref('users/' + uid + '/postsCount').set(realCount).catch(()=>{});
+
     const plusTile = `<div onclick="openNewPostComposer()" style="cursor:pointer;aspect-ratio:1/1;border-radius:10px;overflow:hidden;background:var(--surface-2);display:flex;align-items:center;justify-content:center;color:var(--accent);font-size:24px;font-weight:300;">+</div>`;
     grid.innerHTML = plusTile + ids.map(id => {
       const p = data[id];
@@ -3414,10 +3744,19 @@ function openMomentStart(){
   document.querySelector('.momentChallengeChip[data-c=""]').classList.add('active');
   document.getElementById('momentFriendSearch').value = '';
   document.getElementById('momentStartOverlay').classList.remove('hidden');
+  document.body.classList.add('moment-active'); // alt navigasyon adasını gizle
   loadMomentFriendCandidates();
 }
 function closeMomentStart(){
   document.getElementById('momentStartOverlay').classList.add('hidden');
+  // Diğer Anı Yakala ekranları açık değilse adayı geri göster
+  if(!isAnyMomentOverlayOpen()) document.body.classList.remove('moment-active');
+}
+function isAnyMomentOverlayOpen(){
+  return !document.getElementById('momentStartOverlay').classList.contains('hidden') ||
+         !document.getElementById('momentWaitOverlay').classList.contains('hidden') ||
+         !document.getElementById('momentCaptureOverlay').classList.contains('hidden') ||
+         !document.getElementById('momentPreviewOverlay').classList.contains('hidden');
 }
 function setMomentMode(mode){
   momentSelectedMode = mode;
@@ -3646,6 +3985,7 @@ function closeAllMomentOverlays(){
   document.getElementById('momentWaitOverlay').classList.add('hidden');
   document.getElementById('momentCaptureOverlay').classList.add('hidden');
   document.getElementById('momentPreviewOverlay').classList.add('hidden');
+  document.getElementById('momentStartOverlay').classList.add('hidden');
   document.getElementById('momentCountdown').classList.add('hidden');
   if(momentSessionRef){ momentSessionRef.off(); momentSessionRef = null; }
   if(momentCountdownTimer){ clearInterval(momentCountdownTimer); momentCountdownTimer = null; }
@@ -3654,6 +3994,7 @@ function closeAllMomentOverlays(){
   momentIsHost = false;
   momentCapturedDataUrl = null;
   momentCountdownStarted = false;
+  document.body.classList.remove('moment-active'); // alt navigasyon adasını geri göster
 }
 
 /* ---------- 3) GERİ SAYIM + SENKRON ÇEKİM ---------- */
@@ -4029,10 +4370,292 @@ function showMomentInviteToast(invite){
   toast.classList.add('show');
   setTimeout(()=> toast.classList.remove('show'), 8000);
 }
+/* ============================================================
+   KULLANICI ARAMA — Mesajlar ekranındaki üst arama input'u
+   "Kullanıcı ara..." kutusuna yazıldığında, tüm gerçek kayıtlı
+   kullanıcıları (users/) çekip kullanıcı adı veya bio'da arar.
+   Sonuca tıklayınca o kullanıcının bio/profil ekranını açar.
+   Boş arama: normal chat listesi gözükür.
+   ============================================================ */
+let userSearchAllUsers = [];   // önbellek: tüm kullanıcılar
+let userSearchTimer = null;
+
+function onUserSearchInput(){
+  const inp = document.getElementById('userSearchInput');
+  const q = (inp.value || '').trim().toLowerCase();
+  if(!q){
+    // Arama boşaldı — normal chat listesini geri göster
+    initChatListListener();
+    return;
+  }
+  // Hafif debounce ile filtre
+  if(userSearchTimer) clearTimeout(userSearchTimer);
+  userSearchTimer = setTimeout(()=> runUserSearch(q), 180);
+}
+
+function runUserSearch(q){
+  if(!requireFirebase() || !fbAuth.currentUser) return;
+  const body = document.getElementById('chatListBody');
+  body.innerHTML = '<div class="user-search-empty">Aranıyor...</div>';
+
+  // Önbellek varsa onu kullan, yoksa Firebase'den çek
+  const useCache = userSearchAllUsers && userSearchAllUsers.length > 0;
+  const fetcher = useCache
+    ? Promise.resolve(userSearchAllUsers)
+    : fbDb.ref('users').once('value').then(snap => {
+        const data = snap.val() || {};
+        userSearchAllUsers = Object.keys(data).map(uid => ({ uid, ...(data[uid] || {}) }));
+        return userSearchAllUsers;
+      });
+
+  fetcher.then(list => {
+    const myUid = fbAuth.currentUser.uid;
+    const matches = list.filter(u => {
+      if(u.uid === myUid) return false; // kendimi listede gösterme
+      if(u.blocked) return false;
+      const uname = (u.username || '').toLowerCase();
+      const bio = (u.bio || '').toLowerCase();
+      return uname.includes(q) || bio.includes(q);
+    }).slice(0, 30); // çok sonucu kısalt
+
+    if(!matches.length){
+      body.innerHTML = '<div class="user-search-empty">Bu aramaya uygun kullanıcı bulunamadı.</div>';
+      return;
+    }
+    body.innerHTML = matches.map(u => `
+      <div class="user-search-result" onclick="openUserProfileFromSearch('${u.uid}')">
+        <img src="${u.photo || 'https://i.pravatar.cc/60?img=68'}" onerror="this.src='https://i.pravatar.cc/60?img=68'">
+        <div class="info">
+          <div class="uname">${escapeHtml(u.username || '@kullanici')}</div>
+          <div class="ubio">${escapeHtml(u.bio || u.email || '')}</div>
+        </div>
+      </div>`).join('');
+  }).catch(err => {
+    console.error('Kullanıcı arama hatası:', err);
+    body.innerHTML = '<div class="user-search-empty">Arama yapılamadı, internetini kontrol et.</div>';
+  });
+}
+
+function openUserProfileFromSearch(uid){
+  if(!uid) return;
+  // Aramayı temizle ki kullanıcı geri dönünce listeyi yeniden görsün
+  const inp = document.getElementById('userSearchInput');
+  if(inp) inp.value = '';
+  viewingOtherUid = uid;
+  openOtherProfile();
+}
+
+/* ============================================================
+   CHAT HEAD'DEN PROFİL AÇMA — Sohbetteki avatar ve isim tıklanınca
+   o kullanıcının bio/profil sayfasını açar. Takip durumuna göre
+   doğru butonları gösterir (yeşil "Takip Ediyor" veya "Takip Et").
+   ============================================================ */
+function openChatPeerProfile(){
+  if(!activeChatPeerUid){ showToast('Sohbet bilgisi yüklenemedi.'); return; }
+  viewingOtherUid = activeChatPeerUid;
+  openOtherProfile();
+}
+
+/* ============================================================
+   PROFİL: kendi gönderi sayısını GERÇEK postlardan say
+   Statik/eski postsCount değeri ne olursa olsun, profil her
+   açıldığında Firebase'deki posts/ düğümünden kullanıcıya ait
+   gönderiler taranır ve gerçek sayı hem ekrana yazılır hem de
+   users/{uid}/postsCount alanına geri yazılır (senkronize kalır).
+   ============================================================ */
+function recomputeMyRealPostsCount(){
+  if(!fbReady || !fbAuth || !fbAuth.currentUser) return;
+  const uid = fbAuth.currentUser.uid;
+  fbDb.ref('posts').orderByChild('uid').equalTo(uid).once('value').then(snap => {
+    const data = snap.val() || {};
+    const realCount = Object.keys(data).length;
+    postsCount = realCount;
+    const el = document.getElementById('statPosts');
+    if(el) el.textContent = formatStatNumber(realCount);
+    // Veritabanındaki postsCount'ı da gerçek sayıyla güncelle
+    fbDb.ref('users/' + uid + '/postsCount').set(realCount).catch(()=>{});
+  }).catch(err => {
+    console.error('Gerçek post sayısı hesaplanamadı:', err);
+  });
+}
+
+/* ============================================================
+   GOOGLE / APPLE İLE GİRİŞ — Firebase Authentication
+   Mobil tarayıcılarda popup engellenebildiği için önce popup,
+   hata varsa otomatik redirect'e geçer.
+   ============================================================ */
+function signInWithGoogle(){
+  if(!requireFirebase()) return;
+  const provider = new firebase.auth.GoogleAuthProvider();
+  provider.setCustomParameters({ prompt: 'select_account' });
+  doSocialSignIn(provider, 'Google');
+}
+function signInWithApple(){
+  if(!requireFirebase()) return;
+  const provider = new firebase.auth.OAuthProvider('apple.com');
+  provider.addScope('email');
+  provider.addScope('name');
+  doSocialSignIn(provider, 'Apple');
+}
+function doSocialSignIn(provider, label){
+  showToast(label + ' ile giriş yapılıyor...');
+  // Önce popup dene; engellenirse redirect'e geç
+  fbAuth.signInWithPopup(provider).then(handleSocialSignInResult).catch((err)=>{
+    if(err.code === 'auth/popup-blocked' || err.code === 'auth/popup-closed-by-user' || err.code === 'auth/cancelled-popup-request'){
+      // Popup başarısız oldu — redirect ile tekrar dene
+      fbAuth.signInWithRedirect(provider).catch((err2)=>{
+        showToast(firebaseErrorMessage(err2));
+      });
+    } else if(err.code === 'auth/operation-not-allowed'){
+      showToast(label + ' giriş yöntemi Firebase Console\'da etkin değil. Yöneticiyle iletişime geç.');
+    } else if(err.code === 'auth/unauthorized-domain'){
+      showToast('Bu site adresi Firebase\'de yetkili değil. Yöneticiye bildir.');
+    } else {
+      showToast(firebaseErrorMessage(err));
+    }
+  });
+}
+/* Redirect'ten dönüş — sayfa yeniden yüklendiğinde sonuçları topla */
+function checkSocialSignInRedirect(){
+  if(!fbReady || !fbAuth) return;
+  fbAuth.getRedirectResult().then((result)=>{
+    if(result && result.user) handleSocialSignInResult(result);
+  }).catch((err)=>{
+    if(err && err.code) console.warn('Redirect dönüş hatası:', err.code);
+  });
+}
+function handleSocialSignInResult(result){
+  if(!result || !result.user) return;
+  const user = result.user;
+  // Bu kullanıcı zaten kayıtlı mı kontrol et
+  fbDb.ref('users/' + user.uid).once('value').then((snap)=>{
+    if(snap.exists()){
+      // Mevcut kullanıcı — direkt akışa al
+      savedEmail = user.email || '';
+      loadUserProfileAndEnter(user);
+    } else {
+      // Yeni kullanıcı — temel profil bilgisini Firebase'e yaz, kullanıcı adı seçtir
+      const fallbackUsername = '@' + (user.displayName || user.email || 'kullanici').toString().toLowerCase().replace(/[^a-z0-9_]/g,'').slice(0,18) || ('@user' + user.uid.slice(0,6));
+      savedEmail = user.email || '';
+      savedUsername = fallbackUsername;
+      savedProfilePhoto = user.photoURL || '';
+      savedIsAdmin = false;
+      postsCount = 0; followersCount = 0; followingCount = 0;
+      const usernameKey = fallbackUsername.replace(/^@/,'').toLowerCase();
+      // Kullanıcı adı çakışırsa rastgele 4 haneli ek koy
+      fbDb.ref('usernames/' + usernameKey).once('value').then((unameSnap)=>{
+        let finalKey = usernameKey;
+        let finalUsername = fallbackUsername;
+        if(unameSnap.exists()){
+          const suffix = Math.floor(1000 + Math.random()*9000);
+          finalKey = usernameKey + suffix;
+          finalUsername = fallbackUsername + suffix;
+        }
+        savedUsername = finalUsername;
+        const profileData = {
+          username: finalUsername, email: savedEmail, photo: savedProfilePhoto,
+          isAdmin: false, postsCount:0, followersCount:0, followingCount:0,
+          bio: 'Merhaba, ben buradayım 👋',
+          createdAt: Date.now(),
+          authProvider: (result.credential && result.credential.providerId) || (user.providerData[0] && user.providerData[0].providerId) || 'oauth'
+        };
+        Promise.all([
+          fbDb.ref('usernames/' + finalKey).set(user.uid),
+          fbDb.ref('users/' + user.uid).set(profileData)
+        ]).then(()=>{
+          showToast('Hoş geldin ' + finalUsername + '!');
+          loadUserProfileAndEnter(user);
+        }).catch((err)=>{
+          console.error('Sosyal giriş profili kaydedilemedi:', err);
+          loadUserProfileAndEnter(user);
+        });
+      });
+    }
+  });
+}
+
+/* ============================================================
+   HESABI DONDUR / HESABI SİL — Drawer'dan tetiklenir
+   Dondurma: users/{uid}/frozen=true, kullanıcı çıkışa zorlanır.
+     Tekrar giriş yapınca otomatik olarak unfreeze edilir (basit MVP).
+   Silme: önce Firebase Realtime DB'den kullanıcının profili+takipler
+     temizlenir, sonra Firebase Auth hesabı tamamen silinir.
+   ============================================================ */
+function freezeMyAccount(){
+  if(!requireFirebase() || !fbAuth.currentUser){ showToast('Önce giriş yapmalısın.'); return; }
+  const confirmMsg = 'Hesabını dondurmak istediğine emin misin?\n\n' +
+    '• Profilin geçici olarak gizlenecek\n' +
+    '• Gönderilerin diğer kullanıcılardan saklanacak\n' +
+    '• Tekrar giriş yapınca otomatik aktif olur';
+  if(!confirm(confirmMsg)) return;
+  const uid = fbAuth.currentUser.uid;
+  fbDb.ref('users/' + uid + '/frozen').set(true).then(()=>{
+    fbDb.ref('users/' + uid + '/frozenAt').set(Date.now());
+    showToast('Hesabın donduruldu. Tekrar giriş yapınca aktifleşir.');
+    setTimeout(()=> logoutAccount(), 1200);
+  }).catch(()=> showToast('Dondurulamadı, internetini kontrol et.'));
+}
+
+function deleteMyAccount(){
+  if(!requireFirebase() || !fbAuth.currentUser){ showToast('Önce giriş yapmalısın.'); return; }
+  const confirmMsg = '⚠️ HESABINI KALICI OLARAK SİLECEKSİN\n\n' +
+    'Bu işlem GERİ ALINAMAZ. Şunlar silinir:\n' +
+    '• Profil bilgilerin\n' +
+    '• Tüm gönderilerin\n' +
+    '• Tüm beğenilerin, kayıtların\n' +
+    '• Mesaj geçmişin\n\n' +
+    'Devam etmek istiyor musun?';
+  if(!confirm(confirmMsg)) return;
+  if(!confirm('Son onay: Hesabını GERÇEKTEN siliyorsun. Emin misin?')) return;
+
+  const user = fbAuth.currentUser;
+  const uid = user.uid;
+  showToast('Hesabın siliniyor...');
+
+  // 1) DB temizliği — kullanıcı düğümleri, posts, follows, vb.
+  const cleanupTasks = [
+    fbDb.ref('users/' + uid).remove(),
+    fbDb.ref('follows/' + uid).remove(),
+    fbDb.ref('followers/' + uid).remove()
+  ];
+  // Kullanıcı adını da serbest bırak (başka biri alabilsin)
+  const usernameKey = (savedUsername || '').replace(/^@/,'').toLowerCase();
+  if(usernameKey) cleanupTasks.push(fbDb.ref('usernames/' + usernameKey).remove());
+
+  Promise.allSettled(cleanupTasks).then(()=>{
+    // 2) Firebase Auth hesabını sil
+    user.delete().then(()=>{
+      showToast('Hesabın kalıcı olarak silindi. Hoşça kal 👋');
+      setTimeout(()=>{
+        // Kayıt ekranına dön
+        document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+        document.getElementById('screenRegister').classList.add('active');
+        switchAuthTab('login');
+        document.getElementById('island').classList.add('hidden');
+        // Yerel state'i sıfırla
+        savedEmail = ''; savedPassword = ''; savedUsername = ''; savedProfilePhoto = '';
+        localStorage.removeItem('next_session');
+      }, 900);
+    }).catch((err)=>{
+      // Genellikle 'auth/requires-recent-login' — son zamanlarda giriş yapmamışsa
+      if(err.code === 'auth/requires-recent-login'){
+        alert('Güvenlik için yakın zamanda yeniden giriş yapmalısın. Şimdi çıkış yapacağız, tekrar giriş yapıp tekrar denersen hesabın silinecek.');
+        logoutAccount();
+      } else {
+        showToast(firebaseErrorMessage(err));
+      }
+    });
+  });
+}
+
+/* Anı Yakala davetini kabul et — sohbet listesindeki davet toast'ından
+   tetiklenir. Kullanıcıyı bekleme ekranına alır ve "invited" statusüne
+   geçirir; sonra host hazır deyince herkes hazır olunca sayım başlar. */
 function acceptMomentInvite(sessionId){
   document.getElementById('momentInviteToast').classList.remove('show');
   momentIsHost = false;
   momentCountdownStarted = false;
+  document.body.classList.add('moment-active'); // alt navigasyon adasını gizle
   fbDb.ref('momentSessions/' + sessionId + '/participants/' + fbAuth.currentUser.uid + '/status').set('invited');
   openMomentWaitScreen(sessionId);
 }
@@ -4040,6 +4663,8 @@ function acceptMomentInvite(sessionId){
 function bootApp(){
   initTheme();
   try{
+    // Önce: sosyal giriş redirect'inden döndüysek sonuçları topla
+    checkSocialSignInRedirect();
     initAuthState();
   }catch(err){
     console.error('initAuthState hatası:', err);
