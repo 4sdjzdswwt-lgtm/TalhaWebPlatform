@@ -845,6 +845,78 @@ body.light-mode #screenRegister .spam-warning{background:linear-gradient(135deg,
 .privacy-toggle-row .ptl-title{font-size:13.5px;font-weight:600;color:var(--text);margin-bottom:2px;}
 .privacy-toggle-row .ptl-sub{font-size:11.5px;color:var(--muted);line-height:1.4;}
 
+/* Kullanıcı adı canlı kontrol ipucu */
+.username-hint{
+  font-size:11.5px;margin-top:6px;display:flex;align-items:center;gap:5px;
+  font-family:'JetBrains Mono',monospace;
+}
+.username-hint.ok{color:#22c55e;}
+.username-hint.warn{color:var(--warn);}
+.username-hint.check{color:var(--muted);}
+.username-suggest{
+  display:inline-block;padding:3px 9px;margin:2px 3px 0 0;background:var(--gradient-vivid);color:#fff;
+  border-radius:14px;font-size:11px;font-weight:600;cursor:pointer;
+}
+.username-suggest:hover{filter:brightness(1.1);}
+
+/* Okunmamış mesaj göstergesi — chat-item daha koyu, başlık daha kalın + nokta */
+.chat-item.unread{
+  background:linear-gradient(90deg, rgba(124,58,237,.08), transparent 80%);
+}
+.chat-item.unread .name{font-weight:700;color:var(--text);position:relative;display:flex;align-items:center;gap:7px;}
+.chat-item.unread .preview{color:var(--text);font-weight:500;}
+.unread-dot{
+  display:inline-block;width:9px;height:9px;border-radius:50%;
+  background:var(--gradient-vivid);box-shadow:0 0 8px rgba(124,58,237,.6);flex-shrink:0;
+}
+
+/* ============================================================
+   YENİ MESAJ TOAST BİLDİRİMİ — üstten kayan kart
+   Sohbet ekranında DEĞİLKEN yeni mesaj gelirse görünür.
+   Tıklayınca → o sohbete gider. Uzun basınca → genişler ve
+   hızlı yanıt verme alanı çıkar.
+   ============================================================ */
+.msgNotification{
+  position:fixed;top:14px;left:50%;transform:translateX(-50%) translateY(-130%);
+  width:calc(100% - 28px);max-width:400px;z-index:250;
+  background:var(--glass-bg);border:1px solid var(--glass-border);
+  backdrop-filter:blur(24px) saturate(180%);-webkit-backdrop-filter:blur(24px) saturate(180%);
+  border-radius:18px;padding:13px 14px;
+  box-shadow:var(--glass-shadow), 0 1px 0 var(--glass-shine) inset;
+  display:flex;align-items:center;gap:11px;cursor:pointer;
+  transition:transform .35s cubic-bezier(.16,1,.3,1), opacity .25s;
+}
+.msgNotification.show{transform:translateX(-50%) translateY(0);}
+.msgNotification.expanded{cursor:default;}
+.msgNotification img{width:42px;height:42px;border-radius:50%;object-fit:cover;flex-shrink:0;border:2px solid var(--glass-border);}
+.msgNotification .body{flex:1;min-width:0;overflow:hidden;}
+.msgNotification .who{font-size:13.5px;font-weight:700;color:var(--text);margin-bottom:2px;display:flex;align-items:center;gap:5px;}
+.msgNotification .who::after{content:'• yeni mesaj';font-weight:500;color:var(--accent);font-size:11px;}
+.msgNotification .preview{font-size:12.5px;color:var(--muted);line-height:1.45;}
+.msgNotification.expanded .preview{
+  max-height:200px;overflow-y:auto;color:var(--text);white-space:pre-wrap;
+}
+.msgNotification .close{
+  background:transparent;border:none;color:var(--muted);width:24px;height:24px;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;border-radius:50%;
+}
+.msgNotification .close:hover{background:var(--surface-2);}
+.msgNotification .replyArea{
+  display:none;width:100%;margin-top:10px;
+  flex-direction:row;gap:8px;
+}
+.msgNotification.expanded .replyArea{display:flex;}
+.msgNotification .replyArea input{
+  flex:1;padding:9px 12px;border-radius:18px;border:1px solid var(--line);
+  background:var(--surface-2);color:var(--text);font-size:13px;outline:none;font-family:'Inter',sans-serif;
+}
+.msgNotification .replyArea input:focus{border-color:var(--accent);}
+.msgNotification .replyArea button{
+  background:var(--gradient-vivid);color:#fff;border:none;border-radius:18px;
+  padding:0 14px;font-size:12.5px;font-weight:700;cursor:pointer;
+}
+.msgNotification.expanded{flex-wrap:wrap;}
+
 /* Tema değiştirme anahtarı (switch) */
 .switch{position:relative;display:inline-block;width:42px;height:24px;flex-shrink:0;}
 .switch input{opacity:0;width:0;height:0;}
@@ -1254,7 +1326,7 @@ tbody tr:hover{background:var(--surface-2);}
               </div>
               <div class="auth-switch-link" style="margin-top:8px;text-align:right;" onclick="forgotPassword()">Şifremi Unuttum</div>
             </div>
-            <button class="btn btn-primary" style="width:100%" onclick="loginReturning()">Giriş Yap</button>
+            <button class="btn btn-primary" id="loginBtn" style="width:100%" onclick="loginReturning()">Giriş Yap</button>
             <div class="auth-switch-link" onclick="switchAuthTab('signup')">Hesabın yok mu? <b>Kayıt Ol</b></div>
           </div>
         </div>
@@ -1291,8 +1363,14 @@ tbody tr:hover{background:var(--surface-2);}
             </div>
 
             <div class="regstep" id="reg2">
-              <div class="step-title">Şifre & Kullanıcı Adı</div>
-              <p class="step-sub">Bir şifre belirle ve kendine özel bir <b>@kullaniciadi</b> oluştur.</p>
+              <div class="step-title">Hesabını Oluştur</div>
+              <p class="step-sub">Şifre, ismin ve kendine özel bir <b>@kullaniciadi</b> seç.</p>
+
+              <div class="field"><label>Adın (görünen ad)</label>
+                <input type="text" id="displayName" placeholder="Örn: Talha" maxlength="40">
+                <div class="hint">Profilinde ve gönderilerinde görünecek isim. İstediğin zaman değişir.</div>
+              </div>
+
               <div class="field"><label>Şifre</label>
                 <div class="pwd-wrap">
                   <input type="password" id="password" placeholder="••••••••" oninput="updatePasswordStrength(this.value)">
@@ -1306,12 +1384,15 @@ tbody tr:hover{background:var(--surface-2);}
                 </div>
                 <div class="hint">İstersen büyük harf, küçük harf ve özel karakter (!@#... gibi) ekleyerek şifreni güçlendirebilirsin.</div>
                 <div class="err" id="err-password">Şifre en az 6 karakter olmalı (Firebase şartı).</div></div>
+
               <div class="field"><label>Kullanıcı Adı</label>
                 <div style="display:flex;align-items:center;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;overflow:hidden;">
                   <span style="padding:12px 0 12px 13px;color:var(--muted);font-family:'JetBrains Mono',monospace;">@</span>
-                  <input type="text" id="username" placeholder="kullaniciadi" style="border:none;background:transparent;padding-left:2px;">
+                  <input type="text" id="username" placeholder="kullaniciadi" style="border:none;background:transparent;padding-left:2px;" oninput="onUsernameInput(this)" autocomplete="off">
                 </div>
+                <div class="username-hint" id="usernameHint" style="display:none;"></div>
                 <div class="err" id="err-username">Kullanıcı adı en az 3 karakter olmalı.</div></div>
+
               <div class="row"><button class="btn btn-ghost" onclick="goReg(1)">Geri</button><button class="btn btn-primary" id="createAccountBtn" onclick="createAccountAndSendVerification()">Hesabı Oluştur</button></div>
             </div>
 
@@ -1568,7 +1649,14 @@ tbody tr:hover{background:var(--surface-2);}
           </label>
         </div>
 
-        <button class="drawer-btn" onclick="closeDrawer();goToRegisterScreen()">Kayıt Ekranını Yeniden Aç</button>
+        <div class="drawer-theme-row">
+          <span>🔒 Gizli Hesap</span>
+          <label class="switch">
+            <input type="checkbox" id="privacyToggleDrawer" onchange="togglePrivacy(this.checked)">
+            <span class="switch-slider"></span>
+          </label>
+        </div>
+
         <button class="drawer-btn" onclick="closeDrawer();freezeMyAccount()">❄️ Hesabımı Dondur</button>
         <button class="drawer-btn danger" onclick="closeDrawer();deleteMyAccount()">🗑️ Hesabımı Sil</button>
         <button class="drawer-btn danger" onclick="closeDrawer();logoutAccount()">Çıkış Yap</button>
@@ -1613,21 +1701,9 @@ tbody tr:hover{background:var(--surface-2);}
         <button class="btn btn-ghost" style="width:100%;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;" onclick="openSavedScreen()">
           <span>🔖 Kaydedilenler</span><span style="color:var(--muted);">›</span>
         </button>
-        <button class="btn btn-ghost" style="width:100%;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;" onclick="openLikedScreen()">
+        <button class="btn btn-ghost" style="width:100%;margin-bottom:24px;display:flex;align-items:center;justify-content:space-between;" onclick="openLikedScreen()">
           <span>❤️ Beğenilenler</span><span style="color:var(--muted);">›</span>
         </button>
-
-        <!-- Gizli Hesap toggle — açıksa, sadece takip ettiğin kişiler gönderilerini görebilir -->
-        <div class="privacy-toggle-row">
-          <div class="ptl">
-            <div class="ptl-title">🔒 Gizli Hesap</div>
-            <div class="ptl-sub">Açıksa, gönderilerini sadece takip ettiğin kişiler görebilir.</div>
-          </div>
-          <label class="switch">
-            <input type="checkbox" id="privacyToggle" onchange="togglePrivacy(this.checked)">
-            <span class="switch-slider"></span>
-          </label>
-        </div>
       </div>
       </div>
     </div>
@@ -1730,6 +1806,21 @@ tbody tr:hover{background:var(--surface-2);}
       <div class="followListEmpty">Yükleniyor...</div>
     </div>
   </div>
+</div>
+
+<!-- YENİ MESAJ BİLDİRİMİ (üstten kayan toast) — basınca sohbete götürür,
+     uzun basınca genişler ve hızlı yanıt verme alanı çıkar -->
+<div class="msgNotification" id="msgNotification">
+  <img id="msgNotifAvatar" src="https://i.pravatar.cc/60?img=68">
+  <div class="body">
+    <div class="who" id="msgNotifWho">@kullanici</div>
+    <div class="preview" id="msgNotifPreview">Mesaj</div>
+    <div class="replyArea">
+      <input type="text" id="msgNotifInput" placeholder="Hızlı yanıt..." onkeydown="if(event.key==='Enter') sendQuickReplyFromNotif()">
+      <button onclick="sendQuickReplyFromNotif()">Gönder</button>
+    </div>
+  </div>
+  <button class="close" onclick="closeMsgNotification(event)">✕</button>
 </div>
 
 <!-- ================= ANI YAKALA — TÜM MODAL/EKRANLARI ================= -->
@@ -1944,6 +2035,7 @@ let fakeCode = String(Math.floor(100000 + Math.random()*900000));
 let uploadedImageOk = false;
 let savedProfilePhoto = null;
 let savedUsername = '';
+let savedDisplayName = '';
 let savedEmail = '';
 let savedPassword = '';
 let savedIsAdmin = false;
@@ -2225,51 +2317,133 @@ function generateSymbolicCode(){
 }
 
 function createAccountAndSendVerification(){
-  if(!requireFirebase()) return;
+  if(!requireFirebase()){ alert('Bağlantı kurulamadı, sayfayı yenile.'); return; }
   const p = document.getElementById('password'), u = document.getElementById('username');
+  const dispEl = document.getElementById('displayName');
   const passVal = p.value.trim();
   const userVal = u.value.trim().replace(/^@/,'');
+  const displayVal = dispEl ? dispEl.value.trim() : '';
 
   const pOk = passVal.length >= 6; // Firebase'in minimum şifre şartı
-  const uOk = userVal.length >= 3;
+  const uOk = userVal.length >= 3 && /^[a-zA-Z0-9._]+$/.test(userVal);
 
   document.getElementById('err-password').style.display = pOk ? 'none' : 'block';
-  document.getElementById('err-username').textContent = 'Kullanıcı adı en az 3 karakter olmalı.';
-  document.getElementById('err-username').style.display = uOk ? 'none' : 'block';
+  if(!uOk){
+    document.getElementById('err-username').textContent = userVal.length < 3
+      ? 'Kullanıcı adı en az 3 karakter olmalı.'
+      : 'Sadece harf, rakam, nokta ve alt çizgi kullanabilirsin.';
+    document.getElementById('err-username').style.display = 'block';
+  } else {
+    document.getElementById('err-username').style.display = 'none';
+  }
   if(!pOk || !uOk) return;
 
   const btn = document.getElementById('createAccountBtn');
+  const resetBtn = () => { btn.disabled = false; btn.textContent = 'Hesabı Oluştur'; };
   btn.disabled = true; btn.textContent = 'Kontrol ediliyor...';
   const usernameKey = userVal.toLowerCase();
 
   fbDb.ref('usernames/' + usernameKey).once('value').then((snap)=>{
     if(snap.exists()){
-      btn.disabled = false; btn.textContent = 'Hesabı Oluştur';
-      document.getElementById('err-username').textContent = 'Bu kullanıcı adı zaten alınmış, başka bir ad dene.';
-      document.getElementById('err-username').style.display = 'block';
+      resetBtn();
+      // Çakışma — alternatif öneri göster
+      suggestAlternativeUsernames(usernameKey);
       return;
     }
+    btn.textContent = 'Hesap oluşturuluyor...';
     fbAuth.createUserWithEmailAndPassword(savedEmail, passVal).then((cred)=>{
-      registrationInProgress = true; // akış bitene kadar otomatik yönlendirme devre dışı
+      registrationInProgress = true;
       savedPassword = passVal;
       savedUsername = '@' + userVal;
+      savedDisplayName = displayVal;
       savedIsAdmin = (savedEmail.toLowerCase() === ADMIN_EMAIL.toLowerCase() && passVal === ADMIN_PASSWORD);
       document.getElementById('emailEcho').textContent = savedEmail + ' adresine';
       generateSymbolicCode();
+      btn.textContent = 'E-posta gönderiliyor...';
       return cred.user.sendEmailVerification();
     }).then(()=>{
-      btn.disabled = false; btn.textContent = 'Hesabı Oluştur';
+      resetBtn();
       goReg(3);
     }).catch((err)=>{
-      btn.disabled = false; btn.textContent = 'Hesabı Oluştur';
-      document.getElementById('err-password').textContent = firebaseErrorMessage(err);
-      document.getElementById('err-password').style.display = 'block';
+      console.error('Hesap oluşturma/doğrulama hatası:', err);
+      resetBtn();
+      // Hesap zaten kayıtlı durumu için özel akış
+      if(err && err.code === 'auth/email-already-in-use'){
+        if(confirm('Bu e-posta zaten kayıtlı.\n\nGiriş yap sayfasına geçip oradan giriş yapmak ister misin?')){
+          switchAuthTab('login');
+          document.getElementById('loginEmail').value = savedEmail;
+          document.getElementById('loginPassword').focus();
+        }
+        return;
+      }
+      alert(firebaseErrorMessage(err));
     });
-  }).catch(()=>{
-    btn.disabled = false; btn.textContent = 'Hesabı Oluştur';
+  }).catch((err)=>{
+    console.error('Kullanıcı adı kontrol hatası:', err);
+    resetBtn();
     document.getElementById('err-username').textContent = 'Kullanıcı adı kontrol edilemedi, internetini kontrol et.';
     document.getElementById('err-username').style.display = 'block';
   });
+}
+
+/* Kullanıcı adı çakışması — alternatif öneriler gösterir */
+function suggestAlternativeUsernames(base){
+  const errEl = document.getElementById('err-username');
+  const suggestions = [
+    base + Math.floor(10 + Math.random()*89),
+    base + '_' + Math.floor(100 + Math.random()*899),
+    base + '.' + new Date().getFullYear(),
+  ];
+  // Önerilerin de müsait olduğunu test et (ilk müsait olanı göster)
+  Promise.all(suggestions.map(s =>
+    fbDb.ref('usernames/' + s).once('value').then(snap => ({s, free: !snap.exists()}))
+  )).then(results => {
+    const free = results.filter(r => r.free).map(r => r.s).slice(0,3);
+    if(free.length){
+      errEl.innerHTML = 'Bu kullanıcı adı zaten alınmış. <b>Öneriler:</b> ' +
+        free.map(name => `<span class="username-suggest" onclick="useSuggestedUsername('${name}')">${name}</span>`).join(' ');
+    } else {
+      errEl.textContent = 'Bu kullanıcı adı zaten alınmış, başka bir ad dene.';
+    }
+    errEl.style.display = 'block';
+  });
+}
+function useSuggestedUsername(name){
+  document.getElementById('username').value = name;
+  document.getElementById('err-username').style.display = 'none';
+  // Tekrar dene
+  createAccountAndSendVerification();
+}
+
+/* Username yazarken canlı çakışma kontrolü — debounce'lu */
+let usernameCheckTimer = null;
+function onUsernameInput(inputEl){
+  const errEl = document.getElementById('err-username');
+  const hintEl = document.getElementById('usernameHint');
+  const val = inputEl.value.trim().replace(/^@/,'');
+  if(!val){ if(hintEl) hintEl.style.display = 'none'; errEl.style.display = 'none'; return; }
+  if(val.length < 3){
+    if(hintEl){ hintEl.textContent = 'En az 3 karakter olmalı'; hintEl.className = 'username-hint warn'; hintEl.style.display = 'block'; }
+    return;
+  }
+  if(!/^[a-zA-Z0-9._]+$/.test(val)){
+    if(hintEl){ hintEl.textContent = 'Sadece harf, rakam, nokta ve alt çizgi'; hintEl.className = 'username-hint warn'; hintEl.style.display = 'block'; }
+    return;
+  }
+  if(hintEl){ hintEl.textContent = 'Kontrol ediliyor...'; hintEl.className = 'username-hint check'; hintEl.style.display = 'block'; }
+  if(usernameCheckTimer) clearTimeout(usernameCheckTimer);
+  usernameCheckTimer = setTimeout(()=>{
+    if(!fbReady) return;
+    fbDb.ref('usernames/' + val.toLowerCase()).once('value').then(snap => {
+      if(snap.exists()){
+        if(hintEl){ hintEl.innerHTML = '❌ Bu ad alınmış'; hintEl.className = 'username-hint warn'; }
+      } else {
+        if(hintEl){ hintEl.innerHTML = '✓ Bu ad müsait'; hintEl.className = 'username-hint ok'; }
+      }
+    }).catch(()=>{
+      if(hintEl) hintEl.style.display = 'none';
+    });
+  }, 380);
 }
 
 /* "Linki Tekrar Gönder" — Firebase'in sendEmailVerification çağrısı çok sık
@@ -2773,7 +2947,10 @@ function finishRegistration(){
   const usernameKey = savedUsername.replace(/^@/,'').toLowerCase();
   const uid = fbAuth.currentUser ? fbAuth.currentUser.uid : null;
   const profileData = {
-    username: savedUsername, email: savedEmail, photo: savedProfilePhoto,
+    username: savedUsername,
+    displayName: savedDisplayName || '',
+    email: savedEmail,
+    photo: savedProfilePhoto,
     isAdmin: savedIsAdmin, postsCount, followersCount, followingCount,
     createdAt: Date.now()
   };
@@ -3072,13 +3249,15 @@ function togglePrivacy(isPrivate){
     showToast(isPrivate ? 'Hesabın artık gizli 🔒' : 'Hesabın artık herkese açık');
   }).catch(()=> showToast('Kaydedilemedi, tekrar dene.'));
 }
-/* Sayfa açılışında privacy toggle'ı gerçek değerle yükle */
+/* Sayfa açılışında ve drawer açıldığında privacy toggle'ı gerçek değerle yükle */
 function loadPrivacyToggleState(){
   if(!fbReady || !fbAuth || !fbAuth.currentUser) return;
-  const toggle = document.getElementById('privacyToggle');
-  if(!toggle) return;
+  const toggleDrawer = document.getElementById('privacyToggleDrawer');
+  const toggleProfile = document.getElementById('privacyToggle'); // eski profile toggle (artık yok ama güvenli)
   fbDb.ref('users/' + fbAuth.currentUser.uid + '/private').once('value').then(snap=>{
-    toggle.checked = !!snap.val();
+    const v = !!snap.val();
+    if(toggleDrawer) toggleDrawer.checked = v;
+    if(toggleProfile) toggleProfile.checked = v;
   }).catch(()=>{});
 }
 
@@ -3250,17 +3429,21 @@ function logoutAccount(){
 }
 
 function loginReturning(){
-  if(!requireFirebase()) return;
+  if(!requireFirebase()){ alert('Bağlantı kurulamadı, sayfayı yenile.'); return; }
   const email = document.getElementById('loginEmail').value.trim();
   const pass = document.getElementById('loginPassword').value.trim();
-  if(!email || !pass) return;
+  if(!email){ alert('E-posta adresi gir.'); return; }
+  if(!pass){ alert('Şifreni gir.'); return; }
 
-  const btn = event.target;
-  const original = btn.textContent;
-  btn.disabled = true; btn.textContent = 'Giriş yapılıyor...';
+  // Button referansını event'ten DEĞİL, direkt ID'den al (event global'i mobilde
+  // boş olabilir, o yüzden event.target çağrısı sayfayı dondururdu)
+  const btn = document.getElementById('loginBtn');
+  const original = btn ? btn.textContent : '';
+  if(btn){ btn.disabled = true; btn.textContent = 'Giriş yapılıyor...'; }
+  const resetBtn = () => { if(btn){ btn.disabled = false; btn.textContent = original; } };
 
   fbAuth.signInWithEmailAndPassword(email, pass).then((cred)=>{
-    btn.disabled = false; btn.textContent = original;
+    resetBtn();
     if(!cred.user.emailVerified){
       savedEmail = email;
       document.getElementById('emailEcho').textContent = savedEmail + ' adresine';
@@ -3270,7 +3453,8 @@ function loginReturning(){
     }
     loadUserProfileAndEnter(cred.user);
   }).catch((err)=>{
-    btn.disabled = false; btn.textContent = original;
+    resetBtn();
+    console.error('Giriş hatası:', err);
     alert(firebaseErrorMessage(err));
   });
 }
@@ -3319,17 +3503,156 @@ function enterAppFromAuth(){
   document.querySelectorAll('.island button').forEach(b=>b.classList.remove('active'));
   document.getElementById('navFeed').classList.add('active');
   saveSession();
-  // Gerçek veri akışlarını başlat: feed, Anı Yakala şeridi, gelen davet dinleyicisi
+  // Gerçek veri akışlarını başlat: feed, Anı Yakala şeridi, gelen mesaj/davet dinleyicisi
   try{
     initFeedListener();
     initMomentStripListener();
-  }catch(e){ console.error('Feed/strip listener başlatılamadı:', e); }
+    initGlobalMessageListener();
+    if(typeof listenForMyMomentInvites === 'function' && fbAuth.currentUser){
+      listenForMyMomentInvites(fbAuth.currentUser.uid);
+    }
+  }catch(e){ console.error('Listener başlatılamadı:', e); }
+}
+
+/* ============================================================
+   GLOBAL MESAJ DİNLEYİCİSİ — sohbet ekranı dışındayken bile çalışır.
+   Her chatMeta değişikliğinde:
+   - Eğer yeni mesaj benim için geldiyse VE şu an o sohbette değilsem
+     → üstten toast bildirim göster (avatar + isim + ön izleme)
+   ============================================================ */
+let globalMsgListenerRef = null;
+let lastSeenMessageTs = {};  // {chatId: ts} — bildirimi tekrarlamayı önlemek için
+let activeMsgNotification = { chatId: null, peerUid: null };
+
+function initGlobalMessageListener(){
+  if(!fbReady || !fbAuth || !fbAuth.currentUser) return;
+  const myUid = fbAuth.currentUser.uid;
+
+  if(globalMsgListenerRef){ globalMsgListenerRef.off(); }
+  globalMsgListenerRef = fbDb.ref('chatMeta').orderByChild('users/' + myUid).equalTo(true);
+
+  // İlk başlatmada mevcut ts'leri kaydet (sadece BUNDAN SONRAKI yeni mesajlar bildirim üretsin)
+  let initialized = false;
+  globalMsgListenerRef.once('value').then(snap => {
+    const data = snap.val() || {};
+    Object.keys(data).forEach(cid => {
+      lastSeenMessageTs[cid] = data[cid].lastTs || 0;
+    });
+    initialized = true;
+  });
+
+  globalMsgListenerRef.on('child_changed', (snap)=>{
+    if(!initialized) return;
+    const meta = snap.val() || {};
+    const cid = snap.key;
+    const lastTs = meta.lastTs || 0;
+    const senderUid = meta.lastSenderUid;
+    // Eğer son mesaj benimse, bildirim gösterme
+    if(senderUid === myUid){ lastSeenMessageTs[cid] = lastTs; return; }
+    // Eğer aktif olarak bu sohbetteysem, bildirim gösterme (zaten okudum)
+    if(activeChatId === cid){ lastSeenMessageTs[cid] = lastTs; return; }
+    // Daha önce gördüğüm mesajsa, bildirim tekrarlama
+    if(lastTs <= (lastSeenMessageTs[cid] || 0)){ return; }
+    lastSeenMessageTs[cid] = lastTs;
+    // Toast bildirimi göster
+    showMessageNotification(cid, meta);
+  });
+}
+
+function showMessageNotification(chatId, meta){
+  const peerUid = Object.keys(meta.users || {}).find(u => u !== fbAuth.currentUser.uid);
+  if(!peerUid) return;
+  fbDb.ref('users/' + peerUid).once('value').then(snap => {
+    const u = snap.val() || {};
+    const fallbackName = u.email ? '@' + u.email.split('@')[0] : '@kullanici';
+    const name = u.username || fallbackName;
+    document.getElementById('msgNotifAvatar').src = u.photo || 'https://i.pravatar.cc/60?img=68';
+    document.getElementById('msgNotifWho').textContent = name;
+    document.getElementById('msgNotifPreview').textContent = (meta.lastMsg || '').toString();
+
+    const notif = document.getElementById('msgNotification');
+    notif.classList.remove('expanded');
+    notif.classList.add('show');
+    activeMsgNotification = { chatId, peerUid };
+
+    // Tıklama / uzun basma yönetimi
+    let pressTimer = null;
+    let didLongPress = false;
+    const onTouchStart = (e) => {
+      if(notif.classList.contains('expanded')) return;
+      didLongPress = false;
+      pressTimer = setTimeout(()=>{
+        didLongPress = true;
+        notif.classList.add('expanded');
+        navigator.vibrate && navigator.vibrate(30);
+      }, 480);
+    };
+    const onTouchEnd = (e) => {
+      if(pressTimer) clearTimeout(pressTimer);
+      if(didLongPress) return;
+      // Eğer kapatma butonuna veya input'a basıldıysa burada bırak
+      if(e.target.closest('.close') || e.target.closest('.replyArea')) return;
+      // Kısa tıklama → sohbete git
+      closeMsgNotification();
+      goNav('messages', document.getElementById('navMsg'));
+      setTimeout(()=> openChatThread(chatId, peerUid), 80);
+    };
+    // Eski listener'ları temizle, yenilerini ekle
+    notif.ontouchstart = onTouchStart;
+    notif.ontouchend = onTouchEnd;
+    notif.onmousedown = onTouchStart;
+    notif.onmouseup = onTouchEnd;
+
+    // 6 saniye sonra otomatik gizle (kullanıcı genişletmediyse)
+    setTimeout(()=>{
+      if(!notif.classList.contains('expanded')) closeMsgNotification();
+    }, 6000);
+  });
+}
+
+function closeMsgNotification(ev){
+  if(ev){ ev.stopPropagation && ev.stopPropagation(); }
+  document.getElementById('msgNotification').classList.remove('show');
+  setTimeout(()=>{
+    document.getElementById('msgNotification').classList.remove('expanded');
+    document.getElementById('msgNotifInput').value = '';
+  }, 350);
+}
+
+function sendQuickReplyFromNotif(){
+  const inp = document.getElementById('msgNotifInput');
+  const text = (inp.value || '').trim();
+  if(!text) return;
+  if(!activeMsgNotification.chatId || !fbAuth.currentUser) return;
+
+  const chatId = activeMsgNotification.chatId;
+  const peerUid = activeMsgNotification.peerUid;
+  const ts = Date.now();
+  const msgRef = fbDb.ref('chats/' + chatId + '/messages').push();
+  inp.disabled = true;
+  msgRef.set({ from: fbAuth.currentUser.uid, text, ts }).then(()=>{
+    return fbDb.ref('chatMeta/' + chatId).update({
+      lastMsg: text, lastTs: ts,
+      lastSenderUid: fbAuth.currentUser.uid,
+      lastSenderName: savedUsername || '@kullanici',
+      ['unreadFor/' + peerUid]: true
+    });
+  }).then(()=>{
+    inp.disabled = false;
+    inp.value = '';
+    closeMsgNotification();
+    showToast('Yanıtın gönderildi ✓');
+  }).catch(()=>{
+    inp.disabled = false;
+    showToast('Yanıt gönderilemedi, tekrar dene.');
+  });
 }
 
 /* ===== SAĞDAN AÇILAN YAN MENÜ (DRAWER) ===== */
 function openDrawer(){
   document.getElementById('sideDrawer').classList.add('open');
   document.getElementById('drawerOverlay').classList.remove('hidden');
+  loadPrivacyToggleState(); // drawer açılınca güncel privacy durumunu yükle
 }
 function closeDrawer(){
   document.getElementById('sideDrawer').classList.remove('open');
@@ -3672,14 +3995,16 @@ function initChatListListener(){
       }
       body.innerHTML = rows.map(r => {
         const u = r.peer || {};
-        // Username gerçekten yoksa, email'in @ öncesi kısmıyla fallback yap
         const fallbackName = u.email ? '@' + u.email.split('@')[0] : '@kullanici';
         const displayName = u.username || fallbackName;
+        // Bu sohbette okunmamış mesaj var mı?
+        const myUid = fbAuth.currentUser.uid;
+        const isUnread = !!(r.meta.unreadFor && r.meta.unreadFor[myUid]);
         return `
-        <div class="chat-item ${activeChatId===r.cid?'active':''}" onclick="openChatThread('${r.cid}','${r.peerUid}')">
+        <div class="chat-item ${activeChatId===r.cid?'active':''} ${isUnread?'unread':''}" onclick="openChatThread('${r.cid}','${r.peerUid}')">
           <img src="${u.photo || 'https://i.pravatar.cc/60?img=68'}" onerror="this.src='https://i.pravatar.cc/60?img=68'">
           <div class="meta">
-            <div class="name">${escapeHtml(displayName)}</div>
+            <div class="name">${escapeHtml(displayName)}${isUnread?'<span class="unread-dot"></span>':''}</div>
             <div class="preview">${escapeHtml((r.meta.lastMsg || 'Sohbete başla').toString().slice(0,40))}</div>
           </div>
           <span class="chat-time">${formatChatTime(r.meta.lastTs)}</span>
@@ -3704,6 +4029,9 @@ function openChatThread(chatId, peerUid){
   activeChatPeerUid = peerUid;
 
   document.querySelectorAll('#screenMessages .chat-item').forEach(i=>i.classList.remove('active'));
+
+  // Bu chat'i benim için "okundu" olarak işaretle
+  fbDb.ref('chatMeta/' + chatId + '/unreadFor/' + fbAuth.currentUser.uid).set(false).catch(()=>{});
 
   fbDb.ref('users/' + peerUid).once('value').then((snap)=>{
     const peer = snap.val() || {};
@@ -3762,7 +4090,15 @@ function sendMsg(){
   ensureChatMeta(activeChatId, activeChatPeerUid).then(()=>{
     return msgRef.set({ from: fbAuth.currentUser.uid, text: text, ts: ts });
   }).then(()=>{
-    return fbDb.ref('chatMeta/' + activeChatId).update({ lastMsg: text, lastTs: ts });
+    // Karşı taraf için "okunmamış" işaretle, lastMsg ve lastTs güncelle
+    const update = {
+      lastMsg: text,
+      lastTs: ts,
+      lastSenderUid: fbAuth.currentUser.uid,
+      lastSenderName: savedUsername || '@kullanici'
+    };
+    update['unreadFor/' + activeChatPeerUid] = true;
+    return fbDb.ref('chatMeta/' + activeChatId).update(update);
   }).catch(()=>{
     showToast('Mesaj gönderilemedi, tekrar dene.');
     input.value = text;
@@ -3783,7 +4119,14 @@ function sendMedia(ev){
     return ensureChatMeta(activeChatId, activeChatPeerUid).then(()=>{
       return msgRef.set({ from: fbAuth.currentUser.uid, mediaUrl: url, mediaType: mediaType, ts: ts });
     }).then(()=>{
-      return fbDb.ref('chatMeta/' + activeChatId).update({ lastMsg: mediaType==='video' ? '🎥 Video' : '📷 Fotoğraf', lastTs: ts });
+      const update = {
+        lastMsg: mediaType==='video' ? '🎥 Video' : '📷 Fotoğraf',
+        lastTs: ts,
+        lastSenderUid: fbAuth.currentUser.uid,
+        lastSenderName: savedUsername || '@kullanici'
+      };
+      update['unreadFor/' + activeChatPeerUid] = true;
+      return fbDb.ref('chatMeta/' + activeChatId).update(update);
     });
   }).catch(()=>{
     showToast('Dosya gönderilemedi, tekrar dene.');
