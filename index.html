@@ -2,8 +2,34 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NeXT</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>NeXT — Anları yalnız değil, birlikte yakala</title>
+
+<!-- SEO ve sosyal medya önizleme (WhatsApp, X, Facebook, iMessage paylaşımlarında görünür) -->
+<meta name="description" content="NeXT — arkadaşlarınla aynı anda fotoğraf çekip ortak anılar oluşturduğun sosyal medya. Anı Yakala, hikayeler ve daha fazlası.">
+<meta name="theme-color" content="#7c3aed">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="NeXT">
+<meta name="mobile-web-app-capable" content="yes">
+
+<!-- Open Graph (sosyal paylaşımlar için zengin önizleme) -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="NeXT — Anları yalnız değil, birlikte yakala">
+<meta property="og:description" content="Arkadaşlarınla aynı anda fotoğraf çekip ortak anılar oluştur. Senkron Anı Yakala özelliğiyle yeni nesil sosyal medya.">
+<meta property="og:image" content="NeXT.PNG">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="NeXT — Anları yalnız değil, birlikte yakala">
+<meta name="twitter:description" content="Arkadaşlarınla aynı anda fotoğraf çekip ortak anılar oluştur.">
+<meta name="twitter:image" content="NeXT.PNG">
+
+<!-- Favicon ve mobil ikonlar — NeXT.PNG dosyası repo'nun root'unda olmalı -->
+<link rel="icon" type="image/png" href="NeXT.PNG">
+<link rel="apple-touch-icon" href="NeXT.PNG">
+
+<!-- PWA manifest (telefona "Ana ekrana ekle" yapınca uygulama gibi açılır) -->
+<link rel="manifest" href='data:application/manifest+json,{"name":"NeXT","short_name":"NeXT","description":"Anları yalnız değil, birlikte yakala","start_url":"./","scope":"./","display":"standalone","orientation":"portrait","theme_color":"%237c3aed","background_color":"%23000000","icons":[{"src":"NeXT.PNG","sizes":"any","type":"image/png","purpose":"any maskable"}]}'>
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -719,6 +745,105 @@ body.light-mode #screenRegister .spam-warning{background:linear-gradient(135deg,
   #screenRegisterInner{padding:18px 12px !important;}
   #screenRegister .step-title{font-size:21px;}
 }
+
+/* ============================================================
+   YENİ PROFİL EKRANI (otherProfile) — Instagram-benzeri düzen
+   ============================================================ */
+.otherProfileWrap{padding:22px 22px 30px;}
+.otherProfileTopRow{display:flex;align-items:center;gap:24px;margin-bottom:16px;}
+.otherProfileAvatar{
+  width:90px;height:90px;border-radius:50%;object-fit:cover;
+  border:2px solid var(--line);flex-shrink:0;
+}
+.otherProfileStats{display:flex;flex:1;justify-content:space-around;gap:10px;}
+.otherStatItem{
+  display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;
+  padding:6px 10px;border-radius:10px;transition:background .15s;min-width:55px;
+}
+.otherStatItem:hover{background:var(--surface-2);}
+.otherStatNum{font-size:18px;font-weight:700;color:var(--text);font-family:'Space Grotesk',sans-serif;}
+.otherStatLbl{font-size:12px;color:var(--muted);}
+.otherProfileInfo{margin-bottom:16px;}
+.otherProfileName{font-size:16px;font-weight:700;color:var(--text);font-family:'Space Grotesk',sans-serif;margin-bottom:3px;}
+.otherProfileLocation{font-size:12.5px;color:var(--muted);margin-bottom:6px;}
+.otherProfileLocation:empty{display:none;}
+.otherProfileBio{font-size:13.5px;color:var(--text);line-height:1.5;white-space:pre-wrap;}
+.otherProfileBio:empty{display:none;}
+.otherProfileActions{display:flex;gap:8px;margin-bottom:24px;}
+.otherProfileTabBar{
+  display:flex;justify-content:center;border-top:1px solid var(--line);
+  border-bottom:1px solid var(--line);padding:10px 0;margin-bottom:6px;
+}
+.otherProfileTab{
+  padding:6px 22px;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;
+  display:flex;align-items:center;justify-content:center;
+}
+.otherProfileTab.active{color:var(--text);border-bottom-color:var(--accent);}
+.otherProfileTab svg{width:22px;height:22px;}
+.otherProfilePostsGrid{
+  display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px;
+}
+.otherProfileLockBox{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:60px 24px;text-align:center;
+}
+.lockCircle{
+  width:88px;height:88px;border-radius:50%;border:2px solid var(--line);
+  display:flex;align-items:center;justify-content:center;color:var(--text);
+  margin-bottom:18px;
+}
+.lockCircle svg{width:38px;height:38px;}
+.lockTitle{font-size:18px;font-weight:700;font-family:'Space Grotesk',sans-serif;margin-bottom:8px;color:var(--text);}
+.lockSub{font-size:13.5px;color:var(--muted);max-width:280px;line-height:1.5;}
+
+/* ============================================================
+   TAKİPÇİ / TAKİP LİSTESİ MODALI
+   ============================================================ */
+.followListOverlay{
+  position:fixed;inset:0;background:rgba(5,2,15,.72);backdrop-filter:blur(4px);
+  z-index:200;display:flex;align-items:flex-end;justify-content:center;padding:0;
+}
+.followListOverlay.hidden{display:none;}
+@media (min-width:520px){
+  .followListOverlay{align-items:center;padding:18px;}
+}
+.followListSheet{
+  width:100%;max-width:460px;max-height:78vh;background:var(--surface);
+  border:1px solid var(--glass-border);border-radius:22px 22px 0 0;
+  display:flex;flex-direction:column;overflow:hidden;
+}
+@media (min-width:520px){
+  .followListSheet{border-radius:22px;max-height:70vh;}
+}
+.followListHead{
+  padding:16px 20px;display:flex;align-items:center;justify-content:space-between;
+  border-bottom:1px solid var(--line);
+}
+.followListHead h3{margin:0;font-size:16px;font-weight:700;font-family:'Space Grotesk',sans-serif;}
+.followListClose{
+  background:var(--surface-2);border:none;width:30px;height:30px;border-radius:50%;
+  color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;
+}
+.followListBody{flex:1;overflow-y:auto;padding:4px 0;}
+.followListRow{
+  display:flex;align-items:center;gap:12px;padding:10px 18px;cursor:pointer;
+}
+.followListRow:hover{background:var(--surface-2);}
+.followListRow img{width:44px;height:44px;border-radius:50%;object-fit:cover;flex-shrink:0;}
+.followListRow .info{flex:1;min-width:0;}
+.followListRow .info .uname{font-size:14px;font-weight:600;color:var(--text);}
+.followListRow .info .ubio{font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.followListEmpty{text-align:center;color:var(--muted);font-size:13px;padding:40px 18px;}
+
+/* Gizli hesap toggle (kendi profilim ekranındaki) */
+.privacy-toggle-row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:13px 14px;background:var(--surface-2);border:1px solid var(--line);
+  border-radius:11px;margin-bottom:10px;
+}
+.privacy-toggle-row .ptl{flex:1;}
+.privacy-toggle-row .ptl-title{font-size:13.5px;font-weight:600;color:var(--text);margin-bottom:2px;}
+.privacy-toggle-row .ptl-sub{font-size:11.5px;color:var(--muted);line-height:1.4;}
 
 /* Tema değiştirme anahtarı (switch) */
 .switch{position:relative;display:inline-block;width:42px;height:24px;flex-shrink:0;}
@@ -1456,9 +1581,9 @@ tbody tr:hover{background:var(--surface-2);}
         <div class="uemail" id="profileEmail">—</div>
 
         <div class="statsRow">
-          <div class="statItem"><div class="statNum" id="statPosts">0</div><div class="statLbl">Gönderi</div></div>
-          <div class="statItem"><div class="statNum" id="statFollowers">0</div><div class="statLbl">Takipçi</div></div>
-          <div class="statItem"><div class="statNum" id="statFollowing">0</div><div class="statLbl">Takip</div></div>
+          <div class="statItem" style="cursor:pointer;" onclick="openMyFollowList('posts')"><div class="statNum" id="statPosts">0</div><div class="statLbl">Gönderi</div></div>
+          <div class="statItem" style="cursor:pointer;" onclick="openMyFollowList('followers')"><div class="statNum" id="statFollowers">0</div><div class="statLbl">Takipçi</div></div>
+          <div class="statItem" style="cursor:pointer;" onclick="openMyFollowList('following')"><div class="statNum" id="statFollowing">0</div><div class="statLbl">Takip</div></div>
         </div>
 
         <button class="btn btn-ghost" style="width:100%;margin-bottom:14px;" onclick="toggleEditUsername()">✏️ Kullanıcı Adı / Fotoğrafı Düzenle</button>
@@ -1488,9 +1613,21 @@ tbody tr:hover{background:var(--surface-2);}
         <button class="btn btn-ghost" style="width:100%;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;" onclick="openSavedScreen()">
           <span>🔖 Kaydedilenler</span><span style="color:var(--muted);">›</span>
         </button>
-        <button class="btn btn-ghost" style="width:100%;margin-bottom:24px;display:flex;align-items:center;justify-content:space-between;" onclick="openLikedScreen()">
+        <button class="btn btn-ghost" style="width:100%;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;" onclick="openLikedScreen()">
           <span>❤️ Beğenilenler</span><span style="color:var(--muted);">›</span>
         </button>
+
+        <!-- Gizli Hesap toggle — açıksa, sadece takip ettiğin kişiler gönderilerini görebilir -->
+        <div class="privacy-toggle-row">
+          <div class="ptl">
+            <div class="ptl-title">🔒 Gizli Hesap</div>
+            <div class="ptl-sub">Açıksa, gönderilerini sadece takip ettiğin kişiler görebilir.</div>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="privacyToggle" onchange="togglePrivacy(this.checked)">
+            <span class="switch-slider"></span>
+          </label>
+        </div>
       </div>
       </div>
     </div>
@@ -1526,20 +1663,54 @@ tbody tr:hover{background:var(--surface-2);}
         <h1 id="otherProfileTitle">Profil</h1>
       </div>
       <div class="screen-body">
-        <div class="profileWrap">
-          <img class="avatarBig" id="otherProfileAvatar" src="https://i.pravatar.cc/120?img=68">
-          <h2 id="otherProfileName">@kullanici</h2>
-          <div class="uemail" id="otherProfileEmail">—</div>
-
-          <div class="statsRow">
-            <div class="statItem"><div class="statNum" id="otherStatPosts">0</div><div class="statLbl">Gönderi</div></div>
-            <div class="statItem"><div class="statNum" id="otherStatFollowers">0</div><div class="statLbl">Takipçi</div></div>
-            <div class="statItem"><div class="statNum" id="otherStatFollowing">0</div><div class="statLbl">Takip</div></div>
+        <div class="otherProfileWrap">
+          <!-- Üst satır: büyük avatar + istatistikler (Instagram tarzı yatay) -->
+          <div class="otherProfileTopRow">
+            <img class="otherProfileAvatar" id="otherProfileAvatar" src="https://i.pravatar.cc/120?img=68">
+            <div class="otherProfileStats">
+              <div class="otherStatItem" onclick="openFollowList('posts')">
+                <div class="otherStatNum" id="otherStatPosts">0</div>
+                <div class="otherStatLbl">gönderi</div>
+              </div>
+              <div class="otherStatItem" onclick="openFollowList('followers')">
+                <div class="otherStatNum" id="otherStatFollowers">0</div>
+                <div class="otherStatLbl">takipçi</div>
+              </div>
+              <div class="otherStatItem" onclick="openFollowList('following')">
+                <div class="otherStatNum" id="otherStatFollowing">0</div>
+                <div class="otherStatLbl">takip</div>
+              </div>
+            </div>
           </div>
 
-          <div class="row">
-            <button class="btn btn-primary" id="otherFollowBtn" style="flex:1;">Takip Et</button>
-            <button class="btn btn-ghost" style="flex:1;" onclick="messageOtherUser()">Mesaj Gönder</button>
+          <!-- İsim + konum + bio -->
+          <div class="otherProfileInfo">
+            <div class="otherProfileName" id="otherProfileName">@kullanici</div>
+            <div class="otherProfileLocation" id="otherProfileLocation"></div>
+            <div class="otherProfileBio" id="otherProfileEmail"></div>
+          </div>
+
+          <!-- Aksiyon butonları: Takip Et + Mesaj Gönder -->
+          <div class="otherProfileActions">
+            <button class="btn btn-primary" id="otherFollowBtn" style="flex:1.4;">Takip Et</button>
+            <button class="btn btn-ghost" style="flex:1;" onclick="messageOtherUser()">Mesaj</button>
+          </div>
+
+          <!-- Gönderiler grid (hesap gizliyse altında lockBox görünür) -->
+          <div class="otherProfileTabBar">
+            <div class="otherProfileTab active">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+            </div>
+          </div>
+          <div class="otherProfilePostsGrid" id="otherProfilePostsGrid"></div>
+
+          <!-- Gizli profil: kilit kutusu -->
+          <div class="otherProfileLockBox" id="otherProfileLockBox" style="display:none;">
+            <div class="lockCircle">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="11" width="16" height="11" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/></svg>
+            </div>
+            <div class="lockTitle">Bu profil gizli</div>
+            <div class="lockSub">Fotoğraf ve videolarını görmek için bu profili takip et.</div>
           </div>
         </div>
       </div>
@@ -1547,6 +1718,19 @@ tbody tr:hover{background:var(--surface-2);}
 
   </div><!-- /main -->
 </div><!-- /appShell -->
+
+<!-- TAKİPÇİ / TAKİP LİSTESİ MODALI -->
+<div class="followListOverlay hidden" id="followListOverlay" onclick="if(event.target===this) closeFollowList()">
+  <div class="followListSheet">
+    <div class="followListHead">
+      <h3 id="followListTitle">Takipçiler</h3>
+      <button class="followListClose" onclick="closeFollowList()">✕</button>
+    </div>
+    <div class="followListBody" id="followListBody">
+      <div class="followListEmpty">Yükleniyor...</div>
+    </div>
+  </div>
+</div>
 
 <!-- ================= ANI YAKALA — TÜM MODAL/EKRANLARI ================= -->
 
@@ -2627,27 +2811,47 @@ function addMemberToAdminTable(){ /* no-op: gerçek liste Firebase'den geliyor *
      followers/{onlarınUid}/{benimUid} = true   (kimler beni takip ediyor)
    Takipçi/takip sayıları bu düğümlerin GERÇEK çocuk sayısından hesaplanır. */
 let viewingOtherUid = null;
+let otherProfileReturnTo = 'feed'; // closeOtherProfile geri dönüş hedefi
 
 function viewOtherProfile(uid){
-  if(!requireFirebase()) return;
   viewingOtherUid = uid;
-  showScreen('otherProfile');
-
-  fbDb.ref('users/' + uid).once('value').then((snap)=>{
-    const u = snap.val() || {};
-    document.getElementById('otherProfileTitle').textContent = u.username || 'Profil';
-    document.getElementById('otherProfileName').textContent = u.username || '@kullanici';
-    document.getElementById('otherProfileEmail').textContent = u.email || '—';
-    document.getElementById('otherProfileAvatar').src = u.photo || 'https://i.pravatar.cc/120?img=68';
-    document.getElementById('otherStatPosts').textContent = formatStatNumber(u.postsCount || 0);
-    refreshOtherFollowCounts(uid);
-    refreshFollowButtonState(uid);
-  });
+  openOtherProfile();
 }
 
-function closeOtherProfile(){
-  viewingOtherUid = null;
-  showScreen('admin');
+/* Başka kullanıcının profilini aç — viewingOtherUid önceden setlenmiş
+   olmalı (chat header'a tıklayınca, arama sonucunda, admin tablosunda vb.) */
+function openOtherProfile(){
+  if(!requireFirebase()) return;
+  if(!viewingOtherUid) return;
+  // Geri dönüş hedefini şu an aktif olan ekrandan al
+  const activeScreen = document.querySelector('#main .screen.active');
+  if(activeScreen){
+    const id = activeScreen.id || '';
+    const map = {
+      'screenFeed':'feed', 'screenMessages':'messages',
+      'screenProfile':'profile', 'screenAdmin':'admin',
+      'screenSaved':'saved', 'screenLiked':'liked'
+    };
+    otherProfileReturnTo = map[id] || 'feed';
+  }
+  showScreen('otherProfile');
+
+  fbDb.ref('users/' + viewingOtherUid).once('value').then((snap)=>{
+    const u = snap.val() || {};
+    // Username gösterimi — eğer kayıtlı yoksa, email'in @ önündeki kısmı
+    const fallbackName = u.email ? '@' + u.email.split('@')[0] : '@kullanici';
+    const displayName = u.username || fallbackName;
+    document.getElementById('otherProfileTitle').textContent = (displayName || 'Profil').replace(/^@/,'');
+    document.getElementById('otherProfileName').textContent = displayName;
+    document.getElementById('otherProfileEmail').textContent = u.bio || u.email || '';
+    document.getElementById('otherProfileAvatar').src = u.photo || 'https://i.pravatar.cc/120?img=68';
+    document.getElementById('otherProfileLocation').textContent = u.location || '';
+    document.getElementById('otherStatPosts').textContent = formatStatNumber(u.postsCount || 0);
+    refreshOtherFollowCounts(viewingOtherUid);
+    refreshFollowButtonState(viewingOtherUid);
+    // Gizli profil kontrolü — başkasıysa ve takip etmiyorsa içerik kilitli
+    applyOtherProfilePrivacy(viewingOtherUid, u);
+  });
 }
 
 function refreshOtherFollowCounts(uid){
@@ -2656,6 +2860,76 @@ function refreshOtherFollowCounts(uid){
   });
   fbDb.ref('follows/' + uid).once('value').then(snap=>{
     document.getElementById('otherStatFollowing').textContent = formatStatNumber(snap.numChildren());
+  });
+}
+
+/* Geri butonu — son ziyaret edilen ekrana döner (admin'e değil) */
+function closeOtherProfile(){
+  viewingOtherUid = null;
+  const target = otherProfileReturnTo || 'feed';
+  const navBtn = document.getElementById({
+    'feed':'navFeed','messages':'navMsg','profile':'navBio','admin':'navAdmin'
+  }[target] || 'navFeed');
+  if(navBtn){
+    goNav(target, navBtn);
+  } else {
+    showScreen(target);
+  }
+}
+
+/* Gizli profil kontrolü — başka birinin profiline bakıyorsak ve o kullanıcı
+   hesabını gizli yapmışsa VE biz onu takip etmiyorsak, gönderiler grid'i
+   "Bu profil gizli — fotoğrafları görmek için takip et" mesajıyla değiştirilir.
+   Kendi profilim ise bu kontrol uygulanmaz. */
+function applyOtherProfilePrivacy(uid, userData){
+  const grid = document.getElementById('otherProfilePostsGrid');
+  const lockBox = document.getElementById('otherProfileLockBox');
+  if(!grid || !lockBox) return;
+  const me = fbAuth.currentUser;
+  const isPrivate = !!userData.private;
+  const isMe = me && me.uid === uid;
+
+  if(!isPrivate || isMe){
+    // Hesap açık veya kendi profilim — gönderileri yükle
+    lockBox.style.display = 'none';
+    grid.style.display = '';
+    loadOtherUserPostsGrid(uid);
+    return;
+  }
+  // Gizli hesap — takip ediyor muyum kontrol et
+  fbDb.ref('follows/' + me.uid + '/' + uid).once('value').then(snap => {
+    if(snap.exists()){
+      // Takip ediyorum, gönderileri göster
+      lockBox.style.display = 'none';
+      grid.style.display = '';
+      loadOtherUserPostsGrid(uid);
+    } else {
+      // Takip etmiyorum, kilit göster
+      grid.style.display = 'none';
+      lockBox.style.display = 'flex';
+    }
+  });
+}
+
+function loadOtherUserPostsGrid(uid){
+  const grid = document.getElementById('otherProfilePostsGrid');
+  if(!grid) return;
+  grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--muted);font-size:12px;padding:18px;">Yükleniyor...</div>';
+  fbDb.ref('posts').orderByChild('uid').equalTo(uid).once('value').then(snap => {
+    const data = snap.val() || {};
+    const ids = Object.keys(data).sort((a,b)=>(data[b].ts||0)-(data[a].ts||0));
+    if(!ids.length){
+      grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--muted);font-size:12.5px;padding:36px 18px;">Henüz gönderi yok.</div>';
+      return;
+    }
+    grid.innerHTML = ids.map(id => {
+      const p = data[id];
+      const thumb = (Array.isArray(p.media) && p.media[0]) || p.photo || '';
+      const playIcon = p.mediaType === 'video' ? `<span style="position:absolute;top:6px;right:6px;font-size:11px;background:rgba(0,0,0,.5);color:#fff;padding:2px 5px;border-radius:5px;">▶</span>` : '';
+      return `<div style="aspect-ratio:1/1;border-radius:10px;overflow:hidden;position:relative;cursor:pointer;background:var(--surface-2);" onclick="scrollToPost('${id}')"><img src="${thumb}" style="width:100%;height:100%;object-fit:cover;">${playIcon}</div>`;
+    }).join('');
+  }).catch(()=>{
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--muted);font-size:12.5px;padding:18px;">Gönderiler yüklenemedi.</div>';
   });
 }
 
@@ -2702,9 +2976,110 @@ function toggleFollowOther(){
       refreshFollowButtonState(targetUid);
       refreshOtherFollowCounts(targetUid);
       if(me.uid) refreshOwnFollowCounts(me.uid);
+      // Takip durumu değiştiyse, gizli profilin gönderi/kilit gösterimini güncelle
+      fbDb.ref('users/' + targetUid).once('value').then(s => {
+        applyOtherProfilePrivacy(targetUid, s.val() || {});
+      });
       showToast(alreadyFollowing ? 'Takibi bıraktın' : 'Takip ediyorsun ✓');
     });
   });
+}
+
+/* ============================================================
+   TAKİPÇİ / TAKİP / GÖNDERİ LİSTESİ MODALI
+   profile ekranındaki sayılara tıklanınca açılır, modaldaki her
+   satıra tıklanınca o kullanıcının profili açılır.
+   ============================================================ */
+function openFollowList(type){
+  const targetUid = viewingOtherUid || (fbAuth.currentUser && fbAuth.currentUser.uid);
+  if(!targetUid || !requireFirebase()) return;
+
+  const titles = {
+    followers: 'Takipçiler',
+    following: 'Takip Edilenler',
+    posts: 'Gönderiler'
+  };
+  document.getElementById('followListTitle').textContent = titles[type] || 'Liste';
+  document.getElementById('followListBody').innerHTML = '<div class="followListEmpty">Yükleniyor...</div>';
+  document.getElementById('followListOverlay').classList.remove('hidden');
+
+  if(type === 'posts'){
+    // Gönderi sayısına tıklayınca → kullanıcının gönderilerini grid'de göster değil
+    // ama profilin zaten gönderiler kısmına kaydır
+    closeFollowList();
+    const grid = document.getElementById('otherProfilePostsGrid');
+    if(grid && grid.style.display !== 'none'){
+      grid.scrollIntoView({behavior:'smooth', block:'start'});
+    }
+    return;
+  }
+
+  const path = type === 'followers' ? 'followers/' + targetUid : 'follows/' + targetUid;
+  fbDb.ref(path).once('value').then(snap => {
+    const data = snap.val() || {};
+    const uids = Object.keys(data);
+    if(!uids.length){
+      const empty = type === 'followers'
+        ? 'Henüz takipçi yok.'
+        : 'Henüz kimseyi takip etmiyor.';
+      document.getElementById('followListBody').innerHTML = `<div class="followListEmpty">${empty}</div>`;
+      return;
+    }
+    // Her uid için kullanıcı verisini çek
+    Promise.all(uids.map(uid =>
+      fbDb.ref('users/' + uid).once('value').then(s => ({uid, data: s.val() || {}}))
+    )).then(rows => {
+      const html = rows.filter(r => !r.data.blocked).map(r => {
+        const u = r.data;
+        const uname = u.username || (u.email ? '@' + u.email.split('@')[0] : '@kullanici');
+        return `
+          <div class="followListRow" onclick="closeFollowList();viewOtherProfile('${r.uid}')">
+            <img src="${u.photo || 'https://i.pravatar.cc/60?img=68'}" onerror="this.src='https://i.pravatar.cc/60?img=68'">
+            <div class="info">
+              <div class="uname">${escapeHtml(uname)}</div>
+              <div class="ubio">${escapeHtml(u.bio || u.location || '')}</div>
+            </div>
+          </div>`;
+      }).join('');
+      document.getElementById('followListBody').innerHTML = html || '<div class="followListEmpty">Liste boş.</div>';
+    });
+  }).catch(()=>{
+    document.getElementById('followListBody').innerHTML = '<div class="followListEmpty">Liste yüklenemedi.</div>';
+  });
+}
+function closeFollowList(){
+  document.getElementById('followListOverlay').classList.add('hidden');
+}
+
+/* Kendi profilim ekranındaki sayılara da aynı modal açılsın */
+function openMyFollowList(type){
+  // Geçici olarak viewingOtherUid'i kendi uid'imize set et ki openFollowList çalışsın
+  const savedView = viewingOtherUid;
+  viewingOtherUid = null; // openFollowList currentUser'a fallback yapacak
+  openFollowList(type);
+  // viewingOtherUid değişmedi zaten, geri yüklemeye gerek yok
+  viewingOtherUid = savedView;
+}
+
+/* ============================================================
+   GİZLİ HESAP — kendi profilim ekranındaki toggle
+   users/{uid}/private = true|false
+   ============================================================ */
+function togglePrivacy(isPrivate){
+  if(!requireFirebase() || !fbAuth.currentUser) return;
+  const uid = fbAuth.currentUser.uid;
+  fbDb.ref('users/' + uid + '/private').set(!!isPrivate).then(()=>{
+    showToast(isPrivate ? 'Hesabın artık gizli 🔒' : 'Hesabın artık herkese açık');
+  }).catch(()=> showToast('Kaydedilemedi, tekrar dene.'));
+}
+/* Sayfa açılışında privacy toggle'ı gerçek değerle yükle */
+function loadPrivacyToggleState(){
+  if(!fbReady || !fbAuth || !fbAuth.currentUser) return;
+  const toggle = document.getElementById('privacyToggle');
+  if(!toggle) return;
+  fbDb.ref('users/' + fbAuth.currentUser.uid + '/private').once('value').then(snap=>{
+    toggle.checked = !!snap.val();
+  }).catch(()=>{});
 }
 
 function messageOtherUser(){
@@ -3042,7 +3417,7 @@ function goNav(name, btnEl){
   if(name === 'admin') loadAdminUsers();
   if(name === 'feed'){ initFeedListener(); initMomentStripListener(); }
   if(name === 'messages') initChatListListener();
-  if(name === 'profile') renderMyPostsGrid();
+  if(name === 'profile'){ renderMyPostsGrid(); loadPrivacyToggleState(); }
 }
 
 function exitChatToFeed(){
@@ -3295,16 +3670,21 @@ function initChatListListener(){
         body.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:12.5px;padding:24px 16px;">Henüz hiç sohbetin yok.</div>';
         return;
       }
-      body.innerHTML = rows.map(r => `
+      body.innerHTML = rows.map(r => {
+        const u = r.peer || {};
+        // Username gerçekten yoksa, email'in @ öncesi kısmıyla fallback yap
+        const fallbackName = u.email ? '@' + u.email.split('@')[0] : '@kullanici';
+        const displayName = u.username || fallbackName;
+        return `
         <div class="chat-item ${activeChatId===r.cid?'active':''}" onclick="openChatThread('${r.cid}','${r.peerUid}')">
-          <img src="${r.peer.photo || 'https://i.pravatar.cc/60?img=68'}">
+          <img src="${u.photo || 'https://i.pravatar.cc/60?img=68'}" onerror="this.src='https://i.pravatar.cc/60?img=68'">
           <div class="meta">
-            <div class="name">${r.peer.username || '@kullanici'}</div>
-            <div class="preview">${(r.meta.lastMsg || 'Sohbete başla').toString().slice(0,40)}</div>
+            <div class="name">${escapeHtml(displayName)}</div>
+            <div class="preview">${escapeHtml((r.meta.lastMsg || 'Sohbete başla').toString().slice(0,40))}</div>
           </div>
           <span class="chat-time">${formatChatTime(r.meta.lastTs)}</span>
-        </div>
-      `).join('');
+        </div>`;
+      }).join('');
     });
   });
 }
@@ -3327,7 +3707,8 @@ function openChatThread(chatId, peerUid){
 
   fbDb.ref('users/' + peerUid).once('value').then((snap)=>{
     const peer = snap.val() || {};
-    document.getElementById('chatName').textContent = peer.username || '@kullanici';
+    const fallbackName = peer.email ? '@' + peer.email.split('@')[0] : '@kullanici';
+    document.getElementById('chatName').textContent = peer.username || fallbackName;
     document.getElementById('chatHeadImg').src = peer.photo || 'https://i.pravatar.cc/60?img=68';
     document.getElementById('chatStatus').textContent = '';
   });
