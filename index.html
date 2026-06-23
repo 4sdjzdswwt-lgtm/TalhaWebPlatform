@@ -1279,43 +1279,60 @@ tbody tr:hover{background:var(--surface-2);}
 }
 
 /* ============================================================
-   REELS EKRANI
+   HİKAYE BUTONU — profil fotoğrafı + gradient ring + plus
    ============================================================ */
-#screenReels{ background:#000; overflow:hidden; }
-.reelsContainer{
-  height:100%;overflow-y:scroll;scroll-snap-type:y mandatory;
-  scrollbar-width:none;-ms-overflow-style:none;
+.storyAddBtn{position:relative;}
+.storyAddRing{
+  width:58px;height:58px;border-radius:50%;padding:3px;
+  background:linear-gradient(135deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);
+  position:relative;flex-shrink:0;
 }
-.reelsContainer::-webkit-scrollbar{display:none;}
-.reelItem{
-  height:100vh;width:100%;position:relative;
-  scroll-snap-align:start;scroll-snap-stop:always;
+.storyAddRing img{
+  width:100%;height:100%;border-radius:50%;object-fit:cover;
+  border:3px solid var(--bg);display:block;
+}
+.storyAddPlus{
+  position:absolute;bottom:0;right:0;
+  width:20px;height:20px;border-radius:50%;
+  background:var(--accent);color:#fff;
+  font-size:14px;font-weight:700;
   display:flex;align-items:center;justify-content:center;
-  background:#000;overflow:hidden;
+  border:2px solid var(--bg);
+  line-height:1;
 }
-.reelItem video{
-  width:100%;height:100%;object-fit:cover;position:absolute;inset:0;
+
+/* ============================================================
+   KEŞFET SEKMELERİ
+   ============================================================ */
+.exploreTab{
+  flex-shrink:0;padding:7px 14px;border-radius:20px;border:1px solid var(--line);
+  background:var(--surface-2);color:var(--text);font-size:12.5px;font-weight:600;
+  cursor:pointer;white-space:nowrap;transition:all .15s;
 }
-.reelOverlay{
-  position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.7) 0%,transparent 40%,transparent 70%,rgba(0,0,0,.3) 100%);
-  display:flex;flex-direction:column;justify-content:flex-end;padding:20px 16px;
-  pointer-events:none;
+.exploreTab.active,.exploreTab:hover{
+  background:var(--gradient-vivid);color:#fff;border-color:transparent;
 }
-.reelOverlay>*{pointer-events:auto;}
-.reelUser{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
-.reelUser img{width:36px;height:36px;border-radius:50%;border:2px solid #fff;object-fit:cover;}
-.reelUser .uname{color:#fff;font-size:14px;font-weight:700;}
-.reelCaption{color:#fff;font-size:13.5px;line-height:1.4;margin-bottom:12px;}
-.reelSidebar{
-  position:absolute;right:14px;bottom:100px;
-  display:flex;flex-direction:column;gap:22px;align-items:center;
+#exploreHashtagChips::-webkit-scrollbar{display:none;}
+.exploreGridItem{aspect-ratio:1/1;overflow:hidden;position:relative;cursor:pointer;background:var(--surface-2);}
+.exploreGridItem img,.exploreGridItem video{width:100%;height:100%;object-fit:cover;display:block;}
+.exploreVideoTag{position:absolute;top:5px;right:5px;background:rgba(0,0,0,.55);color:#fff;font-size:10px;padding:2px 6px;border-radius:6px;font-weight:600;}
+
+/* ============================================================
+   ANI YAKALA FEED EKRANI
+   ============================================================ */
+.momentFeedCard{
+  background:var(--surface);border-bottom:1px solid var(--line);
+  padding:14px 16px;
 }
-.reelSideBtn{
-  display:flex;flex-direction:column;align-items:center;gap:4px;
-  color:#fff;cursor:pointer;
-}
-.reelSideBtn svg{width:28px;height:28px;}
-.reelSideBtn span{font-size:11px;font-weight:600;}
+.momentFeedCardHead{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.momentFeedCardHead img{width:40px;height:40px;border-radius:50%;object-fit:cover;border:2px solid var(--accent);}
+.momentFeedMedia{width:100%;border-radius:14px;overflow:hidden;background:var(--surface-2);max-height:420px;}
+.momentFeedMedia img{width:100%;height:100%;object-fit:cover;display:block;}
+.momentFeedMedia video{width:100%;max-height:420px;object-fit:cover;display:block;}
+.momentFeedActions{display:flex;gap:18px;margin-top:10px;align-items:center;}
+.momentFeedBtn{background:none;border:none;color:var(--muted);font-size:13px;cursor:pointer;display:flex;align-items:center;gap:5px;padding:4px 0;}
+.momentFeedBtn svg{width:18px;height:18px;}
+.momentFeedBtn:hover{color:var(--text);}
 
 /* ============================================================
    KEŞFET EKRANI
@@ -1452,8 +1469,9 @@ tbody tr:hover{background:var(--surface-2);}
     <button id="navExplore" onclick="goNav('explore', this)" title="Keşfet">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
     </button>
-    <button id="navReels" onclick="goNav('reels', this)" title="Reels">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="3"/><path d="M9 8l7 4-7 4V8z"/></svg>
+    <!-- Anı Yakala Feed — ortadaki büyük özel buton -->
+    <button id="navMomentFeed" onclick="goNav('momentFeed', this)" title="Anı Yakala" style="position:relative;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 011 1v10a1 1 0 01-1 1H4a1 1 0 01-1-1V9a1 1 0 011-1z"/><circle cx="12" cy="13" r="3.5"/><path d="M19 6.5h.01"/></svg>
     </button>
     <button id="navMsg" onclick="goNav('messages', this)" title="Mesajlar">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16v11H8l-4 4V5z"/></svg>
@@ -1657,10 +1675,11 @@ tbody tr:hover{background:var(--surface-2);}
       <div class="screen-body">
       <!-- ANI YAKALA — hikaye şeridi (aktif/yakın zamanda biten anılar) -->
       <div class="momentStrip" id="momentStrip">
-        <!-- Hikaye Ekle butonu (kendi story'n) -->
-        <div class="momentStartCircle" onclick="openStoryComposer()" title="Hikaye Ekle">
-          <div class="momentStartIcon" style="background:linear-gradient(135deg,#833AB4,#FD1D1D,#F77737);">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        <!-- Hikaye Ekle butonu — profil fotoğrafı + gradient ring + artı -->
+        <div class="momentStartCircle storyAddBtn" onclick="openStoryComposer()" title="Hikaye Ekle" id="storyAddCircle">
+          <div class="storyAddRing">
+            <img id="storyAddAvatar" src="https://i.pravatar.cc/60?img=68" onerror="this.src='https://i.pravatar.cc/60?img=68'">
+            <div class="storyAddPlus">+</div>
           </div>
           <span class="momentStripLabel">Hikaye</span>
         </div>
@@ -1695,30 +1714,57 @@ tbody tr:hover{background:var(--surface-2);}
     <div class="screen" id="screenExplore">
       <div class="topbar screen-header">
         <h1>Keşfet</h1>
+        <button class="icon-btn" onclick="openNewPostComposer()" title="Gönderi Paylaş" style="background:var(--gradient-vivid);border-radius:20px;padding:6px 12px;color:#fff;font-size:12px;font-weight:700;">
+          + Paylaş
+        </button>
       </div>
       <div class="screen-body" style="padding:0;">
+        <!-- Arama kutusu -->
         <div style="padding:12px 14px 6px;">
           <div style="display:flex;gap:8px;align-items:center;background:var(--surface-2);border:1px solid var(--line);border-radius:14px;padding:10px 14px;">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" style="color:var(--muted);flex-shrink:0;"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
-            <input type="text" id="exploreSearchInput" placeholder="Kullanıcı, #hashtag, konum ara..." oninput="runExploreSearch()" style="border:none;background:transparent;color:var(--text);font-size:13.5px;outline:none;flex:1;">
+            <input type="text" id="exploreSearchInput" placeholder="Kullanıcı, #hashtag, video, içerik ara..." oninput="runExploreSearch()" style="border:none;background:transparent;color:var(--text);font-size:13.5px;outline:none;flex:1;">
+            <button id="exploreClearBtn" onclick="clearExploreSearch()" style="display:none;background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;padding:0;">✕</button>
           </div>
-          <!-- Hashtag chips -->
-          <div id="exploreHashtagChips" style="display:flex;gap:8px;margin-top:10px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none;"></div>
+          <!-- Sekme filtreleri -->
+          <div style="display:flex;gap:8px;margin-top:10px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none;">
+            <button class="exploreTab active" onclick="setExploreTab('all',this)">Tümü</button>
+            <button class="exploreTab" onclick="setExploreTab('video',this)">🎥 Video</button>
+            <button class="exploreTab" onclick="setExploreTab('photo',this)">📷 Fotoğraf</button>
+            <button class="exploreTab" onclick="setExploreTab('user',this)">👤 Kişi</button>
+            <button class="exploreTab" onclick="setExploreTab('moment',this)">📸 Anı</button>
+          </div>
+          <!-- Trend hashtagler -->
+          <div id="exploreHashtagChips" style="display:flex;gap:8px;margin-top:8px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none;"></div>
         </div>
-        <div id="exploreGrid" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:2px;padding:0;"></div>
+        <!-- Normal grid görünümü -->
+        <div id="exploreGrid" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:2px;"></div>
+        <!-- Arama sonuçları -->
         <div id="exploreResults" style="display:none;padding:4px 0;"></div>
       </div>
     </div>
 
-    <!-- ================= REELS EKRANI ================= -->
-    <div class="screen" id="screenReels">
-      <div class="reelsContainer" id="reelsContainer">
-        <div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted);font-size:13px;flex-direction:column;gap:12px;">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="48" height="48"><rect x="2" y="2" width="20" height="20" rx="3"/><path d="M9 8l7 4-7 4V8z"/></svg>
-          Reels yükleniyor...
+    <!-- ================= ANI YAKALA FEED EKRANI ================= -->
+    <div class="screen" id="screenMomentFeed">
+      <div class="topbar screen-header">
+        <h1>📸 Anı Yakala</h1>
+        <button class="icon-btn" onclick="openMomentStart()" title="Yeni Anı Başlat" style="background:var(--gradient-vivid);border-radius:20px;padding:6px 12px;color:#fff;font-size:12px;font-weight:700;">
+          + Başlat
+        </button>
+      </div>
+      <div class="screen-body" style="padding:0;">
+        <!-- Filtre sekmeleri -->
+        <div style="display:flex;gap:0;border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:none;">
+          <button class="momentFeedTab active" onclick="filterMomentFeed('all', this)" style="flex:1;padding:12px;font-size:13px;font-weight:600;background:none;border:none;color:var(--accent);border-bottom:2px solid var(--accent);cursor:pointer;">Tümü</button>
+          <button class="momentFeedTab" onclick="filterMomentFeed('following', this)" style="flex:1;padding:12px;font-size:13px;font-weight:600;background:none;border:none;color:var(--muted);border-bottom:2px solid transparent;cursor:pointer;">Takip</button>
+          <button class="momentFeedTab" onclick="filterMomentFeed('mine', this)" style="flex:1;padding:12px;font-size:13px;font-weight:600;background:none;border:none;color:var(--muted);border-bottom:2px solid transparent;cursor:pointer;">Benimkiler</button>
         </div>
+        <div id="momentFeedContainer" style="padding:0 0 80px;"></div>
       </div>
     </div>
+
+    <!-- ================= REELS EKRANI (artık kullanılmıyor, Anı Yakala Feed aldı) ================= -->
+    <div class="screen" id="screenReels" style="display:none !important;"></div>
 
     <!-- ================= EKRAN 3: MESAJLAR ================= -->
     <div class="screen" id="screenMessages">
@@ -4037,6 +4083,8 @@ function enterAppFromAuth(){
   saveSession();
   // Presence (çevrimiçi durumu)
   if(fbAuth && fbAuth.currentUser) initPresence(fbAuth.currentUser.uid);
+  // Hikaye butonuna profil fotoğrafını koy
+  setTimeout(updateStoryAvatarBtn, 200);
   // Veri akışlarını başlat
   try{
     initFeedListener();
@@ -4605,23 +4653,40 @@ function ensureChatMeta(chatId, peerUid){
 }
 
 function sendMsg(){
-  const input = document.getElementById('msgInput'); const text = input.value.trim(); if(!text) return;
-  if(!requireFirebase() || !fbAuth.currentUser || !activeChatId){ showToast('Bir sohbet seçmelisin.'); return; }
+  const input = document.getElementById('msgInput');
+  const text = (input.value||'').trim();
+  if(!text) return;
+  if(!requireFirebase()){ showToast('Bağlantı yok.'); return; }
+  if(!fbAuth.currentUser){ showToast('Giriş yapmalısın.'); return; }
+  if(!activeChatId){ showToast('Bir sohbet seç.'); return; }
   input.value = '';
+
+  const msgData = {
+    from: fbAuth.currentUser.uid,
+    text,
+    ts: Date.now()
+  };
+  // Reply desteği
+  if(typeof replyToMsg !== 'undefined' && replyToMsg){
+    msgData.replyTo = replyToMsg;
+    if(typeof clearReply === 'function') clearReply();
+  }
+
   const msgRef = fbDb.ref('chats/' + activeChatId + '/messages').push();
-  const ts = Date.now();
   ensureChatMeta(activeChatId, activeChatPeerUid).then(()=>{
-    return msgRef.set({ from: fbAuth.currentUser.uid, text: text, ts: ts });
+    return msgRef.set(msgData);
   }).then(()=>{
-    // Karşı taraf için "okunmamış" işaretle, lastMsg ve lastTs güncelle
     const update = {
       lastMsg: text,
-      lastTs: ts,
+      lastTs: Date.now(),
       lastSenderUid: fbAuth.currentUser.uid,
       lastSenderName: savedUsername || '@kullanici'
     };
     update['unreadFor/' + activeChatPeerUid] = true;
-    return fbDb.ref('chatMeta/' + activeChatId).update(update);
+    fbDb.ref('chatMeta/' + activeChatId).update(update);
+    // Yazıyor göstergesini kapat
+    if(fbReady && activeChatId)
+      fbDb.ref('typing/' + activeChatId + '/' + fbAuth.currentUser.uid).set(false);
   }).catch(()=>{
     showToast('Mesaj gönderilemedi, tekrar dene.');
     input.value = text;
@@ -6797,7 +6862,7 @@ function goNav(name, btn){
   if(name === 'profile'){ renderMyPostsGrid(); loadPrivacyToggleState(); }
   if(name === 'admin') { if(typeof loadAdminUsers==='function') loadAdminUsers(); }
   if(name === 'explore') initExplore();
-  if(name === 'reels') initReels();
+  if(name === 'reels' || name === 'momentFeed') initMomentFeed();
 
   saveSession();
 }
@@ -7181,61 +7246,307 @@ function triggerDoubleTapLike(mediaEl, postId){
   });
 }
 
-/* sendMsg override — reply desteği eklendi (orijinal sendMsg'in üzerine yazar) */
-function sendMsg(){
-  const input = document.getElementById('msgInput');
-  const text = (input.value||'').trim();
-  if(!text) return;
-  if(!requireFirebase() || !fbAuth.currentUser || !activeChatId) return;
-  input.value = '';
-
-  const msgData = {
-    from: fbAuth.currentUser.uid,
-    text, ts: Date.now()
-  };
-  if(replyToMsg){
-    msgData.replyTo = replyToMsg;
-    clearReply();
-  }
-
-  const msgRef = fbDb.ref('chats/' + activeChatId + '/messages').push();
-  ensureChatMeta(activeChatId, activeChatPeerUid).then(()=>{
-    return msgRef.set(msgData);
-  }).then(()=>{
-    const update = {
-      lastMsg: text, lastTs: Date.now(),
-      lastSenderUid: fbAuth.currentUser.uid
-    };
-    update['unreadFor/' + activeChatPeerUid] = true;
-    fbDb.ref('chatMeta/' + activeChatId).update(update);
-    // Yazıyor göstergesini kapat
-    fbDb.ref('typing/' + activeChatId + '/' + fbAuth.currentUser.uid).set(false);
-  }).catch(()=>{ showToast('Gönderilemedi.'); input.value=text; });
-}
+/* sendMsg tek yerde tanımlı (yukarıda) */
 
 /* ============================================================
-   openChatThread — presence + typing entegrasyonu
+   openChatThread — presence + typing eklentisi
+   NOT: openChatThread asıl tanımı yukarıda (satır ~4287).
+   Burada sadece presence/typing başlatıyoruz.
    ============================================================ */
-const _openChatThreadBase = window.openChatThread;
+const _openChatThreadBase = openChatThread; // asıl fonksiyonu sakla
 function openChatThread(chatId, peerUid){
-  // Ana fonksiyonu çağır (yukarıda tanımlı)
-  if(typeof _openChatThreadBase === 'function') _openChatThreadBase(chatId, peerUid);
-  // Ek: presence ve typing
+  // Asıl chat açma işlemi
+  _openChatThreadBase(chatId, peerUid);
+  // Presence ve typing dinleyicilerini başlat
   setTimeout(()=>{
-    watchPeerPresence(peerUid);
-    watchPeerTyping(chatId, peerUid);
+    if(typeof watchPeerPresence === 'function') watchPeerPresence(peerUid);
+    if(typeof watchPeerTyping === 'function') watchPeerTyping(chatId, peerUid);
     const inp = document.getElementById('msgInput');
     if(inp && !inp._typingBound){
       inp._typingBound = true;
-      inp.addEventListener('input', onMsgInputType);
+      inp.addEventListener('input', ()=>{ if(typeof onMsgInputType==='function') onMsgInputType(); });
     }
-  }, 200);
+  }, 150);
 }
 
 /* ============================================================
    enterAppFromAuth UPDATE — presence başlat
    (Aşağıdaki override artık gerek yok, yukarıdaki ana fonksiyona presence eklendi)
    ============================================================ */
+
+/* ============================================================
+   NAV_MAP güncelleme — momentFeed eklendi
+   ============================================================ */
+NAV_MAP['momentFeed'] = 'screenMomentFeed';
+NAV_MAP['reels'] = 'screenMomentFeed'; // eski reels yönlendirmesi de buraya gelsin
+
+/* ============================================================
+   ANI YAKALA FEED — tüm kullanıcıların paylaştığı anı fotoğraf/videoları
+   ============================================================ */
+let momentFeedFilter = 'all';
+
+function initMomentFeed(){
+  loadMomentFeed(momentFeedFilter);
+}
+function filterMomentFeed(filter, btn){
+  momentFeedFilter = filter;
+  document.querySelectorAll('.momentFeedTab').forEach(b=>{
+    b.style.color = b === btn ? 'var(--accent)' : 'var(--muted)';
+    b.style.borderBottomColor = b === btn ? 'var(--accent)' : 'transparent';
+    b.classList.toggle('active', b === btn);
+  });
+  loadMomentFeed(filter);
+}
+function loadMomentFeed(filter){
+  const container = document.getElementById('momentFeedContainer');
+  if(!container || !fbReady) return;
+  container.innerHTML = '<div style="text-align:center;color:var(--muted);padding:40px;font-size:13px;">Yükleniyor...</div>';
+
+  const myUid = fbAuth.currentUser ? fbAuth.currentUser.uid : null;
+
+  // momentSessions'dan birleşik fotoğrafları çek
+  fbDb.ref('posts').orderByChild('isMoment').equalTo(true).limitToLast(40).once('value').then(snap => {
+    let data = snap.val() || {};
+    let items = Object.keys(data).map(id => ({...data[id], id}))
+      .sort((a,b) => (b.ts||0) - (a.ts||0));
+
+    // Filtre uygula
+    if(filter === 'following' && myUid){
+      // Takip edilenler — basit kontrol
+      fbDb.ref('follows/' + myUid).once('value').then(fs => {
+        const following = fs.val() || {};
+        items = items.filter(p => following[p.uid] || p.uid === myUid);
+        renderMomentFeedItems(container, items, myUid);
+      });
+      return;
+    } else if(filter === 'mine' && myUid){
+      items = items.filter(p => p.uid === myUid);
+    }
+    renderMomentFeedItems(container, items, myUid);
+  }).catch(() => {
+    container.innerHTML = '<div style="text-align:center;color:var(--muted);padding:40px;">Yüklenemedi, tekrar dene.</div>';
+  });
+}
+
+function renderMomentFeedItems(container, items, myUid){
+  if(!items.length){
+    container.innerHTML = `<div style="text-align:center;padding:60px 20px;">
+      <div style="font-size:48px;margin-bottom:16px;">📸</div>
+      <div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:8px;">Henüz Anı Yok</div>
+      <div style="font-size:13px;color:var(--muted);">Arkadaşlarınla ilk anını yakala!</div>
+      <button class="btn btn-primary" style="margin-top:20px;" onclick="openMomentStart()">Anı Yakala Başlat</button>
+    </div>`;
+    return;
+  }
+  container.innerHTML = items.map(p => {
+    const likes = p.likes ? Object.keys(p.likes).length : 0;
+    const isLiked = !!(myUid && p.likes && p.likes[myUid]);
+    const media = p.media && p.media[0];
+    const isVideo = p.mediaType === 'video';
+    const participants = Array.isArray(p.momentParticipants) ? p.momentParticipants : [];
+
+    return `<div class="momentFeedCard">
+      <div class="momentFeedCardHead">
+        <img src="${p.authorPhoto||'https://i.pravatar.cc/60?img=68'}" onerror="this.src='https://i.pravatar.cc/60?img=68'" onclick="viewOtherProfile('${p.uid||''}')">
+        <div>
+          <div style="font-size:14px;font-weight:700;color:var(--text);" onclick="viewOtherProfile('${p.uid||''}')">${p.username||'@kullanici'}</div>
+          <div style="font-size:11.5px;color:var(--muted);">${formatPostAge(p.ts)}${p.location?' · 📍'+p.location:''}</div>
+        </div>
+        ${participants.length > 1 ? `<div style="margin-left:auto;display:flex;gap:-6px;">${participants.slice(0,3).map(u=>`<img src="${u.photo||'https://i.pravatar.cc/40'}" style="width:26px;height:26px;border-radius:50%;border:2px solid var(--bg);margin-left:-6px;">`).join('')}</div>` : ''}
+      </div>
+      ${media ? `<div class="momentFeedMedia">${isVideo
+        ? `<video src="${media}" controls playsinline></video>`
+        : `<img src="${media}" loading="lazy" onclick="window.open('${media}','_blank')" style="cursor:zoom-in;">`
+      }</div>` : ''}
+      ${p.caption ? `<div style="font-size:13.5px;color:var(--text);margin-top:8px;">${escapeHtml(p.caption)}</div>` : ''}
+      <div class="momentFeedActions">
+        <button class="momentFeedBtn ${isLiked?'liked':''}" onclick="toggleLikeById('${p.id}','${p.uid||''}',this)" style="color:${isLiked?'var(--danger)':'var(--muted)'};">
+          <svg viewBox="0 0 24 24" fill="${isLiked?'currentColor':'none'}" stroke="currentColor" stroke-width="2"><path d="M20.8 4.6a5 5 0 00-7.1 0L12 6.3l-1.7-1.7a5 5 0 10-7.1 7.1L12 20.3l8.8-8.6a5 5 0 000-7.1z"/></svg>
+          ${likes}
+        </button>
+        <button class="momentFeedBtn" onclick="openCommentSheet('${p.id}')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.4 8.4 0 01-1.1 4.2L21 21l-5.4-1a8.5 8.5 0 11-.6-.4z"/></svg>
+          Yorum
+        </button>
+        <button class="momentFeedBtn" onclick="openShareSheet(this)" style="margin-left:auto;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+        </button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleLikeById(postId, ownerUid, btn){
+  if(!fbAuth.currentUser || !postId) return;
+  const myUid = fbAuth.currentUser.uid;
+  const ref = fbDb.ref('posts/' + postId + '/likes/' + myUid);
+  ref.once('value').then(s => {
+    const liked = s.exists();
+    if(liked){
+      ref.remove();
+      btn.style.color = 'var(--muted)';
+      btn.querySelector('svg').setAttribute('fill','none');
+      const num = btn.textContent.trim().split('\n').pop();
+      btn.innerHTML = btn.innerHTML.replace(/\d+/, Math.max(0,(parseInt(num)||1)-1));
+    } else {
+      ref.set(true);
+      btn.style.color = 'var(--danger)';
+      btn.querySelector('svg').setAttribute('fill','currentColor');
+    }
+  });
+}
+
+/* ============================================================
+   KEŞFET — Gelişmiş arama + tab filtresi + video
+   ============================================================ */
+let exploreCurrentTab = 'all';
+
+function setExploreTab(tab, btn){
+  exploreCurrentTab = tab;
+  document.querySelectorAll('.exploreTab').forEach(b => b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  const q = (document.getElementById('exploreSearchInput').value||'').trim();
+  if(q) runExploreSearch(); else loadExploreGrid();
+}
+
+function clearExploreSearch(){
+  document.getElementById('exploreSearchInput').value = '';
+  document.getElementById('exploreClearBtn').style.display = 'none';
+  document.getElementById('exploreGrid').style.display = '';
+  document.getElementById('exploreResults').style.display = 'none';
+  document.querySelectorAll('.hashtagChip').forEach(c => c.classList.remove('active'));
+}
+
+function loadExploreGrid(){
+  const grid = document.getElementById('exploreGrid');
+  if(!grid || !fbReady) return;
+  grid.innerHTML = '';
+
+  let query = fbDb.ref('posts').orderByChild('ts').limitToLast(30);
+  if(exploreCurrentTab === 'video'){
+    query = fbDb.ref('posts').orderByChild('mediaType').equalTo('video').limitToLast(30);
+  } else if(exploreCurrentTab === 'moment'){
+    query = fbDb.ref('posts').orderByChild('isMoment').equalTo(true).limitToLast(30);
+  }
+
+  query.once('value').then(snap => {
+    const data = snap.val() || {};
+    let items = Object.keys(data).map(id=>({...data[id],id}))
+      .filter(p => p.media && p.media[0])
+      .filter(p => exploreCurrentTab === 'photo' ? p.mediaType !== 'video' : true)
+      .sort(() => Math.random() - .5);
+
+    grid.innerHTML = items.slice(0, 30).map(p => {
+      const isVid = p.mediaType === 'video';
+      return `<div class="exploreGridItem" onclick="openExplorePost('${p.id}')">
+        ${isVid
+          ? `<video src="${p.media[0]}" muted preload="none" style="width:100%;height:100%;object-fit:cover;"></video><span class="exploreVideoTag">▶</span>`
+          : `<img src="${p.media[0]}" loading="lazy">`
+        }
+        ${p.isMoment ? '<span class="exploreVideoTag" style="left:5px;right:auto;">📸</span>' : ''}
+      </div>`;
+    }).join('');
+  });
+}
+
+function runExploreSearch(){
+  const rawQ = (document.getElementById('exploreSearchInput').value||'').trim();
+  const clearBtn = document.getElementById('exploreClearBtn');
+  if(clearBtn) clearBtn.style.display = rawQ ? 'block' : 'none';
+
+  const q = rawQ.replace(/^#/,'').replace(/^@/,'').toLowerCase();
+  const grid = document.getElementById('exploreGrid');
+  const results = document.getElementById('exploreResults');
+
+  if(!q){
+    grid.style.display = '';
+    results.style.display = 'none';
+    return;
+  }
+  grid.style.display = 'none';
+  results.style.display = 'block';
+  results.innerHTML = '<div class="followListEmpty" style="padding:30px;">Aranıyor...</div>';
+
+  if(exploreCurrentTab === 'user'){
+    // Kullanıcı araması
+    fbDb.ref('users').limitToFirst(200).once('value').then(snap => {
+      const data = snap.val() || {};
+      const matched = Object.keys(data).filter(uid => {
+        const u = data[uid];
+        return (u.username||'').toLowerCase().includes(q) || (u.displayName||'').toLowerCase().includes(q);
+      });
+      if(!matched.length){ results.innerHTML = '<div class="followListEmpty">Kullanıcı bulunamadı</div>'; return; }
+      results.innerHTML = matched.slice(0,20).map(uid => {
+        const u = data[uid];
+        return `<div class="followListRow" onclick="viewOtherProfile('${uid}')">
+          <img src="${u.photo||'https://i.pravatar.cc/60?img=68'}" onerror="this.src='https://i.pravatar.cc/60?img=68'">
+          <div class="info">
+            <div class="uname">@${escapeHtml((u.username||'kullanici').replace(/^@/,''))}</div>
+            <div class="ubio">${escapeHtml(u.displayName||u.bio||'')}</div>
+          </div>
+        </div>`;
+      }).join('');
+    });
+    return;
+  }
+
+  // İçerik araması (gönderi, video, fotoğraf)
+  fbDb.ref('posts').once('value').then(snap => {
+    const data = snap.val() || {};
+    let matched = Object.keys(data).map(id=>({...data[id],id})).filter(p => {
+      const cap = (p.caption||'').toLowerCase();
+      const loc = (p.location||'').toLowerCase();
+      const user = (p.username||'').toLowerCase();
+      return cap.includes(q) || loc.includes(q) || user.includes(q);
+    });
+
+    // Tab filtresi
+    if(exploreCurrentTab === 'video') matched = matched.filter(p => p.mediaType === 'video');
+    if(exploreCurrentTab === 'photo') matched = matched.filter(p => p.mediaType !== 'video');
+    if(exploreCurrentTab === 'moment') matched = matched.filter(p => p.isMoment);
+
+    matched = matched.sort((a,b) => (b.ts||0) - (a.ts||0));
+
+    if(!matched.length){
+      results.innerHTML = `<div class="followListEmpty" style="padding:40px;">
+        <div style="font-size:32px;margin-bottom:12px;">🔍</div>
+        <div>"${escapeHtml(rawQ)}" için sonuç bulunamadı</div>
+        <div style="font-size:12px;margin-top:8px;">Farklı kelimeler ya da #hashtag dene</div>
+      </div>`;
+      return;
+    }
+
+    // Video aramasında TikTok-benzeri dikey liste göster
+    if(exploreCurrentTab === 'video'){
+      results.innerHTML = matched.map(p => `
+        <div style="position:relative;margin-bottom:2px;background:#000;cursor:pointer;" onclick="openExplorePost('${p.id}')">
+          ${p.media&&p.media[0] ? `<video src="${p.media[0]}" controls playsinline style="width:100%;max-height:320px;object-fit:cover;display:block;"></video>` : ''}
+          <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,.7));padding:12px 14px;">
+            <div style="color:#fff;font-size:13px;font-weight:600;">@${escapeHtml((p.username||'').replace(/^@/,''))}</div>
+            <div style="color:rgba(255,255,255,.8);font-size:12px;">${escapeHtml(p.caption||'')}</div>
+          </div>
+        </div>`).join('');
+      return;
+    }
+
+    // Normal grid
+    results.innerHTML = `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:2px;">
+      ${matched.slice(0,30).map(p => `<div class="exploreGridItem" onclick="openExplorePost('${p.id}')">
+        ${p.media&&p.media[0]
+          ? (p.mediaType==='video'
+              ? `<video src="${p.media[0]}" muted preload="none" style="width:100%;height:100%;object-fit:cover;"></video><span class="exploreVideoTag">▶</span>`
+              : `<img src="${p.media[0]}" loading="lazy">`)
+          : '<div style="width:100%;height:100%;background:var(--surface-2);"></div>'}
+      </div>`).join('')}
+    </div>`;
+  });
+}
+
+/* Hikaye butonundaki profil fotoğrafını güncelle */
+function updateStoryAvatarBtn(){
+  const img = document.getElementById('storyAddAvatar');
+  if(img && savedProfilePhoto) img.src = savedProfilePhoto;
+}
 
 function bootApp(){
   initTheme();
