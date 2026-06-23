@@ -1278,6 +1278,82 @@ tbody tr:hover{background:var(--surface-2);}
   font-family:'Space Grotesk',sans-serif;
 }
 
+/* ============================================================
+   REELS EKRANI
+   ============================================================ */
+#screenReels{ background:#000; overflow:hidden; }
+.reelsContainer{
+  height:100%;overflow-y:scroll;scroll-snap-type:y mandatory;
+  scrollbar-width:none;-ms-overflow-style:none;
+}
+.reelsContainer::-webkit-scrollbar{display:none;}
+.reelItem{
+  height:100vh;width:100%;position:relative;
+  scroll-snap-align:start;scroll-snap-stop:always;
+  display:flex;align-items:center;justify-content:center;
+  background:#000;overflow:hidden;
+}
+.reelItem video{
+  width:100%;height:100%;object-fit:cover;position:absolute;inset:0;
+}
+.reelOverlay{
+  position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.7) 0%,transparent 40%,transparent 70%,rgba(0,0,0,.3) 100%);
+  display:flex;flex-direction:column;justify-content:flex-end;padding:20px 16px;
+  pointer-events:none;
+}
+.reelOverlay>*{pointer-events:auto;}
+.reelUser{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.reelUser img{width:36px;height:36px;border-radius:50%;border:2px solid #fff;object-fit:cover;}
+.reelUser .uname{color:#fff;font-size:14px;font-weight:700;}
+.reelCaption{color:#fff;font-size:13.5px;line-height:1.4;margin-bottom:12px;}
+.reelSidebar{
+  position:absolute;right:14px;bottom:100px;
+  display:flex;flex-direction:column;gap:22px;align-items:center;
+}
+.reelSideBtn{
+  display:flex;flex-direction:column;align-items:center;gap:4px;
+  color:#fff;cursor:pointer;
+}
+.reelSideBtn svg{width:28px;height:28px;}
+.reelSideBtn span{font-size:11px;font-weight:600;}
+
+/* ============================================================
+   KEŞFET EKRANI
+   ============================================================ */
+#exploreHashtagChips::-webkit-scrollbar{display:none;}
+.hashtagChip{
+  flex-shrink:0;padding:6px 14px;background:var(--surface-2);
+  border:1px solid var(--line);border-radius:20px;
+  font-size:12.5px;color:var(--text);cursor:pointer;white-space:nowrap;
+  transition:background .15s;
+}
+.hashtagChip:hover,.hashtagChip.active{background:var(--gradient-vivid);color:#fff;border-color:transparent;}
+.exploreGridItem{
+  aspect-ratio:1/1;overflow:hidden;position:relative;cursor:pointer;background:var(--surface-2);
+}
+.exploreGridItem:nth-child(3n+1){grid-row:span 2;} /* her 3. öğe büyük */
+.exploreGridItem img,.exploreGridItem video{width:100%;height:100%;object-fit:cover;display:block;}
+
+/* ============================================================
+   DM — Typing, Reply, Online, Mesaj beğeni
+   ============================================================ */
+.msg-wrapper{display:flex;flex-direction:column;max-width:78%;margin-bottom:2px;}
+.msg-wrapper.me{align-self:flex-end;align-items:flex-end;}
+.msg-wrapper.them{align-self:flex-start;align-items:flex-start;}
+.reply-preview{
+  background:rgba(124,58,237,.12);border-left:3px solid var(--accent);
+  border-radius:8px 8px 0 0;padding:5px 10px;font-size:11.5px;color:var(--muted);
+  max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.msg-heart{
+  font-size:14px;cursor:pointer;padding:2px 4px;
+  opacity:0.5;transition:opacity .15s,transform .15s;
+  position:absolute;bottom:-8px;right:4px;
+}
+.msg-heart.active{opacity:1;transform:scale(1.2);}
+.msg-position{position:relative;display:inline-block;}
+.online-dot{width:9px;height:9px;border-radius:50%;background:#22c55e;display:inline-block;margin-right:4px;}
+
 /* ===== ANI YAKALA — birleştirme / önizleme ekranı ===== */
 .momentPreviewOverlay{position:fixed;inset:0;background:linear-gradient(160deg,#0a0518 0%,#160b2e 60%,#04141c 100%);z-index:230;display:flex;flex-direction:column;color:#fff;}
 .momentPreviewOverlay.hidden{display:none;}
@@ -1373,14 +1449,14 @@ tbody tr:hover{background:var(--surface-2);}
     <button class="active" id="navFeed" onclick="goNav('feed', this)" title="Ana Akış">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1h-5v-7H9v7H4a1 1 0 01-1-1V9.5z"/></svg>
     </button>
-    <button id="navSearch" onclick="openSearchOverlay()" title="Ara">
+    <button id="navExplore" onclick="goNav('explore', this)" title="Keşfet">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
+    </button>
+    <button id="navReels" onclick="goNav('reels', this)" title="Reels">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="3"/><path d="M9 8l7 4-7 4V8z"/></svg>
     </button>
     <button id="navMsg" onclick="goNav('messages', this)" title="Mesajlar">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16v11H8l-4 4V5z"/></svg>
-    </button>
-    <button id="navAdmin" onclick="goNav('admin', this)" title="Admin Paneli">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l8 3v6c0 5-3.5 8.5-8 11-4.5-2.5-8-6-8-11V5l8-3z"/></svg>
     </button>
     <button id="navBio" onclick="goNav('profile', this)" title="Bio">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="3.4"/><path d="M5 20c0-3.6 3-6 7-6s7 2.4 7 6"/></svg>
@@ -1615,6 +1691,35 @@ tbody tr:hover{background:var(--surface-2);}
       </div>
     </div>
 
+    <!-- ================= KEŞFET EKRANI ================= -->
+    <div class="screen" id="screenExplore">
+      <div class="topbar screen-header">
+        <h1>Keşfet</h1>
+      </div>
+      <div class="screen-body" style="padding:0;">
+        <div style="padding:12px 14px 6px;">
+          <div style="display:flex;gap:8px;align-items:center;background:var(--surface-2);border:1px solid var(--line);border-radius:14px;padding:10px 14px;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" style="color:var(--muted);flex-shrink:0;"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
+            <input type="text" id="exploreSearchInput" placeholder="Kullanıcı, #hashtag, konum ara..." oninput="runExploreSearch()" style="border:none;background:transparent;color:var(--text);font-size:13.5px;outline:none;flex:1;">
+          </div>
+          <!-- Hashtag chips -->
+          <div id="exploreHashtagChips" style="display:flex;gap:8px;margin-top:10px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none;"></div>
+        </div>
+        <div id="exploreGrid" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:2px;padding:0;"></div>
+        <div id="exploreResults" style="display:none;padding:4px 0;"></div>
+      </div>
+    </div>
+
+    <!-- ================= REELS EKRANI ================= -->
+    <div class="screen" id="screenReels">
+      <div class="reelsContainer" id="reelsContainer">
+        <div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted);font-size:13px;flex-direction:column;gap:12px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="48" height="48"><rect x="2" y="2" width="20" height="20" rx="3"/><path d="M9 8l7 4-7 4V8z"/></svg>
+          Reels yükleniyor...
+        </div>
+      </div>
+    </div>
+
     <!-- ================= EKRAN 3: MESAJLAR ================= -->
     <div class="screen" id="screenMessages">
       <div class="dmWrap" id="dmWrap">
@@ -1642,7 +1747,22 @@ tbody tr:hover{background:var(--surface-2);}
         </div>
         <div class="chatcol">
           <div class="chat-head"><button class="back-btn" onclick="exitChatThread()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 19l-7-7 7-7"/></svg></button>
-            <img id="chatHeadImg" src="https://i.pravatar.cc/60?img=32" style="cursor:pointer;" onclick="openChatPeerProfile()" title="Profili görüntüle"><div style="cursor:pointer;flex:1;min-width:0;" onclick="openChatPeerProfile()" title="Profili görüntüle"><div class="name" id="chatName">Sohbet</div><div class="status" id="chatStatus"></div></div></div>
+            <img id="chatHeadImg" src="https://i.pravatar.cc/60?img=32" style="cursor:pointer;" onclick="openChatPeerProfile()" title="Profili görüntüle">
+            <div style="cursor:pointer;flex:1;min-width:0;" onclick="openChatPeerProfile()">
+              <div class="name" id="chatName">Sohbet</div>
+              <div class="status" id="chatStatus" style="font-size:11.5px;color:var(--muted);"></div>
+            </div>
+          </div>
+          <!-- Reply bar — bir mesaja yanıt verirken görünür -->
+          <div id="replyBar" style="display:none;padding:8px 14px;background:var(--surface-2);border-bottom:1px solid var(--line);display:none;align-items:center;gap:8px;">
+            <div style="flex:1;border-left:3px solid var(--accent);padding-left:8px;">
+              <div style="font-size:11px;color:var(--accent);font-weight:600;">Yanıtlanıyor</div>
+              <div id="replyBarText" style="font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:260px;"></div>
+            </div>
+            <button onclick="clearReply()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px;padding:0 4px;">✕</button>
+          </div>
+          <!-- Typing indicator -->
+          <div id="typingIndicator" style="display:none;padding:6px 16px;font-size:12px;color:var(--muted);font-style:italic;">yazıyor...</div>
           <div class="messages" id="messagesBox">
             <div style="text-align:center;color:var(--muted);font-size:12.5px;padding:24px 16px;">Bir sohbet seç</div>
           </div>
@@ -4074,22 +4194,9 @@ function saveProfileEdit(){
   document.getElementById('editUsernamePanel').classList.add('hidden');
 }
 
-function goNav(name, btnEl){
-  showScreen(name);
-  document.querySelectorAll('.island button').forEach(b=>b.classList.remove('active','pulse'));
-  btnEl.classList.add('active');
-  btnEl.classList.add('pulse');
-  setTimeout(()=>btnEl.classList.remove('pulse'), 320);
-
-  // Mesaj LİSTESİ ekranında ada görünür kalır. Ada sadece kullanıcı bir
-  // sohbetin İÇİNE girdiğinde (dmWrap.view-chat) gizlenir — bunu ayrı
-  // bir yerde (chat-item tıklama / geri butonu) yönetiyoruz.
-  document.getElementById('island').classList.remove('chat-fullscreen-hide');
-
-  if(name === 'admin') loadAdminUsers();
-  if(name === 'feed'){ initFeedListener(); initMomentStripListener(); }
-  if(name === 'messages') initChatListListener();
-  if(name === 'profile'){ renderMyPostsGrid(); loadPrivacyToggleState(); }
+function goNav_legacy(name, btnEl){
+  // Yeni goNav'a yönlendir
+  goNav(name, btnEl);
 }
 
 function exitChatToFeed(){
@@ -4098,7 +4205,9 @@ function exitChatToFeed(){
 
 function showScreen(name){
   document.querySelectorAll('#main .screen').forEach(s=>s.classList.remove('active'));
-  document.getElementById('screen'+name.charAt(0).toUpperCase()+name.slice(1)).classList.add('active');
+  const screenId = NAV_MAP[name] || ('screen'+name.charAt(0).toUpperCase()+name.slice(1));
+  const el = document.getElementById(screenId);
+  if(el) el.classList.add('active');
 }
 
 /* SÖZLEŞME VİDEOSU (demo: 6 saniyelik simülasyon) */
@@ -4657,7 +4766,7 @@ function renderPostCard(id, p, myUid){
         <div class="icon-act" onclick="toggleSave(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h12v18l-6-4-6 4V3z"/></svg>Kaydet</div>
       </div>
       <div class="like-count"><span class="likeNum">${likeCount}</span> beğenme</div>
-      <div class="caption"><b>${p.username || '@kullanici'}</b> ${escapeHtml(p.caption || '')}</div>
+      <div class="caption"><b>${p.username || '@kullanici'}</b> ${linkifyCaption(p.caption || '')}</div>
       <div class="view-comments" onclick="openCommentSheet('${id}')">💬 ${comments.length > 0 ? comments.length + ' yorumu gör' : 'İlk yorumu yap'}</div>
       <div class="post-timestamp">${formatPostAge(p.ts)}</div>
     </div>
@@ -6593,6 +6702,470 @@ function sendEphemeralPhoto(ev){
   };
   reader.readAsDataURL(file);
   ev.target.value = '';
+}
+
+/* ============================================================
+   NAVİGASYON — goNav'a yeni ekranlar eklendi
+   ============================================================ */
+const NAV_MAP = {
+  feed:'screenFeed', messages:'screenMessages', profile:'screenProfile',
+  admin:'screenAdmin', saved:'screenSaved', liked:'screenLiked',
+  explore:'screenExplore', reels:'screenReels',
+  otherProfile:'screenOtherProfile'
+};
+function goNav(name, btn){
+  document.querySelectorAll('#main .screen').forEach(s=>s.classList.remove('active'));
+  const screenId = NAV_MAP[name] || ('screen' + name.charAt(0).toUpperCase() + name.slice(1));
+  const el = document.getElementById(screenId);
+  if(el) el.classList.add('active');
+  document.querySelectorAll('.island button').forEach(b=>b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  if(name === 'profile'){ renderMyPostsGrid(); loadPrivacyToggleState(); }
+  if(name === 'explore') initExplore();
+  if(name === 'reels') initReels();
+  if(name === 'messages' && activeChatId){ /* kaldığı yere dön */ }
+  saveSession();
+}
+
+/* ============================================================
+   REELS — dikey kısa video akışı (sonsuz kaydırma)
+   ============================================================ */
+let reelsLoaded = false, reelsMuted = true;
+function initReels(){
+  if(reelsLoaded) return;
+  reelsLoaded = true;
+  const container = document.getElementById('reelsContainer');
+  container.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted);font-size:13px;">Yükleniyor...</div>';
+
+  // Video olan postları çek
+  fbDb.ref('posts').orderByChild('mediaType').equalTo('video').limitToLast(20).once('value').then(snap=>{
+    const data = snap.val() || {};
+    const items = Object.values(data).filter(p=>p.media&&p.media[0]).reverse();
+    if(!items.length){
+      container.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted);font-size:13px;flex-direction:column;gap:12px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="48" height="48"><rect x="2" y="2" width="20" height="20" rx="3"/><path d="M9 8l7 4-7 4V8z"/></svg>Henüz Reels yok</div>';
+      return;
+    }
+    container.innerHTML = items.map((p,i) => buildReelItem(p, i)).join('');
+    // İlk videoyu başlat
+    setTimeout(()=> playReelAt(0), 300);
+    // Scroll dinleyici
+    container.onscroll = () => {
+      const idx = Math.round(container.scrollTop / window.innerHeight);
+      playReelAt(idx);
+    };
+  }).catch(()=>{
+    // Reels yoksa normal postlardan göster
+    fbDb.ref('posts').limitToLast(10).once('value').then(snap=>{
+      const data = snap.val() || {};
+      const items = Object.values(data).filter(p=>p.media&&p.media[0]).reverse();
+      container.innerHTML = items.length
+        ? items.map((p,i)=>buildReelItem(p,i)).join('')
+        : '<div style="color:var(--muted);text-align:center;padding:40px;">Reels bulunamadı</div>';
+      if(items.length) setTimeout(()=>playReelAt(0), 300);
+    });
+  });
+}
+function buildReelItem(p, idx){
+  const likes = p.likes ? Object.keys(p.likes).length : 0;
+  const comments = p.comments ? Object.keys(p.comments).length : 0;
+  const isVideo = p.mediaType === 'video';
+  const media = isVideo
+    ? `<video src="${p.media[0]}" loop muted playsinline preload="metadata" class="reelVideo" data-idx="${idx}" onclick="toggleReelPlay(this)"></video>`
+    : `<img src="${p.media[0]}" style="width:100%;height:100%;object-fit:cover;">`;
+
+  return `<div class="reelItem" data-idx="${idx}">
+    ${media}
+    <div class="reelOverlay">
+      <div class="reelUser">
+        <img src="${p.authorPhoto||'https://i.pravatar.cc/60?img=68'}" onclick="viewOtherProfile('${p.uid||''}')">
+        <span class="uname" onclick="viewOtherProfile('${p.uid||''}')">@${(p.username||'kullanici').replace(/^@/,'')}</span>
+        <span style="color:rgba(255,255,255,.7);font-size:12px;">· ${formatPostAge(p.ts)}</span>
+      </div>
+      <div class="reelCaption">${escapeHtml(p.caption||'')}</div>
+      ${p.location?`<div style="color:rgba(255,255,255,.7);font-size:12px;margin-bottom:8px;">📍 ${escapeHtml(p.location)}</div>`:''}
+    </div>
+    <div class="reelSidebar">
+      <div class="reelSideBtn" onclick="toggleReelLike(this,'${p.uid||''}')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M20.8 4.6a5 5 0 00-7.1 0L12 6.3l-1.7-1.7a5 5 0 10-7.1 7.1L12 20.3l8.8-8.6a5 5 0 000-7.1z"/></svg>
+        <span>${likes}</span>
+      </div>
+      <div class="reelSideBtn" onclick="openCommentSheet('${p.uid||''}')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M21 11.5a8.4 8.4 0 01-1.1 4.2L21 21l-5.4-1a8.5 8.5 0 11-.6-.4z"/></svg>
+        <span>${comments}</span>
+      </div>
+      <div class="reelSideBtn" onclick="toggleReelMute()">
+        <svg id="reelMuteIcon${idx}" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>
+        <span>Ses</span>
+      </div>
+    </div>
+  </div>`;
+}
+function playReelAt(idx){
+  document.querySelectorAll('.reelVideo').forEach((v,i)=>{
+    if(i === idx){ v.muted = reelsMuted; v.play().catch(()=>{}); }
+    else { v.pause(); }
+  });
+}
+function toggleReelPlay(vid){
+  vid.paused ? vid.play() : vid.pause();
+}
+function toggleReelMute(){
+  reelsMuted = !reelsMuted;
+  document.querySelectorAll('.reelVideo').forEach(v=>{ v.muted = reelsMuted; });
+}
+function toggleReelLike(btn, postId){}
+
+/* ============================================================
+   KEŞFET (EXPLORE) — grid görünüm + hashtag + arama
+   ============================================================ */
+const TRENDING_TAGS = ['#photography','#travel','#food','#nature','#art','#music','#fashion','#fitness','#tech','#lifestyle'];
+let exploreInitialized = false;
+
+function initExplore(){
+  if(exploreInitialized) return;
+  exploreInitialized = true;
+  // Hashtag chips
+  const chips = document.getElementById('exploreHashtagChips');
+  if(chips) chips.innerHTML = TRENDING_TAGS.map(t=>
+    `<div class="hashtagChip" onclick="searchByHashtag('${t}')">${t}</div>`
+  ).join('');
+  // Grid
+  loadExploreGrid();
+}
+function loadExploreGrid(){
+  const grid = document.getElementById('exploreGrid');
+  if(!grid || !fbReady) return;
+  fbDb.ref('posts').orderByChild('ts').limitToLast(30).once('value').then(snap=>{
+    const data = snap.val() || {};
+    const items = Object.keys(data).map(id=>({...data[id],id}))
+      .filter(p=>p.media&&p.media[0]).sort(()=>Math.random()-.5); // karıştır
+    grid.innerHTML = items.map(p=>{
+      const isVid = p.mediaType==='video';
+      return `<div class="exploreGridItem" onclick="openExplorePost('${p.id}')">
+        ${isVid
+          ? `<video src="${p.media[0]}" muted preload="none" style="width:100%;height:100%;object-fit:cover;"></video><span style="position:absolute;top:6px;right:6px;color:#fff;font-size:10px;background:rgba(0,0,0,.5);padding:2px 5px;border-radius:4px;">▶</span>`
+          : `<img src="${p.media[0]}" loading="lazy">`
+        }
+      </div>`;
+    }).join('');
+  });
+}
+function searchByHashtag(tag){
+  document.getElementById('exploreSearchInput').value = tag;
+  runExploreSearch();
+  document.querySelectorAll('.hashtagChip').forEach(c=>{
+    c.classList.toggle('active', c.textContent===tag);
+  });
+}
+function runExploreSearch(){
+  const q = (document.getElementById('exploreSearchInput').value||'').trim().toLowerCase();
+  const grid = document.getElementById('exploreGrid');
+  const results = document.getElementById('exploreResults');
+  if(!q){
+    grid.style.display=''; results.style.display='none';
+    document.querySelectorAll('.hashtagChip').forEach(c=>c.classList.remove('active'));
+    return;
+  }
+  grid.style.display='none'; results.style.display='block';
+  results.innerHTML = '<div class="followListEmpty">Aranıyor...</div>';
+
+  const isHashtag = q.startsWith('#');
+  if(isHashtag){
+    // Hashtag araması — caption'da # ile
+    fbDb.ref('posts').once('value').then(snap=>{
+      const data = snap.val() || {};
+      const matched = Object.keys(data).filter(id=>{
+        const cap = (data[id].caption||'').toLowerCase();
+        return cap.includes(q);
+      }).map(id=>({...data[id],id}));
+      renderExploreResults(matched);
+    });
+  } else {
+    // Kullanıcı araması
+    fbDb.ref('users').once('value').then(snap=>{
+      const data = snap.val() || {};
+      const matched = Object.keys(data).filter(uid=>{
+        const u = data[uid];
+        return (u.username||'').toLowerCase().includes(q) || (u.displayName||'').toLowerCase().includes(q);
+      }).map(uid=>({...data[uid], uid}));
+      if(!matched.length){ results.innerHTML='<div class="followListEmpty">Kullanıcı bulunamadı</div>'; return; }
+      results.innerHTML = matched.map(u=>`
+        <div class="followListRow" onclick="viewOtherProfile('${u.uid}')">
+          <img src="${u.photo||'https://i.pravatar.cc/60?img=68'}" onerror="this.src='https://i.pravatar.cc/60?img=68'">
+          <div class="info">
+            <div class="uname">${escapeHtml(u.username||'@kullanici')}</div>
+            <div class="ubio">${escapeHtml(u.displayName||u.bio||'')}</div>
+          </div>
+        </div>`).join('');
+    });
+  }
+}
+function renderExploreResults(posts){
+  const results = document.getElementById('exploreResults');
+  if(!posts.length){ results.innerHTML='<div class="followListEmpty">Gönderi bulunamadı</div>'; return; }
+  results.innerHTML = `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:2px;">
+    ${posts.map(p=>`<div class="exploreGridItem" onclick="openExplorePost('${p.id}')">
+      <img src="${(p.media&&p.media[0])||''}" loading="lazy">
+    </div>`).join('')}
+  </div>`;
+}
+function openExplorePost(postId){
+  // Gönderiyi feed'de bul veya yeni ekranda aç
+  fbDb.ref('posts/' + postId).once('value').then(snap=>{
+    if(!snap.exists()) return;
+    const p = snap.val();
+    const myUid = fbAuth.currentUser ? fbAuth.currentUser.uid : null;
+    const html = renderPostCard(postId, p, myUid);
+    // Geçici modal'da göster
+    const overlay = document.createElement('div');
+    overlay.style.cssText='position:fixed;inset:0;background:var(--bg);z-index:250;overflow-y:auto;';
+    overlay.innerHTML = `<div style="padding:50px 0 20px;">
+      <button onclick="this.parentElement.parentElement.remove()" style="position:fixed;top:14px;left:16px;background:var(--surface-2);border:none;color:var(--text);padding:8px 14px;border-radius:20px;cursor:pointer;font-size:13px;z-index:251;">← Geri</button>
+      ${html}
+    </div>`;
+    document.body.appendChild(overlay);
+  });
+}
+
+/* ============================================================
+   TYPING INDICATOR + ONLINE STATUS
+   ============================================================ */
+let typingTimer = null, typingListenerRef = null, onlineListenerRef = null;
+
+function initPresence(myUid){
+  if(!fbReady || !myUid) return;
+  // Çevrimiçi durumu yaz
+  const presenceRef = fbDb.ref('presence/' + myUid);
+  presenceRef.set({ online: true, lastSeen: firebase.database.ServerValue.TIMESTAMP });
+  // Çevrimdışı olunca otomatik güncelle
+  presenceRef.onDisconnect().update({ online: false, lastSeen: firebase.database.ServerValue.TIMESTAMP });
+}
+function watchPeerPresence(peerUid){
+  if(onlineListenerRef) onlineListenerRef.off();
+  if(!peerUid || !fbReady) return;
+  onlineListenerRef = fbDb.ref('presence/' + peerUid);
+  onlineListenerRef.on('value', snap=>{
+    const data = snap.val() || {};
+    const statusEl = document.getElementById('chatStatus');
+    if(!statusEl) return;
+    if(data.online){
+      statusEl.innerHTML = '<span class="online-dot"></span>Çevrimiçi';
+    } else if(data.lastSeen){
+      const ago = formatChatTime(data.lastSeen);
+      statusEl.textContent = 'Son görülme: ' + ago;
+    } else {
+      statusEl.textContent = '';
+    }
+  });
+}
+function watchPeerTyping(chatId, peerUid){
+  if(typingListenerRef) typingListenerRef.off();
+  if(!chatId || !peerUid || !fbReady) return;
+  typingListenerRef = fbDb.ref('typing/' + chatId + '/' + peerUid);
+  typingListenerRef.on('value', snap=>{
+    const typing = document.getElementById('typingIndicator');
+    const peerName = document.getElementById('chatName');
+    if(!typing) return;
+    if(snap.val()){
+      typing.style.display='block';
+      typing.textContent = (peerName ? peerName.textContent : '') + ' yazıyor...';
+    } else {
+      typing.style.display='none';
+    }
+  });
+}
+function onMsgInputType(){
+  if(!activeChatId || !fbAuth.currentUser) return;
+  fbDb.ref('typing/' + activeChatId + '/' + fbAuth.currentUser.uid).set(true);
+  if(typingTimer) clearTimeout(typingTimer);
+  typingTimer = setTimeout(()=>{
+    fbDb.ref('typing/' + activeChatId + '/' + fbAuth.currentUser.uid).set(false);
+  }, 2000);
+}
+
+/* ============================================================
+   MESAJ YANITI (Reply) + MESAJ BEĞENİ (Heart)
+   ============================================================ */
+let replyToMsg = null;
+function setReplyTo(msgId, text){
+  replyToMsg = msgId;
+  const bar = document.getElementById('replyBar');
+  const barText = document.getElementById('replyBarText');
+  if(bar){ bar.style.display='flex'; }
+  if(barText) barText.textContent = text;
+  document.getElementById('msgInput').focus();
+}
+function clearReply(){
+  replyToMsg = null;
+  const bar = document.getElementById('replyBar');
+  if(bar) bar.style.display='none';
+}
+
+/* Mesaj beğenme */
+function toggleMsgHeart(msgId){
+  if(!activeChatId || !fbAuth.currentUser) return;
+  const myUid = fbAuth.currentUser.uid;
+  const ref = fbDb.ref('chats/' + activeChatId + '/messages/' + msgId + '/hearts/' + myUid);
+  ref.once('value').then(s=>{
+    s.exists() ? ref.remove() : ref.set(true);
+  });
+}
+
+/* ============================================================
+   CAROUSEL (Çoklu resim) — post composer'da birden fazla resim
+   ============================================================ */
+let newPostFiles = []; // birden fazla dosya
+function onNewPostFileChosen(ev){
+  const files = Array.from(ev.target.files || [ev.target.files[0]]).filter(Boolean);
+  if(!files.length) return;
+  newPostFiles = files.slice(0, 10); // max 10 resim
+  newPostFile = files[0];
+  const mediaType = files[0].type.startsWith('video') ? 'video' : 'image';
+  newPostMediaType = mediaType;
+
+  const readers = files.slice(0,4).map(f => new Promise(res=>{
+    const r = new FileReader();
+    r.onload = e => res({dataUrl: e.target.result, type: f.type.startsWith('video')?'video':'image'});
+    r.readAsDataURL(f);
+  }));
+  Promise.all(readers).then(results=>{
+    newPostDataUrl = results[0].dataUrl;
+    const dz = document.getElementById('newPostDropzone');
+    if(results.length === 1){
+      const r = results[0];
+      dz.innerHTML = r.type==='video'
+        ? `<video src="${r.dataUrl}" controls style="width:100%;max-height:260px;border-radius:12px;"></video>`
+        : `<img src="${r.dataUrl}" style="width:100%;max-height:260px;border-radius:12px;object-fit:cover;">`;
+    } else {
+      dz.innerHTML = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;border-radius:12px;overflow:hidden;">
+        ${results.map(r=>`<img src="${r.dataUrl}" style="width:100%;aspect-ratio:1/1;object-fit:cover;">`).join('')}
+      </div><div style="text-align:center;font-size:12px;color:var(--muted);margin-top:6px;">${files.length} fotoğraf seçildi</div>`;
+    }
+    document.getElementById('newPostPublishBtn').disabled = false;
+  });
+}
+
+/* ============================================================
+   HASHTAG DESTEĞİ — caption'da #tag'ler tıklanabilir
+   ============================================================ */
+function linkifyCaption(text){
+  if(!text) return '';
+  return escapeHtml(text).replace(/#([a-zA-ZğüşıöçĞÜŞİÖÇ0-9_]+)/g,
+    '<span class="hashtag" onclick="searchByHashtagFromFeed(\'#$1\')" style="color:var(--accent);cursor:pointer;">#$1</span>'
+  ).replace(/@([a-zA-Z0-9._]+)/g,
+    '<span style="color:var(--accent);cursor:pointer;" onclick="searchUserFromFeed(\'$1\')"">@$1</span>'
+  );
+}
+function searchByHashtagFromFeed(tag){
+  goNav('explore', document.getElementById('navExplore'));
+  setTimeout(()=>{
+    document.getElementById('exploreSearchInput').value = tag;
+    runExploreSearch();
+  }, 100);
+}
+function searchUserFromFeed(username){
+  goNav('explore', document.getElementById('navExplore'));
+  setTimeout(()=>{
+    document.getElementById('exploreSearchInput').value = username;
+    runExploreSearch();
+  }, 100);
+}
+
+/* ============================================================
+   ÇIFT TAP BEĞENİ (double-tap like)
+   ============================================================ */
+function setupDoubleTapLike(el, postId){
+  let lastTap = 0;
+  el.addEventListener('touchend', e=>{
+    const now = Date.now();
+    if(now - lastTap < 300){
+      // Çift tap
+      triggerDoubleTapLike(el, postId);
+      e.preventDefault();
+    }
+    lastTap = now;
+  }, {passive:false});
+}
+function triggerDoubleTapLike(mediaEl, postId){
+  if(!fbAuth.currentUser) return;
+  const myUid = fbAuth.currentUser.uid;
+  fbDb.ref('posts/' + postId + '/likes/' + myUid).once('value').then(s=>{
+    if(!s.exists()){
+      fbDb.ref('posts/' + postId + '/likes/' + myUid).set(true);
+      // Kalp animasyonu
+      const heart = document.createElement('div');
+      heart.innerHTML = '❤️';
+      heart.style.cssText='position:absolute;font-size:80px;left:50%;top:50%;transform:translate(-50%,-50%) scale(0);pointer-events:none;z-index:10;transition:transform .3s ease,opacity .5s ease .3s;';
+      mediaEl.style.position='relative';
+      mediaEl.appendChild(heart);
+      requestAnimationFrame(()=>{
+        heart.style.transform='translate(-50%,-50%) scale(1)';
+        setTimeout(()=>{ heart.style.opacity='0'; setTimeout(()=>heart.remove(), 500); }, 400);
+      });
+    }
+  });
+}
+
+/* ============================================================
+   YENİ MESAJ GÖNDERİMİNE REPLY ENTEGRE ET
+   ============================================================ */
+const _origSendMsg = window.sendMsg;
+function sendMsg(){
+  const input = document.getElementById('msgInput');
+  const text = (input.value||'').trim();
+  if(!text) return;
+  if(!requireFirebase() || !fbAuth.currentUser || !activeChatId) return;
+  input.value = '';
+
+  const msgData = {
+    from: fbAuth.currentUser.uid,
+    text, ts: Date.now()
+  };
+  if(replyToMsg){
+    msgData.replyTo = replyToMsg;
+    clearReply();
+  }
+
+  const msgRef = fbDb.ref('chats/' + activeChatId + '/messages').push();
+  ensureChatMeta(activeChatId, activeChatPeerUid).then(()=>{
+    return msgRef.set(msgData);
+  }).then(()=>{
+    const update = {
+      lastMsg: text, lastTs: Date.now(),
+      lastSenderUid: fbAuth.currentUser.uid
+    };
+    update['unreadFor/' + activeChatPeerUid] = true;
+    fbDb.ref('chatMeta/' + activeChatId).update(update);
+    // Yazıyor göstergesini kapat
+    fbDb.ref('typing/' + activeChatId + '/' + fbAuth.currentUser.uid).set(false);
+  }).catch(()=>{ showToast('Gönderilemedi.'); input.value=text; });
+}
+
+/* ============================================================
+   openChatThread UPDATE — presence + typing
+   ============================================================ */
+const _origOpenChatThread = window.openChatThread;
+function openChatThread(chatId, peerUid){
+  _origOpenChatThread && _origOpenChatThread(chatId, peerUid);
+  // Ek: presence ve typing
+  setTimeout(()=>{
+    watchPeerPresence(peerUid);
+    watchPeerTyping(chatId, peerUid);
+    // msgInput'a typing event ekle
+    const inp = document.getElementById('msgInput');
+    if(inp) inp.oninput = ()=>{ onMsgInputType(); };
+  }, 200);
+}
+
+/* ============================================================
+   enterAppFromAuth UPDATE — presence başlat
+   ============================================================ */
+const _origEnterApp = window.enterAppFromAuth;
+function enterAppFromAuth(){
+  _origEnterApp && _origEnterApp();
+  if(fbAuth && fbAuth.currentUser){
+    initPresence(fbAuth.currentUser.uid);
+  }
 }
 
 function bootApp(){
