@@ -332,7 +332,16 @@ input[type=file]{display:none;}
   border:1px solid var(--glass-border);border-radius:999px;
   box-shadow:var(--glass-shadow), 0 1px 0 var(--glass-shine) inset;
 }
-.screen-body{position:absolute;inset:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-top:86px;padding-bottom:100px;}
+.screen-body{
+  position:absolute;inset:0;
+  overflow-y:auto;overflow-x:hidden;
+  -webkit-overflow-scrolling:touch;
+  overscroll-behavior:contain;
+  padding-top:86px;padding-bottom:100px;
+}
+/* Explore ve MomentFeed için padding:0 olduğunda scroll yine çalışsın */
+.screen-body.no-pad{padding:0;}
+.screen-body.no-pad>.screen-body-inner{padding-top:86px;padding-bottom:100px;}
 
 /* ===== FEED SCREEN (siteye özgü tasarım) ===== */
 .topbar{padding:12px 20px;display:flex;align-items:center;justify-content:space-between;}
@@ -1476,6 +1485,9 @@ tbody tr:hover{background:var(--surface-2);}
     <button id="navMsg" onclick="goNav('messages', this)" title="Mesajlar">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16v11H8l-4 4V5z"/></svg>
     </button>
+    <button id="navAdmin" onclick="goNav('admin', this)" title="Admin Paneli" style="display:none;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l8 3v6c0 5-3.5 8.5-8 11-4.5-2.5-8-6-8-11V5l8-3z"/></svg>
+    </button>
     <button id="navBio" onclick="goNav('profile', this)" title="Bio">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="3.4"/><path d="M5 20c0-3.6 3-6 7-6s7 2.4 7 6"/></svg>
     </button>
@@ -2255,7 +2267,9 @@ tbody tr:hover{background:var(--surface-2);}
       <div id="storyViewerName" style="font-size:14px;font-weight:700;color:#fff;">@kullanici</div>
       <div id="storyViewerTime" style="font-size:11px;color:rgba(255,255,255,.7);">2s</div>
     </div>
-    <button onclick="closeStoryViewer(event)" style="margin-left:auto;background:none;border:none;color:#fff;font-size:24px;cursor:pointer;">✕</button>
+    <!-- Kendi hikayesinde sil butonu görünür -->
+    <button id="storyDeleteBtn" onclick="deleteCurrentStory(event)" style="display:none;background:rgba(255,0,0,.25);border:1px solid rgba(255,100,100,.4);border-radius:20px;color:#fff;font-size:12px;font-weight:600;padding:5px 12px;cursor:pointer;margin-left:8px;">🗑️ Sil</button>
+    <button onclick="closeStoryViewer(event)" style="margin-left:auto;background:none;border:none;color:#fff;font-size:24px;cursor:pointer;padding:0 4px;">✕</button>
   </div>
   <div class="storyProgressBar" id="storyProgressBar"></div>
   <img id="storyViewerImg" src="" style="width:100%;height:100%;object-fit:contain;">
@@ -3895,10 +3909,9 @@ function applyAccountToUI(){
   document.getElementById('statPosts').textContent = formatStatNumber(postsCount);
   document.getElementById('statFollowers').textContent = formatStatNumber(followersCount);
   document.getElementById('statFollowing').textContent = formatStatNumber(followingCount);
-  // Admin değilse "Admin Paneli" simgesi adada görünmesin, sadece Bio görünsün.
-  // Admin butonu çizilir ama görünürlüğü CSS ile değil JS ile kontrol edilir
-  const _adminBtn = document.getElementById('navAdmin');
-  if(_adminBtn) _adminBtn.style.display = savedIsAdmin ? 'flex' : 'none';
+  // Admin butonu — sadece admin kullanıcılarda göster
+  const _ab = document.getElementById("navAdmin");
+  if(_ab) _ab.style.display = savedIsAdmin ? "flex" : "none";
 }
 
 function goToRegisterScreen(){
@@ -4637,6 +4650,10 @@ function openChatThread(chatId, peerUid){
       const mine = m.from === myUid;
       const t = m.ts ? new Date(m.ts).toTimeString().slice(0,5) : '';
       const editTag = m.edited ? ' <span style="font-size:10px;color:var(--muted);font-style:italic;">düzenlendi</span>' : '';
+      // Süreli fotoğraf (ephemeral)
+      if(m.mediaType === 'ephemeral'){
+        return renderEphemeralMsg(id, m, mine, t, activeChatId);
+      }
       if(m.mediaUrl){
         const isGif = m.mediaType === 'gif';
         const media = (m.mediaType==='video' && !isGif)
@@ -6469,10 +6486,14 @@ function viewUserStories(uid){
     showStoryAtIndex(0);
   });
 }
+// Hangi story ID'sini görüntülüyoruz (silme için)
+let currentStoryId = null;
+
 function showStoryAtIndex(idx){
   if(idx >= currentStoryList.length){ closeStoryViewer(); return; }
   currentStoryIdx = idx;
   const s = currentStoryList[idx];
+  currentStoryId = s.id || null;
   const viewer = document.getElementById('storyViewer');
   viewer.classList.remove('hidden');
 
@@ -6480,6 +6501,12 @@ function showStoryAtIndex(idx){
   document.getElementById('storyViewerName').textContent = s.username || '@kullanici';
   document.getElementById('storyViewerTime').textContent = formatChatTime(s.ts);
   document.getElementById('storyViewerCaption').textContent = s.caption || '';
+
+  // Sil butonu — sadece kendi hikayemizde göster
+  const delBtn = document.getElementById('storyDeleteBtn');
+  if(delBtn && fbAuth.currentUser){
+    delBtn.style.display = (s.uid === fbAuth.currentUser.uid) ? 'block' : 'none';
+  }
 
   const img = document.getElementById('storyViewerImg');
   const vid = document.getElementById('storyViewerVid');
@@ -6489,11 +6516,9 @@ function showStoryAtIndex(idx){
     vid.style.display = 'none'; vid.pause(); img.style.display = ''; img.src = s.url;
   }
 
-  // Progress bar
   const bar = document.getElementById('storyProgressBar');
   bar.innerHTML = currentStoryList.map((_,i)=>`<div class="seg ${i<idx?'done':''}"><div class="fill" id="storyProg${i}"></div></div>`).join('');
 
-  // 5 saniye sonra sonrakine geç
   if(storyTimer) clearInterval(storyTimer);
   const duration = s.mediaType === 'video' ? 15000 : 5000;
   let elapsed = 0;
@@ -6503,6 +6528,25 @@ function showStoryAtIndex(idx){
     if(fill) fill.style.width = Math.min(100, (elapsed/duration)*100) + '%';
     if(elapsed >= duration) advanceStory();
   }, 100);
+}
+
+function deleteCurrentStory(ev){
+  ev && ev.stopPropagation && ev.stopPropagation();
+  if(!currentStoryId || !fbReady || !fbAuth.currentUser) return;
+  if(!confirm('Bu hikayeyi silmek istediğine emin misin?')) return;
+  if(storyTimer){ clearInterval(storyTimer); storyTimer = null; }
+  fbDb.ref('stories/' + currentStoryId).remove().then(()=>{
+    // Listeden kaldır
+    currentStoryList = currentStoryList.filter(s => s.id !== currentStoryId);
+    showToast('Hikaye silindi.');
+    if(currentStoryList.length === 0){
+      closeStoryViewer();
+    } else {
+      const nextIdx = Math.min(currentStoryIdx, currentStoryList.length - 1);
+      showStoryAtIndex(nextIdx);
+    }
+    loadStoryStrip(); // Şeridi güncelle
+  }).catch(()=> showToast('Silinemedi, tekrar dene.'));
 }
 function advanceStory(ev){
   if(ev && (ev.target.closest('.storyViewerHeader') || ev.target.tagName === 'BUTTON')) return;
@@ -7293,11 +7337,48 @@ function triggerDoubleTapLike(mediaEl, postId){
 /* sendMsg tek yerde tanımlı (yukarıda) */
 
 /* ============================================================
-/* ============================================================
    NAV_MAP güncelleme — momentFeed eklendi
    ============================================================ */
 NAV_MAP['momentFeed'] = 'screenMomentFeed';
-NAV_MAP['reels'] = 'screenMomentFeed'; // eski reels yönlendirmesi de buraya gelsin
+NAV_MAP['reels'] = 'screenMomentFeed';
+
+/* ============================================================
+   SÜRELİ FOTOĞRAF (EPHEMERAL) SİSTEMİ
+   ============================================================ */
+function renderEphemeralMsg(msgId, m, isMine, timeStr, chatId){
+  const views = m.viewCount || 0;
+  const align = isMine ? 'align-self:flex-end;' : '';
+  if(views >= 2 || m.expired){
+    return `<div class="msg-media" style="${align}"><div style="width:190px;height:110px;border-radius:14px;background:var(--surface-2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;border:1px solid var(--line);"><span style="font-size:22px;">👁️</span><span style="font-size:12px;color:var(--muted);font-weight:600;">Görüntülendi</span></div><div style="font-size:10px;color:var(--muted);margin-top:3px;">${timeStr}</div></div>`;
+  }
+  if(views === 1){
+    return `<div class="msg-media" style="${align}"><div onclick="openEphemeralPhoto('${msgId}','${chatId}')" style="width:190px;border-radius:14px;background:var(--surface-2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;border:2px solid var(--warn);padding:14px;cursor:pointer;"><span style="font-size:22px;">⚠️</span><span style="font-size:11px;color:var(--warn);font-weight:600;text-align:center;">1 hakkın kaldı!<br>Bakınca silinecek.</span></div><div style="font-size:10px;color:var(--muted);margin-top:3px;">${timeStr}</div></div>`;
+  }
+  return `<div class="msg-media" style="${align}"><div onclick="openEphemeralPhoto('${msgId}','${chatId}')" style="width:190px;height:110px;border-radius:14px;background:var(--surface-2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;border:1.5px solid var(--accent);cursor:pointer;"><span style="font-size:28px;">📷</span><span style="font-size:12px;color:var(--accent);font-weight:700;">Fotoğrafı Aç</span><span style="font-size:10px;color:var(--muted);">2 kez bakılabilir</span></div><div style="font-size:10px;color:var(--muted);margin-top:3px;">${timeStr}</div></div>`;
+}
+function openEphemeralPhoto(msgId, chatId){
+  if(!fbReady || !fbAuth.currentUser) return;
+  fbDb.ref('chats/'+chatId+'/messages/'+msgId).once('value').then(snap=>{
+    const m = snap.val();
+    if(!m || !m.mediaUrl || m.expired || (m.viewCount||0) >= 2) return;
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:#000;z-index:400;display:flex;align-items:center;justify-content:center;';
+    const newCount = (m.viewCount||0) + 1;
+    overlay.innerHTML = `<img src="${m.mediaUrl}" style="max-width:100%;max-height:100%;object-fit:contain;"><button onclick="this.parentElement.remove();updateEphemeralViews('${msgId}','${chatId}',${newCount})" style="position:absolute;top:20px;right:20px;background:rgba(0,0,0,.6);border:none;color:#fff;font-size:24px;width:44px;height:44px;border-radius:50%;cursor:pointer;">✕</button>`;
+    document.body.appendChild(overlay);
+  });
+}
+function updateEphemeralViews(msgId, chatId, newCount){
+  if(!fbReady) return;
+  const upd = newCount >= 2 ? {viewCount:2, expired:true, mediaUrl:''} : {viewCount:newCount};
+  fbDb.ref('chats/'+chatId+'/messages/'+msgId).update(upd);
+}
+
+/* ADMİN butonu görünürlüğünü güncelle */
+function updateAdminVisibility(){
+  const btn = document.getElementById('navAdmin');
+  if(btn) btn.style.display = savedIsAdmin ? 'flex' : 'none';
+}
 
 /* ============================================================
    ANI YAKALA FEED — tüm kullanıcıların paylaştığı anı fotoğraf/videoları
