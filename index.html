@@ -4260,11 +4260,6 @@ function saveProfileEdit(){
   document.getElementById('editUsernamePanel').classList.add('hidden');
 }
 
-function goNav_legacy(name, btnEl){
-  // Yeni goNav'a yönlendir
-  goNav(name, btnEl);
-}
-
 function exitChatToFeed(){
   goNav('feed', document.getElementById('navFeed'));
 }
@@ -6785,12 +6780,25 @@ function goNav(name, btn){
   const screenId = NAV_MAP[name] || ('screen' + name.charAt(0).toUpperCase() + name.slice(1));
   const el = document.getElementById(screenId);
   if(el) el.classList.add('active');
-  document.querySelectorAll('.island button').forEach(b=>b.classList.remove('active'));
-  if(btn) btn.classList.add('active');
+
+  // Ada'yı göster + aktif buton
+  const island = document.getElementById('island');
+  if(island) island.classList.remove('hidden', 'chat-fullscreen-hide');
+  document.querySelectorAll('.island button').forEach(b=>b.classList.remove('active','pulse'));
+  if(btn){
+    btn.classList.add('active');
+    btn.classList.add('pulse');
+    setTimeout(()=> btn.classList.remove('pulse'), 320);
+  }
+
+  // Ekrana özel işler
+  if(name === 'feed'){ initFeedListener(); initMomentStripListener(); }
+  if(name === 'messages') initChatListListener();
   if(name === 'profile'){ renderMyPostsGrid(); loadPrivacyToggleState(); }
+  if(name === 'admin') { if(typeof loadAdminUsers==='function') loadAdminUsers(); }
   if(name === 'explore') initExplore();
   if(name === 'reels') initReels();
-  if(name === 'messages' && activeChatId){ /* kaldığı yere dön */ }
+
   saveSession();
 }
 
