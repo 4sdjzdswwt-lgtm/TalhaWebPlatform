@@ -959,6 +959,36 @@ body.follow-list-open #island{display:none !important;}
 .notif-row .txt b{font-weight:700;}
 .notif-row .time{font-size:11px;color:var(--muted);flex-shrink:0;}
 
+/* ============================================================
+   HİKAYE (STORY) GÖRÜNTÜLEYICI — tam ekran
+   ============================================================ */
+.storyViewer{
+  position:fixed;inset:0;background:#000;z-index:300;
+  display:flex;align-items:center;justify-content:center;
+}
+.storyViewer.hidden{display:none;}
+.storyViewerHeader{
+  position:absolute;top:0;left:0;right:0;z-index:2;
+  display:flex;align-items:center;gap:10px;padding:14px 16px;
+  background:linear-gradient(to bottom, rgba(0,0,0,.6), transparent);
+}
+.storyViewerHeader img{width:36px;height:36px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,.4);}
+.storyProgressBar{
+  position:absolute;top:4px;left:8px;right:8px;z-index:3;
+  display:flex;gap:3px;height:3px;
+}
+.storyProgressBar .seg{flex:1;background:rgba(255,255,255,.3);border-radius:2px;overflow:hidden;}
+.storyProgressBar .seg .fill{height:100%;background:#fff;width:0%;transition:width .1s linear;}
+.storyProgressBar .seg.done .fill{width:100%;}
+
+/* Strip'teki hikaye avatarlarının gradient ring'i */
+.storyAvatarRing{
+  width:58px;height:58px;border-radius:50%;padding:3px;
+  background:linear-gradient(135deg,#833AB4,#FD1D1D,#F77737);
+}
+.storyAvatarRing.seen{background:var(--line);}
+.storyAvatarRing img{width:100%;height:100%;border-radius:50%;object-fit:cover;border:2.5px solid var(--bg);display:block;}
+
 /* Tema değiştirme anahtarı (switch) */
 .switch{position:relative;display:inline-block;width:42px;height:24px;flex-shrink:0;}
 .switch input{opacity:0;width:0;height:0;}
@@ -1509,6 +1539,14 @@ tbody tr:hover{background:var(--surface-2);}
       <div class="screen-body">
       <!-- ANI YAKALA — hikaye şeridi (aktif/yakın zamanda biten anılar) -->
       <div class="momentStrip" id="momentStrip">
+        <!-- Hikaye Ekle butonu (kendi story'n) -->
+        <div class="momentStartCircle" onclick="openStoryComposer()" title="Hikaye Ekle">
+          <div class="momentStartIcon" style="background:linear-gradient(135deg,#833AB4,#FD1D1D,#F77737);">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </div>
+          <span class="momentStripLabel">Hikaye</span>
+        </div>
+        <!-- Anı Yakala butonu -->
         <div class="momentStartCircle" onclick="openMomentStart()" title="Anı Yakala">
           <div class="momentStartIcon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 011 1v10a1 1 0 01-1 1H4a1 1 0 01-1-1V9a1 1 0 011-1z"/><circle cx="12" cy="13" r="3.5"/><path d="M19 6.5h.01"/></svg>
@@ -1516,6 +1554,8 @@ tbody tr:hover{background:var(--surface-2);}
           </div>
           <span class="momentStripLabel">Anı Yakala</span>
         </div>
+        <!-- Hikaye ve Anı items burada dinamik olarak görünür -->
+        <div id="storyStripItems" style="display:contents;"></div>
         <div id="momentStripItems" style="display:contents;"></div>
       </div>
 
@@ -1921,6 +1961,43 @@ tbody tr:hover{background:var(--surface-2);}
     <div class="followListBody" id="emojiGrid" style="display:grid;grid-template-columns:repeat(8,1fr);gap:4px;padding:14px;font-size:24px;text-align:center;">
     </div>
   </div>
+</div>
+
+<!-- ================= HİKAYE (STORY) OLUŞTURMA ================= -->
+<div class="followListOverlay hidden" id="storyComposerOverlay" onclick="if(event.target===this) closeStoryComposer()">
+  <div class="followListSheet" style="max-height:85vh;">
+    <div class="followListHead">
+      <h3>Hikaye Ekle</h3>
+      <button class="followListClose" onclick="closeStoryComposer()">✕</button>
+    </div>
+    <div style="padding:16px;">
+      <div class="upload-zone" id="storyDropzone" onclick="document.getElementById('storyFileInput').click()" style="min-height:160px;cursor:pointer;border:2px dashed var(--line);border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:var(--muted);font-size:13px;background:var(--surface-2);">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+        <span>Fotoğraf veya video seç</span>
+      </div>
+      <input type="file" id="storyFileInput" accept="image/*,video/*" onchange="onStoryFileChosen(event)" style="display:none;">
+      <div class="field" style="margin-top:14px;">
+        <input type="text" id="storyCaption" placeholder="Bir şeyler yaz... (opsiyonel)" style="width:100%;">
+      </div>
+      <button class="btn btn-primary" id="storyPublishBtn" style="width:100%;margin-top:10px;" onclick="publishStory()" disabled>Hikayeyi Paylaş</button>
+    </div>
+  </div>
+</div>
+
+<!-- HİKAYE GÖRÜNTÜLEYICI (tam ekran) -->
+<div class="storyViewer hidden" id="storyViewer" onclick="advanceStory(event)">
+  <div class="storyViewerHeader">
+    <img id="storyViewerAvatar" src="https://i.pravatar.cc/60?img=68">
+    <div>
+      <div id="storyViewerName" style="font-size:14px;font-weight:700;color:#fff;">@kullanici</div>
+      <div id="storyViewerTime" style="font-size:11px;color:rgba(255,255,255,.7);">2s</div>
+    </div>
+    <button onclick="closeStoryViewer(event)" style="margin-left:auto;background:none;border:none;color:#fff;font-size:24px;cursor:pointer;">✕</button>
+  </div>
+  <div class="storyProgressBar" id="storyProgressBar"></div>
+  <img id="storyViewerImg" src="" style="width:100%;height:100%;object-fit:contain;">
+  <video id="storyViewerVid" style="width:100%;height:100%;object-fit:contain;display:none;" autoplay muted></video>
+  <div id="storyViewerCaption" style="position:absolute;bottom:60px;left:0;right:0;text-align:center;color:#fff;font-size:16px;font-weight:600;text-shadow:0 2px 8px rgba(0,0,0,.7);padding:0 20px;"></div>
 </div>
 
 <!-- ================= ANI YAKALA — TÜM MODAL/EKRANLARI ================= -->
@@ -3679,6 +3756,7 @@ function enterAppFromAuth(){
     initFeedListener();
     initMomentStripListener();
     initGlobalMessageListener();
+    loadStoryStrip();
     if(typeof listenForMyMomentInvites === 'function' && fbAuth.currentUser){
       listenForMyMomentInvites(fbAuth.currentUser.uid);
     }
@@ -4859,7 +4937,7 @@ function toggleMomentReady(){
       if(allReady && session.state === 'waiting'){
         return fbDb.ref('momentSessions/' + momentSessionId).update({
           state: 'countdown',
-          countdownStartAt: Date.now() + 1200 // herkesin clientı senkron saysın diye küçük bir gecikme payı
+          countdownStartAt: Date.now() + 7000 // herkesin clientı senkron saysın diye küçük bir gecikme payı
         });
       }
     });
@@ -4894,7 +4972,7 @@ function closeAllMomentOverlays(){
 
 /* ---------- 3) GERİ SAYIM + SENKRON ÇEKİM ---------- */
 function beginMomentCountdownUI(session){
-  if(momentCountdownStarted) return; // birden fazla tetiklenmeyi önle
+  if(momentCountdownStarted) return;
   momentCountdownStarted = true;
 
   document.getElementById('momentWaitOverlay').classList.add('hidden');
@@ -4905,19 +4983,27 @@ function beginMomentCountdownUI(session){
   const countdownEl = document.getElementById('momentCountdown');
   countdownEl.classList.remove('hidden');
 
+  // Önce "HAZIR OL!" göster, sonra 5-4-3-2-1, sonra "YAKALA!"
   const tick = ()=>{
     const remainingMs = session.countdownStartAt - Date.now();
     const secs = Math.ceil(remainingMs / 1000);
-    if(secs > 0){
+    if(secs > 5){
+      countdownEl.textContent = 'HAZIR OL!';
+      countdownEl.style.fontSize = '42px';
+    } else if(secs > 0){
       countdownEl.textContent = secs;
+      countdownEl.style.fontSize = '';
+      countdownEl.classList.remove('flash');
     } else if(secs === 0 || (secs < 0 && remainingMs > -1000)){
       countdownEl.textContent = 'YAKALA!';
+      countdownEl.style.fontSize = '48px';
       countdownEl.classList.add('flash');
       captureMomentFrame();
     } else {
       clearInterval(momentCountdownTimer);
       momentCountdownTimer = null;
       countdownEl.classList.add('hidden');
+      countdownEl.style.fontSize = '';
     }
   };
   tick();
@@ -5139,7 +5225,7 @@ function retakeMoment(){
   }).then(()=>{
     momentCapturedDataUrl = null;
     document.getElementById('momentPreviewOverlay').classList.add('hidden');
-    return fbDb.ref('momentSessions/' + momentSessionId).update({ state: 'countdown', countdownStartAt: Date.now() + 1200 });
+    return fbDb.ref('momentSessions/' + momentSessionId).update({ state: 'countdown', countdownStartAt: Date.now() + 7000 });
   });
 }
 
@@ -5728,6 +5814,168 @@ function sendFollowNotification(targetUid){
     ts: Date.now(),
     type: 'follow'
   }).catch(()=>{});
+}
+
+/* ============================================================
+   HİKAYE (STORY) — 24 saatlik fotoğraf/video paylaşımı
+   Veri modeli: stories/{storyId}: {uid, url, mediaType, caption, ts, expiresAt}
+   Feed'deki şeritte takip edilen kullanıcıların hikayeleri görünür.
+   ============================================================ */
+let storyFile = null, storyDataUrl = null, storyMediaType = 'image';
+let currentStoryUser = null, currentStoryList = [], currentStoryIdx = 0;
+let storyTimer = null;
+
+function openStoryComposer(){
+  storyFile = null; storyDataUrl = null;
+  document.getElementById('storyCaption').value = '';
+  document.getElementById('storyDropzone').innerHTML = '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg><span>Fotoğraf veya video seç</span>';
+  document.getElementById('storyPublishBtn').disabled = true;
+  document.getElementById('storyComposerOverlay').classList.remove('hidden');
+  document.body.classList.add('follow-list-open');
+}
+function closeStoryComposer(){
+  document.getElementById('storyComposerOverlay').classList.add('hidden');
+  document.body.classList.remove('follow-list-open');
+}
+function onStoryFileChosen(ev){
+  const file = ev.target.files[0]; if(!file) return;
+  if(file.size > 25*1024*1024){ showToast('Max 25 MB'); ev.target.value=''; return; }
+  storyFile = file;
+  storyMediaType = file.type.startsWith('video') ? 'video' : 'image';
+  const reader = new FileReader();
+  reader.onload = (e)=>{
+    storyDataUrl = e.target.result;
+    const dz = document.getElementById('storyDropzone');
+    dz.innerHTML = storyMediaType === 'video'
+      ? '<video src="'+storyDataUrl+'" style="width:100%;max-height:200px;border-radius:12px;" controls></video>'
+      : '<img src="'+storyDataUrl+'" style="width:100%;max-height:200px;border-radius:12px;object-fit:cover;">';
+    document.getElementById('storyPublishBtn').disabled = false;
+  };
+  reader.readAsDataURL(file);
+}
+function publishStory(){
+  if(!requireFirebase() || !fbAuth.currentUser || !storyFile) return;
+  if(!fbStorage){ showToast('Depolama kullanılamıyor.'); return; }
+  const btn = document.getElementById('storyPublishBtn');
+  btn.disabled = true; btn.textContent = 'Yükleniyor...';
+  const uid = fbAuth.currentUser.uid;
+  const path = 'stories/' + uid + '/' + Date.now() + '_' + storyFile.name.replace(/[^a-zA-Z0-9._-]/g,'_');
+  fbStorage.ref().child(path).put(storyFile).then(snap=>snap.ref.getDownloadURL()).then(url=>{
+    return fbDb.ref('stories').push().set({
+      uid, url, mediaType: storyMediaType,
+      caption: (document.getElementById('storyCaption').value||'').trim(),
+      username: savedUsername || '@kullanici',
+      userPhoto: savedProfilePhoto || '',
+      ts: Date.now(),
+      expiresAt: Date.now() + 24*60*60*1000 // 24 saat
+    });
+  }).then(()=>{
+    btn.disabled = false; btn.textContent = 'Hikayeyi Paylaş';
+    closeStoryComposer();
+    showToast('Hikayen paylaşıldı 📸');
+    loadStoryStrip();
+  }).catch(err=>{
+    console.error('Story yükleme hatası:', err);
+    btn.disabled = false; btn.textContent = 'Hikayeyi Paylaş';
+    showToast('Hikaye yüklenemedi: ' + (err.message || 'Hata'));
+  });
+}
+
+/* Feed'deki story şeridini yükle — takip edilen kullanıcıların 24 saatlik hikayeleri */
+function loadStoryStrip(){
+  if(!fbReady || !fbAuth || !fbAuth.currentUser) return;
+  const now = Date.now();
+  const container = document.getElementById('storyStripItems');
+  if(!container) return;
+
+  fbDb.ref('stories').orderByChild('expiresAt').startAt(now).limitToLast(50).once('value').then(snap=>{
+    const data = snap.val() || {};
+    // Kullanıcıya göre grupla
+    const byUser = {};
+    Object.keys(data).forEach(id=>{
+      const s = data[id];
+      if(!s.uid || s.expiresAt < now) return;
+      if(!byUser[s.uid]) byUser[s.uid] = [];
+      byUser[s.uid].push({...s, id});
+    });
+    // Her kullanıcı için bir avatar dairesi
+    const uids = Object.keys(byUser);
+    if(!uids.length){ container.innerHTML = ''; return; }
+
+    container.innerHTML = uids.map(uid=>{
+      const stories = byUser[uid].sort((a,b)=>a.ts-b.ts);
+      const first = stories[0];
+      return `<div class="momentStripItem" onclick="viewUserStories('${uid}')">
+        <div class="storyAvatarRing"><img src="${first.userPhoto || 'https://i.pravatar.cc/60?img=68'}" onerror="this.src='https://i.pravatar.cc/60?img=68'"></div>
+        <span class="momentStripLabel">${(first.username||'@').replace(/^@/,'').slice(0,10)}</span>
+      </div>`;
+    }).join('');
+  }).catch(()=>{});
+}
+
+/* Hikaye görüntüleyici */
+function viewUserStories(uid){
+  if(!fbReady) return;
+  const now = Date.now();
+  fbDb.ref('stories').orderByChild('uid').equalTo(uid).once('value').then(snap=>{
+    const data = snap.val() || {};
+    currentStoryList = Object.values(data).filter(s=>s.expiresAt > now).sort((a,b)=>a.ts-b.ts);
+    if(!currentStoryList.length){ showToast('Bu kullanıcının aktif hikayesi yok.'); return; }
+    currentStoryUser = uid;
+    currentStoryIdx = 0;
+    showStoryAtIndex(0);
+  });
+}
+function showStoryAtIndex(idx){
+  if(idx >= currentStoryList.length){ closeStoryViewer(); return; }
+  currentStoryIdx = idx;
+  const s = currentStoryList[idx];
+  const viewer = document.getElementById('storyViewer');
+  viewer.classList.remove('hidden');
+
+  document.getElementById('storyViewerAvatar').src = s.userPhoto || 'https://i.pravatar.cc/60?img=68';
+  document.getElementById('storyViewerName').textContent = s.username || '@kullanici';
+  document.getElementById('storyViewerTime').textContent = formatChatTime(s.ts);
+  document.getElementById('storyViewerCaption').textContent = s.caption || '';
+
+  const img = document.getElementById('storyViewerImg');
+  const vid = document.getElementById('storyViewerVid');
+  if(s.mediaType === 'video'){
+    img.style.display = 'none'; vid.style.display = ''; vid.src = s.url; vid.play();
+  } else {
+    vid.style.display = 'none'; vid.pause(); img.style.display = ''; img.src = s.url;
+  }
+
+  // Progress bar
+  const bar = document.getElementById('storyProgressBar');
+  bar.innerHTML = currentStoryList.map((_,i)=>`<div class="seg ${i<idx?'done':''}"><div class="fill" id="storyProg${i}"></div></div>`).join('');
+
+  // 5 saniye sonra sonrakine geç
+  if(storyTimer) clearInterval(storyTimer);
+  const duration = s.mediaType === 'video' ? 15000 : 5000;
+  let elapsed = 0;
+  storyTimer = setInterval(()=>{
+    elapsed += 100;
+    const fill = document.getElementById('storyProg'+idx);
+    if(fill) fill.style.width = Math.min(100, (elapsed/duration)*100) + '%';
+    if(elapsed >= duration) advanceStory();
+  }, 100);
+}
+function advanceStory(ev){
+  if(ev && (ev.target.closest('.storyViewerHeader') || ev.target.tagName === 'BUTTON')) return;
+  if(storyTimer) clearInterval(storyTimer);
+  if(currentStoryIdx + 1 < currentStoryList.length){
+    showStoryAtIndex(currentStoryIdx + 1);
+  } else {
+    closeStoryViewer();
+  }
+}
+function closeStoryViewer(ev){
+  if(ev) ev.stopPropagation();
+  if(storyTimer){ clearInterval(storyTimer); storyTimer = null; }
+  document.getElementById('storyViewer').classList.add('hidden');
+  const vid = document.getElementById('storyViewerVid');
+  vid.pause(); vid.src = '';
 }
 
 function bootApp(){
