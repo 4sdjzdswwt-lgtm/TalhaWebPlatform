@@ -1373,6 +1373,9 @@ tbody tr:hover{background:var(--surface-2);}
     <button class="active" id="navFeed" onclick="goNav('feed', this)" title="Ana Akış">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1h-5v-7H9v7H4a1 1 0 01-1-1V9.5z"/></svg>
     </button>
+    <button id="navSearch" onclick="openSearchOverlay()" title="Ara">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
+    </button>
     <button id="navMsg" onclick="goNav('messages', this)" title="Mesajlar">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16v11H8l-4 4V5z"/></svg>
     </button>
@@ -1653,8 +1656,10 @@ tbody tr:hover{background:var(--surface-2);}
             <button class="icon-btn" onclick="document.getElementById('dmFile').click()" title="Fotoğraf / Galeri">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
             </button>
+            <button class="icon-btn" onclick="document.getElementById('dmEphemeral').click()" title="Süreli Fotoğraf" style="font-size:16px;">⏱️</button>
             <button class="icon-btn" onclick="openGifPicker()" title="GIF" style="font-size:12px;font-weight:800;color:var(--accent);letter-spacing:-0.5px;">GIF</button>
-            <input type="file" id="dmFile" accept="image/*,video/*" onchange="sendMedia(event)">
+            <input type="file" id="dmFile" accept="image/*,video/*" onchange="sendMedia(event)" style="display:none;">
+            <input type="file" id="dmEphemeral" accept="image/*" onchange="sendEphemeralPhoto(event)" style="display:none;">
             <input type="text" id="msgInput" placeholder="Mesaj..." onkeydown="if(event.key==='Enter') sendMsg()">
             <button class="send" onclick="sendMsg()" title="Gönder"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 11l18-8-8 18-2-8-8-2z"/></svg></button>
           </div>
@@ -1937,6 +1942,55 @@ tbody tr:hover{background:var(--surface-2);}
     </div>
     <div class="followListBody" id="followListBody">
       <div class="followListEmpty">Yükleniyor...</div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= YORUM CHAT EKRANI ================= -->
+<div class="followListOverlay hidden" id="commentSheetOverlay" onclick="if(event.target===this) closeCommentSheet()">
+  <div class="followListSheet" style="max-height:88vh;display:flex;flex-direction:column;">
+    <div class="followListHead">
+      <h3>Yorumlar</h3>
+      <button class="followListClose" onclick="closeCommentSheet()">✕</button>
+    </div>
+    <div class="followListBody" id="commentSheetBody" style="flex:1;overflow-y:auto;padding:8px 0;"></div>
+    <!-- Yorum composer -->
+    <div style="padding:10px 14px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:8px;">
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button class="icon-btn" onclick="openCommentGif()" style="font-size:11px;font-weight:800;color:var(--accent);letter-spacing:-0.5px;flex-shrink:0;">GIF</button>
+        <label class="icon-btn" for="commentImgInput" style="flex-shrink:0;cursor:pointer;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><rect x="2" y="3" width="20" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+        </label>
+        <input type="file" id="commentImgInput" accept="image/*" onchange="sendCommentImage(event)" style="display:none;">
+        <input type="text" id="commentInput" placeholder="Yorum yaz..." style="flex:1;padding:9px 14px;border-radius:20px;border:1px solid var(--line);background:var(--surface-2);color:var(--text);font-size:13px;outline:none;" onkeydown="if(event.key==='Enter') sendComment()">
+        <button class="send" onclick="sendComment()" style="width:38px;height:38px;border-radius:50%;flex-shrink:0;">
+          <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M3 11l18-8-8 18-2-8-8-2z"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- POST MENÜ (dots - silme/düzenleme) -->
+<div class="followListOverlay hidden" id="postMenuOverlay" onclick="if(event.target===this) closePostMenu()">
+  <div class="followListSheet" style="max-height:40vh;">
+    <div class="followListHead"><h3>Seçenekler</h3><button class="followListClose" onclick="closePostMenu()">✕</button></div>
+    <div id="postMenuBody" style="padding:6px 0;"></div>
+  </div>
+</div>
+
+<!-- ================= KULLANICI ARAMA EKRANI ================= -->
+<div class="followListOverlay hidden" id="searchOverlay" onclick="if(event.target===this) closeSearchOverlay()">
+  <div class="followListSheet" style="max-height:88vh;display:flex;flex-direction:column;">
+    <div class="followListHead">
+      <h3>Kullanıcı Ara</h3>
+      <button class="followListClose" onclick="closeSearchOverlay()">✕</button>
+    </div>
+    <div style="padding:10px 14px;">
+      <input type="text" id="globalSearchInput" placeholder="@kullanici veya isim..." oninput="runGlobalSearch()" style="width:100%;padding:10px 14px;border-radius:12px;border:1px solid var(--line);background:var(--surface-2);color:var(--text);font-size:13px;outline:none;">
+    </div>
+    <div class="followListBody" id="globalSearchBody" style="flex:1;overflow-y:auto;">
+      <div class="followListEmpty">Aramak istediğin kullanıcıyı yaz</div>
     </div>
   </div>
 </div>
@@ -4407,29 +4461,36 @@ function sendMsg(){
 function sendMedia(ev){
   const file = ev.target.files[0]; if(!file) return;
   if(!requireFirebase() || !fbAuth.currentUser || !activeChatId){ showToast('Bir sohbet seçmelisin.'); ev.target.value=''; return; }
-  if(!fbStorage){ showToast('Dosya depolama şu an kullanılamıyor.'); ev.target.value=''; return; }
   const mediaType = file.type.startsWith('video') ? 'video' : 'image';
   showToast('Gönderiliyor...');
-  const path = 'chatMedia/' + activeChatId + '/' + Date.now() + '_' + file.name.replace(/[^a-zA-Z0-9._-]/g,'_');
-  const ref = fbStorage.ref().child(path);
-  ref.put(file).then(snap => snap.ref.getDownloadURL()).then((url)=>{
-    const msgRef = fbDb.ref('chats/' + activeChatId + '/messages').push();
+
+  const doSendMedia = (url) => {
     const ts = Date.now();
-    return ensureChatMeta(activeChatId, activeChatPeerUid).then(()=>{
-      return msgRef.set({ from: fbAuth.currentUser.uid, mediaUrl: url, mediaType: mediaType, ts: ts });
+    const msgRef = fbDb.ref('chats/' + activeChatId + '/messages').push();
+    ensureChatMeta(activeChatId, activeChatPeerUid).then(()=>{
+      return msgRef.set({ from: fbAuth.currentUser.uid, mediaUrl: url, mediaType, ts });
     }).then(()=>{
       const update = {
         lastMsg: mediaType==='video' ? '🎥 Video' : '📷 Fotoğraf',
-        lastTs: ts,
-        lastSenderUid: fbAuth.currentUser.uid,
-        lastSenderName: savedUsername || '@kullanici'
+        lastTs: ts, lastSenderUid: fbAuth.currentUser.uid
       };
       update['unreadFor/' + activeChatPeerUid] = true;
-      return fbDb.ref('chatMeta/' + activeChatId).update(update);
-    });
-  }).catch(()=>{
-    showToast('Dosya gönderilemedi, tekrar dene.');
-  }).finally(()=>{ ev.target.value=''; });
+      fbDb.ref('chatMeta/' + activeChatId).update(update);
+    }).catch(()=> showToast('Gönderilemedi.'));
+  };
+
+  if(fbStorage && mediaType !== 'image'){
+    // Video için Storage kullan
+    const path = 'chatMedia/' + activeChatId + '/' + Date.now() + '_' + (file.name||'vid').replace(/[^a-zA-Z0-9._-]/g,'_');
+    fbStorage.ref().child(path).put(file).then(snap => snap.ref.getDownloadURL()).then(doSendMedia)
+      .catch(()=> showToast('Video gönderilemedi.'));
+  } else {
+    // Resim için base64
+    const reader = new FileReader();
+    reader.onload = e => compressImageToBase64(e.target.result, 800, 0.75).then(doSendMedia);
+    reader.readAsDataURL(file);
+  }
+  ev.target.value = '';
 }
 
 function exitChatThread(){
@@ -4579,38 +4640,25 @@ function renderPostCard(id, p, myUid){
   return `
     <div class="post ${p.isMoment?'momentPost':''}" data-post-id="${id}">
       <div class="post-head">
-        <img src="${p.photo && mediaList.length ? (p.authorPhoto||'https://i.pravatar.cc/60?img=68') : (p.authorPhoto||'https://i.pravatar.cc/60?img=68')}">
-        <div><div class="who">${p.username || '@kullanici'}${momentBadge}</div><div class="loc">${p.location || ''}</div></div>
-        <div class="dots">⋯</div>
+        <img src="${p.authorPhoto||'https://i.pravatar.cc/60?img=68'}" onclick="viewOtherProfile('${p.uid||''}')" style="cursor:pointer;">
+        <div onclick="viewOtherProfile('${p.uid||''}')" style="cursor:pointer;"><div class="who">${p.username || '@kullanici'}${momentBadge}</div><div class="loc">${p.location || ''}</div></div>
+        <div class="dots" onclick="openPostMenu('${id}','${p.uid||''}')">⋯</div>
       </div>
       ${mediaHtml}
       ${momentStrip}
       <div class="ig-actions">
         <div class="icon-act ${isLiked?'liked':''}" onclick="toggleLike(this)">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.8 4.6a5 5 0 00-7.1 0L12 6.3l-1.7-1.7a5 5 0 10-7.1 7.1L12 20.3l8.8-8.6a5 5 0 000-7.1z"/></svg>
+          <svg viewBox="0 0 24 24" fill="${isLiked?'var(--danger)':'none'}" stroke="${isLiked?'var(--danger)':'currentColor'}" stroke-width="2"><path d="M20.8 4.6a5 5 0 00-7.1 0L12 6.3l-1.7-1.7a5 5 0 10-7.1 7.1L12 20.3l8.8-8.6a5 5 0 000-7.1z"/></svg>
           Beğen
         </div>
-        <div class="icon-act" onclick="toggleCommentBox(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.4 8.4 0 01-1.1 4.2L21 21l-5.4-1a8.5 8.5 0 11-.6-.4z"/></svg>Yorum</div>
+        <div class="icon-act" onclick="openCommentSheet('${id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.4 8.4 0 01-1.1 4.2L21 21l-5.4-1a8.5 8.5 0 11-.6-.4z"/></svg>Yorum</div>
         <div class="icon-act" onclick="openShareSheet(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>Paylaş</div>
         <div class="spacer"></div>
         <div class="icon-act" onclick="toggleSave(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h12v18l-6-4-6 4V3z"/></svg>Kaydet</div>
       </div>
       <div class="like-count"><span class="likeNum">${likeCount}</span> beğenme</div>
-      <div class="caption"><b>${p.username || '@kullanici'}</b>${escapeHtml(p.caption || '')}</div>
-      <div class="commentsList">${comments.map(c => `<div class="comment-line"><b>${c.username||'@kullanici'}</b>${escapeHtml(c.text||'')}</div>`).join('')}</div>
-      <div class="view-comments"><span class="commentCount">${comments.length}</span> yorumun tümünü gör</div>
-      <div class="emoji-row">
-        <button onclick="quickEmoji(this, '❤️')">❤️</button>
-        <button onclick="quickEmoji(this, '😂')">😂</button>
-        <button onclick="quickEmoji(this, '🔥')">🔥</button>
-        <button onclick="quickEmoji(this, '🙌')">🙌</button>
-      </div>
-      <div class="comment-compose">
-        <input type="text" placeholder="Yorum yaz..." onkeydown="if(event.key==='Enter') submitComment(this)">
-        <button class="comment-send-btn" onclick="submitComment(this.previousElementSibling)" title="Gönder">
-          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 11l18-8-8 18-2-8-8-2z"/></svg>
-        </button>
-      </div>
+      <div class="caption"><b>${p.username || '@kullanici'}</b> ${escapeHtml(p.caption || '')}</div>
+      <div class="view-comments" onclick="openCommentSheet('${id}')">💬 ${comments.length > 0 ? comments.length + ' yorumu gör' : 'İlk yorumu yap'}</div>
       <div class="post-timestamp">${formatPostAge(p.ts)}</div>
     </div>
   `;
@@ -4665,39 +4713,73 @@ function onNewPostFileChosen(ev){
 }
 function publishNewPost(){
   if(!requireFirebase() || !fbAuth.currentUser){ showToast('Giriş yapmalısın.'); return; }
-  if(!newPostFile){ showToast('Önce bir fotoğraf/video seç.'); return; }
-  if(!fbStorage){ showToast('Dosya depolama şu an kullanılamıyor.'); return; }
+  if(!newPostFile && !newPostDataUrl){ showToast('Önce bir fotoğraf/video seç.'); return; }
 
   const btn = document.getElementById('newPostPublishBtn');
-  btn.disabled = true; btn.textContent = 'Yükleniyor...';
+  btn.disabled = true; btn.textContent = 'Paylaşılıyor...';
 
   const uid = fbAuth.currentUser.uid;
-  const path = 'posts/' + uid + '/' + Date.now() + '_' + newPostFile.name.replace(/[^a-zA-Z0-9._-]/g,'_');
-  const ref = fbStorage.ref().child(path);
+  const caption = (document.getElementById('newPostCaption').value || '').trim();
+  const location = (document.getElementById('newPostLocation').value || '').trim();
 
-  ref.put(newPostFile).then(snap => snap.ref.getDownloadURL()).then((url)=>{
+  const doPublish = (mediaUrl) => {
     const postRef = fbDb.ref('posts').push();
     return postRef.set({
-      uid: uid,
-      username: savedUsername || '@kullanici',
-      authorPhoto: savedProfilePhoto || 'https://i.pravatar.cc/60?img=68',
-      location: (document.getElementById('newPostLocation').value || '').trim(),
-      media: [url],
+      uid, username: savedUsername || '@kullanici',
+      authorPhoto: savedProfilePhoto || '',
+      location, media: mediaUrl ? [mediaUrl] : [],
       mediaType: newPostMediaType,
-      caption: (document.getElementById('newPostCaption').value || '').trim(),
-      ts: firebase.database.ServerValue.TIMESTAMP,
+      caption, ts: firebase.database.ServerValue.TIMESTAMP,
       isMoment: false
+    }).then(()=>{
+      fbDb.ref('users/' + uid + '/postsCount').transaction(n => (n||0) + 1);
+      btn.disabled = false; btn.textContent = 'Paylaş';
+      closeNewPostComposer();
+      showToast('Gönderin paylaşıldı 🎉');
+      renderMyPostsGrid();
+    }).catch(err => {
+      btn.disabled = false; btn.textContent = 'Paylaş';
+      showToast('Paylaşılamadı, tekrar dene.');
     });
-  }).then(()=>{
-    return fbDb.ref('users/' + uid + '/postsCount').transaction(n => (n||0) + 1);
-  }).then(()=>{
-    btn.disabled = false; btn.textContent = 'Paylaş';
-    closeNewPostComposer();
-    showToast('Gönderin paylaşıldı 🎉');
-    renderMyPostsGrid();
-  }).catch((err)=>{
-    btn.disabled = false; btn.textContent = 'Paylaş';
-    showToast('Paylaşılamadı: ' + (err && err.message ? err.message : 'bilinmeyen hata'));
+  };
+
+  // Firebase Storage varsa kullan, yoksa resmi küçültüp base64 kaydet
+  if(fbStorage && newPostFile){
+    const path = 'posts/' + uid + '/' + Date.now() + '_' + (newPostFile.name||'img').replace(/[^a-zA-Z0-9._-]/g,'_');
+    fbStorage.ref().child(path).put(newPostFile)
+      .then(snap => snap.ref.getDownloadURL())
+      .then(url => doPublish(url))
+      .catch(() => {
+        // Storage hata verirse base64'e düş
+        if(newPostDataUrl) doPublish(newPostDataUrl);
+        else { btn.disabled=false; btn.textContent='Paylaş'; showToast('Fotoğraf yüklenemedi.'); }
+      });
+  } else if(newPostDataUrl){
+    // Storage yok — resmi compress edip base64 olarak kaydet
+    compressImageToBase64(newPostDataUrl, 800, 0.75).then(compressed => doPublish(compressed));
+  } else {
+    btn.disabled=false; btn.textContent='Paylaş';
+    showToast('Fotoğraf seçilmedi.');
+  }
+}
+
+// Resmi canvas ile küçültüp sıkıştır
+function compressImageToBase64(dataUrl, maxSize, quality){
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      let w = img.width, h = img.height;
+      if(w > maxSize || h > maxSize){
+        if(w > h){ h = Math.round(h * maxSize/w); w = maxSize; }
+        else { w = Math.round(w * maxSize/h); h = maxSize; }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.onerror = () => resolve(dataUrl);
+    img.src = dataUrl;
   });
 }
 
@@ -6158,6 +6240,359 @@ function closeStoryViewer(ev){
   document.getElementById('storyViewer').classList.add('hidden');
   const vid = document.getElementById('storyViewerVid');
   vid.pause(); vid.src = '';
+}
+
+/* ============================================================
+   YORUM CHAT EKRANI
+   ============================================================ */
+let activeCommentPostId = null;
+function openCommentSheet(postId){
+  activeCommentPostId = postId;
+  document.getElementById('commentSheetOverlay').classList.remove('hidden');
+  document.body.classList.add('modal-open','follow-list-open');
+  loadComments(postId);
+  setTimeout(()=> document.getElementById('commentInput').focus(), 300);
+}
+function closeCommentSheet(){
+  document.getElementById('commentSheetOverlay').classList.add('hidden');
+  document.body.classList.remove('modal-open','follow-list-open');
+  activeCommentPostId = null;
+}
+function loadComments(postId){
+  const body = document.getElementById('commentSheetBody');
+  body.innerHTML = '<div class="followListEmpty">Yükleniyor...</div>';
+  const myUid = fbAuth.currentUser ? fbAuth.currentUser.uid : null;
+  fbDb.ref('posts/' + postId + '/comments').orderByChild('ts').on('value', snap=>{
+    const data = snap.val() || {};
+    const items = Object.keys(data).map(k=>({...data[k], id:k})).sort((a,b)=>(a.ts||0)-(b.ts||0));
+    if(!items.length){ body.innerHTML = '<div class="followListEmpty">Henüz yorum yok. İlk yorumu sen yap!</div>'; return; }
+    body.innerHTML = items.map(c => {
+      const isMe = myUid && c.uid === myUid;
+      const isGif = c.mediaType === 'gif';
+      const isImg = c.mediaType === 'image' || c.mediaUrl;
+      const content = isImg
+        ? `<img src="${c.mediaUrl}" style="max-width:200px;border-radius:12px;margin-top:4px;">`
+        : `<span>${escapeHtml(c.text||'')}</span>`;
+      return `<div class="notif-row" style="${isMe?'flex-direction:row-reverse;':''}"
+        ontouchstart="this._ct=setTimeout(()=>onCommentLongPress('${postId}','${c.id}','${c.uid}'),600)" 
+        ontouchend="clearTimeout(this._ct)"
+        oncontextmenu="event.preventDefault();onCommentLongPress('${postId}','${c.id}','${c.uid}')">
+        <img src="${c.userPhoto||'https://i.pravatar.cc/40?img=68'}" style="width:34px;height:34px;">
+        <div class="txt" style="${isMe?'text-align:right;':''}">
+          <b>${c.username||'@kullanici'}</b><br>${content}
+        </div>
+        <div class="time">${formatChatTime(c.ts)}</div>
+      </div>`;
+    }).join('');
+    body.scrollTop = body.scrollHeight;
+  });
+}
+function sendComment(){
+  const input = document.getElementById('commentInput');
+  const text = (input.value||'').trim();
+  if(!text || !activeCommentPostId || !fbAuth.currentUser) return;
+  input.value = '';
+  fbDb.ref('posts/' + activeCommentPostId + '/comments').push({
+    uid: fbAuth.currentUser.uid,
+    username: savedUsername || '@kullanici',
+    userPhoto: savedProfilePhoto || '',
+    text, ts: Date.now()
+  });
+}
+function sendCommentImage(ev){
+  const file = ev.target.files[0];
+  if(!file || !activeCommentPostId || !fbAuth.currentUser) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    compressImageToBase64(e.target.result, 600, 0.7).then(compressed=>{
+      fbDb.ref('posts/' + activeCommentPostId + '/comments').push({
+        uid: fbAuth.currentUser.uid,
+        username: savedUsername || '@kullanici',
+        userPhoto: savedProfilePhoto || '',
+        mediaUrl: compressed, mediaType: 'image', ts: Date.now()
+      });
+    });
+  };
+  reader.readAsDataURL(file);
+  ev.target.value = '';
+}
+function openCommentGif(){
+  // Geçici olarak mevcut GIF picker'ı yorum modunda kullan
+  document.getElementById('emojiPickerOverlay').classList.remove('hidden');
+  document.body.classList.add('modal-open');
+  renderGifGrid(POPULAR_GIFS);
+  // GIF seçilince yorum olarak gönder
+  window._commentGifMode = true;
+}
+function onCommentLongPress(postId, commentId, uid){
+  const myUid = fbAuth.currentUser ? fbAuth.currentUser.uid : null;
+  if(myUid !== uid) return;
+  if(confirm('Bu yorumu silmek istiyor musun?')){
+    fbDb.ref('posts/' + postId + '/comments/' + commentId).remove()
+      .then(()=> showToast('Yorum silindi.'));
+  }
+}
+
+/* ============================================================
+   POST MENÜSÜ (⋯ dots) — silme, bildirme
+   ============================================================ */
+let activePostMenuId = null, activePostOwnerUid = null;
+function openPostMenu(postId, ownerUid){
+  activePostMenuId = postId;
+  activePostOwnerUid = ownerUid;
+  const myUid = fbAuth.currentUser ? fbAuth.currentUser.uid : null;
+  const isMyPost = myUid === ownerUid;
+  const body = document.getElementById('postMenuBody');
+  body.innerHTML = (isMyPost ? `
+    <div class="profileMenuItem" onclick="deletePost('${postId}')">🗑️ Gönderiyi Sil</div>
+    <div class="profileMenuItem" onclick="editPostCaption('${postId}')">✏️ Açıklamayı Düzenle</div>
+  ` : `
+    <div class="profileMenuItem" onclick="reportPost('${postId}')">⚠️ Gönderiyi Şikayet Et</div>
+  `) + `<div class="profileMenuItem" onclick="closePostMenu()">❌ İptal</div>`;
+  document.getElementById('postMenuOverlay').classList.remove('hidden');
+  document.body.classList.add('modal-open','follow-list-open');
+}
+function closePostMenu(){
+  document.getElementById('postMenuOverlay').classList.add('hidden');
+  document.body.classList.remove('modal-open','follow-list-open');
+}
+function deletePost(postId){
+  closePostMenu();
+  if(!confirm('Bu gönderiyi kalıcı olarak silmek istiyor musun?')) return;
+  const uid = fbAuth.currentUser ? fbAuth.currentUser.uid : null;
+  if(!uid) return;
+  fbDb.ref('posts/' + postId).remove().then(()=>{
+    fbDb.ref('users/' + uid + '/postsCount').transaction(n => Math.max(0,(n||1)-1));
+    showToast('Gönderi silindi.');
+    renderMyPostsGrid();
+  }).catch(()=> showToast('Silinemedi, tekrar dene.'));
+}
+function editPostCaption(postId){
+  closePostMenu();
+  fbDb.ref('posts/' + postId + '/caption').once('value').then(snap=>{
+    const old = snap.val() || '';
+    const newCap = prompt('Açıklamayı düzenle:', old);
+    if(newCap === null || newCap === old) return;
+    fbDb.ref('posts/' + postId + '/caption').set(newCap.trim())
+      .then(()=> showToast('Açıklama güncellendi.'));
+  });
+}
+function reportPost(postId){
+  closePostMenu();
+  const reason = prompt('Şikayet sebebini yaz:');
+  if(!reason || !reason.trim()) return;
+  fbDb.ref('reports').push({
+    reporterUid: fbAuth.currentUser ? fbAuth.currentUser.uid : 'anon',
+    reportedPostId: postId,
+    reason: reason.trim(), type: 'post', ts: Date.now()
+  }).then(()=> showToast('Şikayet gönderildi.'));
+}
+
+/* ============================================================
+   KULLANICI ARAMA (global)
+   ============================================================ */
+let searchDebounce = null;
+function openSearchOverlay(){
+  document.getElementById('searchOverlay').classList.remove('hidden');
+  document.body.classList.add('modal-open','follow-list-open');
+  setTimeout(()=> document.getElementById('globalSearchInput').focus(), 200);
+}
+function closeSearchOverlay(){
+  document.getElementById('searchOverlay').classList.add('hidden');
+  document.body.classList.remove('modal-open','follow-list-open');
+}
+function runGlobalSearch(){
+  const q = (document.getElementById('globalSearchInput').value||'').trim().toLowerCase();
+  const body = document.getElementById('globalSearchBody');
+  if(!q){ body.innerHTML = '<div class="followListEmpty">Aramak istediğin kullanıcıyı yaz</div>'; return; }
+  if(searchDebounce) clearTimeout(searchDebounce);
+  body.innerHTML = '<div class="followListEmpty">Aranıyor...</div>';
+  searchDebounce = setTimeout(()=>{
+    if(!fbReady) return;
+    fbDb.ref('users').orderByChild('username').startAt(q).endAt(q + '\uf8ff').limitToFirst(20).once('value').then(snap=>{
+      const data = snap.val() || {};
+      const uids = Object.keys(data).filter(uid => {
+        const u = data[uid];
+        return (u.username||'').toLowerCase().includes(q) || (u.displayName||'').toLowerCase().includes(q);
+      });
+      if(!uids.length){ body.innerHTML = '<div class="followListEmpty">Kullanıcı bulunamadı</div>'; return; }
+      body.innerHTML = uids.map(uid => {
+        const u = data[uid];
+        return `<div class="followListRow" onclick="closeSearchOverlay();viewOtherProfile('${uid}')">
+          <img src="${u.photo||'https://i.pravatar.cc/60?img=68'}" onerror="this.src='https://i.pravatar.cc/60?img=68'">
+          <div class="info">
+            <div class="uname">${escapeHtml(u.username||'@kullanici')}</div>
+            <div class="ubio">${escapeHtml(u.displayName||u.bio||'')}</div>
+          </div>
+        </div>`;
+      }).join('');
+    }).catch(()=>{ body.innerHTML = '<div class="followListEmpty">Arama başarısız, tekrar dene.</div>'; });
+  }, 300);
+}
+
+/* ============================================================
+   GOOGLE SIGN-IN — kullanıcı adı/profil kurulum adımı düzeltmesi
+   ============================================================ */
+function handleSocialSignInResult(result){
+  if(!result || !result.user) return;
+  const user = result.user;
+  fbDb.ref('users/' + user.uid).once('value').then((snap)=>{
+    if(snap.exists() && snap.val().username){
+      // Mevcut kullanıcı — direkt akışa al
+      savedEmail = user.email || '';
+      loadUserProfileAndEnter(user);
+    } else {
+      // YENİ kullanıcı — kullanıcı adı ve profil kurulum ekranı göster
+      savedEmail = user.email || '';
+      savedProfilePhoto = user.photoURL || '';
+      savedDisplayName = user.displayName || '';
+      // Auth panelini kayıt moduna al, 2. adıma git (şifre/kullanıcı adı)
+      switchAuthTab('signup');
+      // Email adımını doldur
+      const emailEl = document.getElementById('email');
+      if(emailEl) emailEl.value = savedEmail;
+      // Google hesabı için şifre gerekmez, sadece kullanıcı adı istelim
+      goReg(2);
+      // Sosyal giriş bayrağı — şifre alanını opsiyonel yap
+      window._socialSignupUid = user.uid;
+      window._socialSignupUser = user;
+      // Şifre alanını gizle (Google hesabı, şifre yok)
+      const pwdField = document.getElementById('password');
+      if(pwdField){
+        pwdField.value = 'google_oauth_' + user.uid.slice(0,8);
+        const pwdRow = pwdField.closest('.field');
+        if(pwdRow) pwdRow.style.display = 'none';
+      }
+      showToast('Google hesabın bulundu! Kullanıcı adı seç ve devam et.');
+    }
+  }).catch(()=>{
+    savedEmail = user.email || '';
+    loadUserProfileAndEnter(user);
+  });
+}
+
+/* Override createAccountAndSendVerification for Google OAuth flow */
+const _origCreateAccount = window.createAccountAndSendVerification;
+function createAccountAndSendVerification(){
+  // Eğer Google OAuth flow'undaysak, direkt profil kaydet
+  if(window._socialSignupUid){
+    const userVal = (document.getElementById('username').value||'').trim().replace(/^@/,'');
+    const displayVal = (document.getElementById('displayName').value||'').trim();
+    if(userVal.length < 3){ alert('Kullanıcı adı en az 3 karakter olmalı.'); return; }
+    const btn = document.getElementById('createAccountBtn');
+    btn.disabled = true; btn.textContent = 'Kaydediliyor...';
+    const usernameKey = userVal.toLowerCase();
+    fbDb.ref('usernames/' + usernameKey).once('value').then(snap=>{
+      if(snap.exists() && snap.val() !== window._socialSignupUid){
+        btn.disabled=false; btn.textContent='Hesabı Oluştur';
+        suggestAlternativeUsernames(usernameKey); return;
+      }
+      const profileData = {
+        username: '@'+userVal, displayName: displayVal,
+        email: savedEmail, photo: savedProfilePhoto,
+        isAdmin: false, postsCount:0, followersCount:0, followingCount:0,
+        createdAt: Date.now(), authProvider: 'google'
+      };
+      Promise.all([
+        fbDb.ref('usernames/' + usernameKey).set(window._socialSignupUid),
+        fbDb.ref('users/' + window._socialSignupUid).set(profileData)
+      ]).then(()=>{
+        savedUsername = '@'+userVal;
+        savedDisplayName = displayVal;
+        const u = window._socialSignupUser;
+        window._socialSignupUid = null; window._socialSignupUser = null;
+        const pwdRow = document.getElementById('password') ? document.getElementById('password').closest('.field') : null;
+        if(pwdRow) pwdRow.style.display = '';
+        btn.disabled=false; btn.textContent='Hesabı Oluştur';
+        loadUserProfileAndEnter(u);
+      }).catch(()=>{ btn.disabled=false; btn.textContent='Hesabı Oluştur'; showToast('Kaydedilemedi, tekrar dene.'); });
+    });
+    return;
+  }
+  // Normal email/password flow
+  if(typeof _origCreateAccount === 'function') _origCreateAccount();
+}
+
+/* ============================================================
+   HESAP SİLME — tam silme
+   ============================================================ */
+function deleteMyAccount(){
+  if(!requireFirebase() || !fbAuth.currentUser){ showToast('Önce giriş yapmalısın.'); return; }
+  const reason = prompt('Hesabını neden silmek istiyorsun? (isteğe bağlı)');
+  if(reason === null) return; // iptal
+  if(!confirm('⚠️ Hesabını KALICI olarak silmek istediğine emin misin?\n\nTüm gönderilerin, mesajların, takip listelerin silinecek.\n\nBu işlem GERİ ALINAMAZ.')) return;
+  if(!confirm('Son onay: Gerçekten silmek istiyor musun?')) return;
+
+  const user = fbAuth.currentUser;
+  const uid = user.uid;
+  showToast('Hesabın siliniyor...');
+
+  // Neden raporunu kaydet
+  if(reason && reason.trim()){
+    fbDb.ref('deletionReasons').push({ uid, reason: reason.trim(), ts: Date.now() }).catch(()=>{});
+  }
+
+  // Tüm kullanıcı verisini sil
+  const usernameKey = (savedUsername||'').replace(/^@/,'').toLowerCase();
+  Promise.allSettled([
+    fbDb.ref('users/' + uid).remove(),
+    fbDb.ref('follows/' + uid).remove(),
+    fbDb.ref('followers/' + uid).remove(),
+    fbDb.ref('notifications/' + uid).remove(),
+    usernameKey ? fbDb.ref('usernames/' + usernameKey).remove() : Promise.resolve(),
+    // Gönderileri sil
+    fbDb.ref('posts').orderByChild('uid').equalTo(uid).once('value').then(snap=>{
+      const ps = snap.val() || {};
+      return Promise.all(Object.keys(ps).map(pid => fbDb.ref('posts/'+pid).remove()));
+    })
+  ]).then(()=>{
+    user.delete().then(()=>{
+      // State'i sıfırla
+      savedEmail=''; savedPassword=''; savedUsername=''; savedProfilePhoto=''; savedBio='';
+      try{ localStorage.removeItem('next_session'); }catch(e){}
+      document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+      document.getElementById('screenRegister').classList.add('active');
+      switchAuthTab('login');
+      document.getElementById('island').classList.add('hidden');
+      alert('Hesabın kalıcı olarak silindi. Hoşça kal 👋\n\nAynı e-posta ile yeniden kayıt olabilirsin.');
+    }).catch(err=>{
+      if(err.code === 'auth/requires-recent-login'){
+        alert('Güvenlik için yeniden giriş yapman gerekiyor. Şimdi çıkış yapılacak, tekrar giriş yap ve sil butonuna bas.');
+        logoutAccount();
+      } else { showToast(firebaseErrorMessage(err)); }
+    });
+  });
+}
+
+/* ============================================================
+   SÜRELİ FOTOĞRAF (Kaybolacak fotoğraf) — DM'de
+   ============================================================ */
+function sendEphemeralPhoto(ev){
+  const file = ev.target.files[0];
+  if(!file || !activeChatId || !fbAuth.currentUser) return;
+  const seconds = parseInt(prompt('Kaç saniye sonra kaybolsun? (1-10)', '5')) || 5;
+  const duration = Math.min(10, Math.max(1, seconds));
+  const reader = new FileReader();
+  reader.onload = e => {
+    compressImageToBase64(e.target.result, 600, 0.7).then(compressed=>{
+      const ts = Date.now();
+      const msgRef = fbDb.ref('chats/' + activeChatId + '/messages').push();
+      ensureChatMeta(activeChatId, activeChatPeerUid).then(()=>{
+        return msgRef.set({
+          from: fbAuth.currentUser.uid,
+          mediaUrl: compressed, mediaType: 'ephemeral',
+          ephemeralSecs: duration,
+          ts
+        });
+      }).then(()=>{
+        const update = { lastMsg: '📸 Süreli fotoğraf', lastTs: ts, lastSenderUid: fbAuth.currentUser.uid };
+        update['unreadFor/' + activeChatPeerUid] = true;
+        fbDb.ref('chatMeta/' + activeChatId).update(update);
+      });
+    });
+  };
+  reader.readAsDataURL(file);
+  ev.target.value = '';
 }
 
 function bootApp(){
