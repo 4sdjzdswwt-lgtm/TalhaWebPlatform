@@ -948,6 +948,12 @@ body.follow-list-open #island{display:none !important;}
   #island{display:none !important;}
 }
 
+/* Herhangi bir modal/overlay açıkken adayı gizle — butonları engellemesin */
+body.modal-open #island{display:none !important;}
+
+/* iOS Safari'de file input click sorunu — label kullanarak çöz */
+.file-input-label{display:block;cursor:pointer;width:100%;}
+
 /* Bildirim satırları */
 .notif-row{
   display:flex;align-items:center;gap:12px;padding:12px 18px;cursor:pointer;
@@ -1223,23 +1229,54 @@ tbody tr:hover{background:var(--surface-2);}
 .momentReadyBtn.isReady{background:linear-gradient(135deg,#22c55e,#16a34a);}
 
 /* ===== ANI YAKALA — senkron çekim ekranı ===== */
-.momentCaptureOverlay{position:fixed;inset:0;background:#000;z-index:220;display:flex;flex-direction:column;}
+.momentCaptureOverlay{position:fixed;inset:0;background:linear-gradient(180deg,#0a0010 0%,#0d001a 100%);z-index:220;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;}
 .momentCaptureOverlay.hidden{display:none;}
-.momentCamWrap{flex:1;position:relative;overflow:hidden;background:#111;display:flex;align-items:center;justify-content:center;}
-.momentCamWrap video{width:100%;height:100%;object-fit:cover;}
+.momentCamWrap{
+  position:relative;width:100%;max-width:420px;
+  aspect-ratio:3/4;border-radius:28px;overflow:hidden;
+  background:#111;
+  border:3px solid rgba(124,58,237,.5);
+  box-shadow:0 0 40px rgba(124,58,237,.3), 0 0 80px rgba(124,58,237,.1);
+  flex-shrink:0;
+}
+.momentCamWrap video{width:100%;height:100%;object-fit:cover;border-radius:25px;}
 .momentCamPlaceholder{color:rgba(255,255,255,.5);font-size:13px;text-align:center;padding:24px;}
 .momentCountdown{
   position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
-  font-family:'Space Grotesk',sans-serif;font-size:120px;font-weight:700;color:#fff;
-  text-shadow:0 0 40px rgba(124,58,237,.8);pointer-events:none;
+  font-family:'Space Grotesk',sans-serif;font-size:96px;font-weight:900;
+  color:#fff;text-shadow:0 0 60px rgba(124,58,237,1), 0 4px 24px rgba(0,0,0,.8);
+  pointer-events:none;z-index:10;
 }
 .momentCountdown.flash{animation:momentFlash .5s ease;}
-@keyframes momentFlash{0%{background:rgba(255,255,255,0);}15%{background:rgba(255,255,255,.85);}100%{background:rgba(255,255,255,0);}}
-.momentCamTopBar{position:absolute;top:0;left:0;right:0;padding:16px;display:flex;justify-content:space-between;z-index:5;}
-.momentCamBtn{width:40px;height:40px;border-radius:50%;background:rgba(0,0,0,.4);border:none;color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+@keyframes momentFlash{0%{background:rgba(255,255,255,0);}15%{background:rgba(255,255,255,.9);}100%{background:rgba(255,255,255,0);}}
+.momentCamTopBar{
+  position:absolute;top:0;left:0;right:0;padding:14px 16px;
+  display:flex;justify-content:space-between;z-index:5;
+  background:linear-gradient(to bottom,rgba(0,0,0,.5),transparent);
+}
+.momentCamBtn{
+  width:42px;height:42px;border-radius:50%;
+  background:rgba(0,0,0,.45);backdrop-filter:blur(8px);
+  border:1px solid rgba(255,255,255,.15);color:#fff;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;
+}
 .momentCamBtn svg{width:19px;height:19px;}
-.momentParticipantsBottom{position:absolute;bottom:16px;left:0;right:0;display:flex;gap:10px;justify-content:center;z-index:5;flex-wrap:wrap;padding:0 16px;}
-.momentParticipantsBottom img{width:38px;height:38px;border-radius:50%;border:2px solid rgba(34,211,238,.8);object-fit:cover;}
+.momentParticipantsBottom{
+  position:absolute;bottom:14px;left:0;right:0;
+  display:flex;gap:10px;justify-content:center;z-index:5;
+  flex-wrap:wrap;padding:0 16px;
+}
+.momentParticipantsBottom img{
+  width:40px;height:40px;border-radius:50%;
+  border:2.5px solid rgba(34,211,238,.9);object-fit:cover;
+  box-shadow:0 0 10px rgba(34,211,238,.5);
+}
+/* Kamera ekranı alt başlık */
+.momentCamLabel{
+  color:rgba(255,255,255,.8);font-size:13px;font-weight:600;
+  text-align:center;margin-top:14px;letter-spacing:.5px;
+  font-family:'Space Grotesk',sans-serif;
+}
 
 /* ===== ANI YAKALA — birleştirme / önizleme ekranı ===== */
 .momentPreviewOverlay{position:fixed;inset:0;background:linear-gradient(160deg,#0a0518 0%,#160b2e 60%,#04141c 100%);z-index:230;display:flex;flex-direction:column;color:#fff;}
@@ -1399,7 +1436,9 @@ tbody tr:hover{background:var(--surface-2);}
               <div class="auth-switch-link" style="margin-top:8px;text-align:right;" onclick="forgotPassword()">Şifremi Unuttum</div>
             </div>
             <button class="btn btn-primary" id="loginBtn" style="width:100%" onclick="loginReturning()">Giriş Yap</button>
-            <div class="auth-switch-link" onclick="switchAuthTab('signup')">Hesabın yok mu? <b>Kayıt Ol</b></div>
+            <button class="btn btn-ghost" style="width:100%;margin-top:10px;border:2px solid var(--accent);" onclick="switchAuthTab('signup')">
+              Hesabın yok mu? <b>Kayıt Ol →</b>
+            </button>
           </div>
         </div>
 
@@ -1614,9 +1653,7 @@ tbody tr:hover{background:var(--surface-2);}
             <button class="icon-btn" onclick="document.getElementById('dmFile').click()" title="Fotoğraf / Galeri">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
             </button>
-            <button class="icon-btn" onclick="insertEmoji()" title="Emoji">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
-            </button>
+            <button class="icon-btn" onclick="openGifPicker()" title="GIF" style="font-size:12px;font-weight:800;color:var(--accent);letter-spacing:-0.5px;">GIF</button>
             <input type="file" id="dmFile" accept="image/*,video/*" onchange="sendMedia(event)">
             <input type="text" id="msgInput" placeholder="Mesaj..." onkeydown="if(event.key==='Enter') sendMsg()">
             <button class="send" onclick="sendMsg()" title="Gönder"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 11l18-8-8 18-2-8-8-2z"/></svg></button>
@@ -1940,9 +1977,9 @@ tbody tr:hover{background:var(--surface-2);}
       <button class="followListClose" onclick="closeProfileMenu()">✕</button>
     </div>
     <div class="followListBody" id="profileMenuBody" style="padding:6px 0;">
-      <div class="profileMenuItem" onclick="blockUser()">🚫 Engelle</div>
+      <div class="profileMenuItem" data-action="block" onclick="blockUser()">🚫 Engelle</div>
       <div class="profileMenuItem" onclick="reportUser()">⚠️ Şikayet Et</div>
-      <div class="profileMenuItem" onclick="restrictUser()">🔇 Kısıtla</div>
+      <div class="profileMenuItem" data-action="restrict" onclick="restrictUser()">🔇 Kısıtla</div>
       <div class="profileMenuItem" onclick="unfollowFromMenu()">➖ Takipten Çık</div>
       <div class="profileMenuItem" onclick="shareProfile()">📤 Bu Profili Paylaş</div>
       <div class="profileMenuItem" onclick="copyProfileUrl()">🔗 Profil URL'sini Kopyala</div>
@@ -1951,14 +1988,18 @@ tbody tr:hover{background:var(--surface-2);}
   </div>
 </div>
 
-<!-- ================= EMOJİ SEÇİCİ (basit) ================= -->
-<div class="followListOverlay hidden" id="emojiPickerOverlay" onclick="if(event.target===this) closeEmojiPicker()">
-  <div class="followListSheet" style="max-height:45vh;">
+<!-- ================= GIF SEÇİCİ ================= -->
+<div class="followListOverlay hidden" id="emojiPickerOverlay" onclick="if(event.target===this) closeGifPicker()">
+  <div class="followListSheet" style="max-height:55vh;">
     <div class="followListHead">
-      <h3>Emoji Seç</h3>
-      <button class="followListClose" onclick="closeEmojiPicker()">✕</button>
+      <h3>GIF Gönder</h3>
+      <button class="followListClose" onclick="closeGifPicker()">✕</button>
     </div>
-    <div class="followListBody" id="emojiGrid" style="display:grid;grid-template-columns:repeat(8,1fr);gap:4px;padding:14px;font-size:24px;text-align:center;">
+    <div style="padding:10px 14px;">
+      <input type="text" id="gifSearchInput" placeholder="GIF ara..." oninput="searchGifs()" style="width:100%;padding:10px 14px;border-radius:12px;border:1px solid var(--line);background:var(--surface-2);color:var(--text);font-size:13px;">
+    </div>
+    <div class="followListBody" id="emojiGrid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding:8px 14px;">
+      <div style="grid-column:1/-1;text-align:center;color:var(--muted);font-size:12px;padding:20px;">GIF aramak için yukarı yaz veya aşağıdan seç</div>
     </div>
   </div>
 </div>
@@ -1971,9 +2012,11 @@ tbody tr:hover{background:var(--surface-2);}
       <button class="followListClose" onclick="closeStoryComposer()">✕</button>
     </div>
     <div style="padding:16px;">
-      <div class="upload-zone" id="storyDropzone" onclick="document.getElementById('storyFileInput').click()" style="min-height:160px;cursor:pointer;border:2px dashed var(--line);border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:var(--muted);font-size:13px;background:var(--surface-2);">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
-        <span>Fotoğraf veya video seç</span>
+      <div class="upload-zone" id="storyDropzone" style="min-height:160px;cursor:pointer;border:2px dashed var(--line);border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:var(--muted);font-size:13px;background:var(--surface-2);">
+        <label class="file-input-label" for="storyFileInput" style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+          <span>📷 Fotoğraf veya video seç</span>
+        </label>
       </div>
       <input type="file" id="storyFileInput" accept="image/*,video/*" onchange="onStoryFileChosen(event)" style="display:none;">
       <div class="field" style="margin-top:14px;">
@@ -2065,9 +2108,10 @@ tbody tr:hover{background:var(--surface-2);}
       <button class="momentCamBtn" onclick="cancelMomentSession()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
       <button class="momentCamBtn" id="momentFlipBtn" onclick="flipMomentCamera()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 1 2.6 6.3M3 12V6m0 6h6"/></svg></button>
     </div>
-    <div class="momentCountdown hidden" id="momentCountdown">3</div>
+    <div class="momentCountdown hidden" id="momentCountdown">5</div>
     <div class="momentParticipantsBottom" id="momentParticipantsBottom"></div>
   </div>
+  <div class="momentCamLabel" id="momentCamLabel">📸 Hazırlan, geri sayım başlıyor...</div>
 </div>
 
 <!-- 4) BİRLEŞTİRME / ÖNİZLEME EKRANI -->
@@ -2101,11 +2145,13 @@ tbody tr:hover{background:var(--surface-2);}
       <p>Akışında paylaş.</p>
     </div>
     <div class="momentModalBody">
-      <div class="upload-zone" id="newPostDropzone" onclick="document.getElementById('newPostFileInput').click()">
-        <div class="icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 16V4M12 4l-4 4M12 4l4 4M4 20h16"/></svg></div>
-        <p>Fotoğraf veya video seç</p>
+      <div class="upload-zone" id="newPostDropzone">
+        <label class="file-input-label" for="newPostFileInput">
+          <div class="icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div>
+          <p>📷 Fotoğraf veya video seçmek için dokun</p>
+        </label>
       </div>
-      <input type="file" id="newPostFileInput" accept="image/*,video/*" onchange="onNewPostFileChosen(event)">
+      <input type="file" id="newPostFileInput" accept="image/*,video/*" onchange="onNewPostFileChosen(event)" style="display:none;">
       <div style="margin-top:14px;">
         <label style="display:block;font-size:12px;color:var(--muted);margin-bottom:6px;">Açıklama</label>
         <input type="text" class="momentFriendSearch" id="newPostCaption" placeholder="Bir şeyler yaz...">
@@ -4310,10 +4356,14 @@ function openChatThread(chatId, peerUid){
       const m = data[id];
       const mine = m.from === myUid;
       const t = m.ts ? new Date(m.ts).toTimeString().slice(0,5) : '';
+      const editTag = m.edited ? ' <span style="font-size:10px;color:var(--muted);font-style:italic;">düzenlendi</span>' : '';
+      const lp = 'ontouchstart="this._pt=setTimeout(()=>onMessageLongPress(\''+id+'\',\''+m.from+'\'),600)" ontouchend="clearTimeout(this._pt)" oncontextmenu="event.preventDefault();onMessageLongPress(\''+id+'\',\''+m.from+'\')"';
       if(m.mediaUrl){
-        return `<div class="msg-media" style="${mine?'align-self:flex-end;':''}">${m.mediaType==='video' ? `<video src="${m.mediaUrl}" controls></video>` : `<img src="${m.mediaUrl}">`}</div>`;
+        const isGif = m.mediaType === 'gif';
+        const media = (m.mediaType==='video' && !isGif) ? `<video src="${m.mediaUrl}" controls style="max-width:220px;border-radius:12px;"></video>` : `<img src="${m.mediaUrl}" style="max-width:220px;border-radius:12px;">`;
+        return `<div class="msg-media" style="${mine?'align-self:flex-end;':''}" ${lp}>${media}<div style="font-size:10px;color:var(--muted);margin-top:3px;">${t}</div></div>`;
       }
-      return `<div class="msg ${mine?'me':'them'}">${escapeHtml(m.text||'')} <span class="time">${t}</span></div>`;
+      return `<div class="msg ${mine?'me':'them'}" ${lp}>${escapeHtml(m.text||'')}${editTag} <span class="time">${t}</span></div>`;
     }).join('');
     box.scrollTop = box.scrollHeight;
   });
@@ -4582,14 +4632,18 @@ function openNewPostComposer(){
   document.getElementById('newPostCaption').value = '';
   document.getElementById('newPostLocation').value = '';
   document.getElementById('newPostDropzone').innerHTML = `
-    <div class="icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 16V4M12 4l-4 4M12 4l4 4M4 20h16"/></svg></div>
-    <p>Fotoğraf veya video seç</p>`;
+    <label class="file-input-label" for="newPostFileInput">
+      <div class="icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div>
+      <p>📷 Fotoğraf veya video seçmek için dokun</p>
+    </label>`;
   document.getElementById('newPostDropzone').classList.remove('has-img');
   document.getElementById('newPostPublishBtn').disabled = true;
   document.getElementById('newPostOverlay').classList.remove('hidden');
+  document.body.classList.add('modal-open');
 }
 function closeNewPostComposer(){
   document.getElementById('newPostOverlay').classList.add('hidden');
+  document.body.classList.remove('modal-open');
 }
 function onNewPostFileChosen(ev){
   const file = ev.target.files[0]; if(!file) return;
@@ -4984,28 +5038,33 @@ function beginMomentCountdownUI(session){
   countdownEl.classList.remove('hidden');
 
   // Önce "HAZIR OL!" göster, sonra 5-4-3-2-1, sonra "YAKALA!"
-  const tick = ()=>{
-    const remainingMs = session.countdownStartAt - Date.now();
-    const secs = Math.ceil(remainingMs / 1000);
-    if(secs > 5){
-      countdownEl.textContent = 'HAZIR OL!';
-      countdownEl.style.fontSize = '42px';
-    } else if(secs > 0){
-      countdownEl.textContent = secs;
-      countdownEl.style.fontSize = '';
-      countdownEl.classList.remove('flash');
-    } else if(secs === 0 || (secs < 0 && remainingMs > -1000)){
-      countdownEl.textContent = 'YAKALA!';
-      countdownEl.style.fontSize = '48px';
-      countdownEl.classList.add('flash');
-      captureMomentFrame();
-    } else {
-      clearInterval(momentCountdownTimer);
-      momentCountdownTimer = null;
-      countdownEl.classList.add('hidden');
-      countdownEl.style.fontSize = '';
-    }
-  };
+    const label = document.getElementById('momentCamLabel');
+    const tick = ()=>{
+      const remainingMs = session.countdownStartAt - Date.now();
+      const secs = Math.ceil(remainingMs / 1000);
+      if(secs > 5){
+        countdownEl.textContent = 'HAZIR OL!';
+        countdownEl.style.fontSize = '42px';
+        if(label) label.textContent = '📸 Hazırlan, geri sayım başlıyor...';
+      } else if(secs > 0){
+        countdownEl.textContent = secs;
+        countdownEl.style.fontSize = '';
+        countdownEl.classList.remove('flash');
+        if(label) label.textContent = secs + ' saniye sonra çekiliyor...';
+      } else if(secs === 0 || (secs < 0 && remainingMs > -1000)){
+        countdownEl.textContent = 'YAKALA!';
+        countdownEl.style.fontSize = '48px';
+        countdownEl.classList.add('flash');
+        if(label) label.textContent = '✨ Fotoğraf çekildi!';
+        captureMomentFrame();
+      } else {
+        clearInterval(momentCountdownTimer);
+        momentCountdownTimer = null;
+        countdownEl.classList.add('hidden');
+        countdownEl.style.fontSize = '';
+        if(label) label.textContent = '⏳ Diğerleri bekleniyor...';
+      }
+    };
   tick();
   momentCountdownTimer = setInterval(tick, 250);
 }
@@ -5683,24 +5742,48 @@ function loadNotifications(){
 function openProfileMenu(){
   document.getElementById('profileMenuOverlay').classList.remove('hidden');
   document.body.classList.add('follow-list-open');
+  document.body.classList.add('modal-open');
+  // Engel ve kısıtlama durumlarını kontrol et, menü metinlerini güncelle
+  if(viewingOtherUid && fbAuth.currentUser){
+    const myUid = fbAuth.currentUser.uid;
+    fbDb.ref('blocks/' + myUid + '/' + viewingOtherUid).once('value').then(s=>{
+      const el = document.querySelector('#profileMenuBody [data-action="block"]');
+      if(el) el.textContent = s.exists() ? '✅ Engeli Kaldır' : '🚫 Engelle';
+    });
+    fbDb.ref('restrictions/' + myUid + '/' + viewingOtherUid).once('value').then(s=>{
+      const el = document.querySelector('#profileMenuBody [data-action="restrict"]');
+      if(el) el.textContent = s.exists() ? '✅ Kısıtlamayı Kaldır' : '🔇 Kısıtla';
+    });
+  }
 }
 function closeProfileMenu(){
   document.getElementById('profileMenuOverlay').classList.add('hidden');
   document.body.classList.remove('follow-list-open');
+  document.body.classList.remove('modal-open');
 }
 function blockUser(){
   if(!viewingOtherUid || !fbAuth.currentUser) return;
-  if(!confirm('Bu kullanıcıyı engellemek istediğine emin misin?\n\nEngellenen kullanıcı seni göremez, mesaj atamaz.')) return;
   const myUid = fbAuth.currentUser.uid;
-  fbDb.ref('blocks/' + myUid + '/' + viewingOtherUid).set(true).then(()=>{
-    // Takipten de çık
-    fbDb.ref('follows/' + myUid + '/' + viewingOtherUid).remove();
-    fbDb.ref('followers/' + viewingOtherUid + '/' + myUid).remove();
-    fbDb.ref('follows/' + viewingOtherUid + '/' + myUid).remove();
-    fbDb.ref('followers/' + myUid + '/' + viewingOtherUid).remove();
-    closeProfileMenu();
-    showToast('Kullanıcı engellendi.');
-    closeOtherProfile();
+  const ref = fbDb.ref('blocks/' + myUid + '/' + viewingOtherUid);
+  ref.once('value').then(snap=>{
+    if(snap.exists()){
+      // Engeli kaldır
+      ref.remove().then(()=>{
+        closeProfileMenu();
+        showToast('Engel kaldırıldı.');
+      });
+    } else {
+      if(!confirm('Bu kullanıcıyı engellemek istediğine emin misin?')) return;
+      ref.set(true).then(()=>{
+        fbDb.ref('follows/' + myUid + '/' + viewingOtherUid).remove();
+        fbDb.ref('followers/' + viewingOtherUid + '/' + myUid).remove();
+        fbDb.ref('follows/' + viewingOtherUid + '/' + myUid).remove();
+        fbDb.ref('followers/' + myUid + '/' + viewingOtherUid).remove();
+        closeProfileMenu();
+        showToast('Kullanıcı engellendi.');
+        refreshFollowButtonState(viewingOtherUid);
+      });
+    }
   });
 }
 function reportUser(){
@@ -5720,9 +5803,20 @@ function reportUser(){
 }
 function restrictUser(){
   if(!viewingOtherUid || !fbAuth.currentUser) return;
-  fbDb.ref('restrictions/' + fbAuth.currentUser.uid + '/' + viewingOtherUid).set(true).then(()=>{
-    closeProfileMenu();
-    showToast('Kullanıcı kısıtlandı. Mesajları ve yorumları senden gizlenecek.');
+  const myUid = fbAuth.currentUser.uid;
+  const ref = fbDb.ref('restrictions/' + myUid + '/' + viewingOtherUid);
+  ref.once('value').then(snap=>{
+    if(snap.exists()){
+      ref.remove().then(()=>{
+        closeProfileMenu();
+        showToast('Kısıtlama kaldırıldı.');
+      });
+    } else {
+      ref.set(true).then(()=>{
+        closeProfileMenu();
+        showToast('Kullanıcı kısıtlandı.');
+      });
+    }
   });
 }
 function unfollowFromMenu(){
@@ -5779,27 +5873,113 @@ const _origOpenFollowList = typeof openFollowList === 'function' ? openFollowLis
 })();
 
 /* ============================================================
-   EMOJİ SEÇİCİ — basit grid
+   GIF SEÇİCİ — popüler reaksiyon GIF'leri
    ============================================================ */
-const EMOJI_LIST = ['😀','😂','😍','🥰','😎','🤔','😢','😡','👍','👎','❤️','🔥','💯','🎉','🥳','😴','🤩','😱','🙏','💪','👏','🫡','😘','🤣','🥺','😇','🤗','😈','💀','👻','🎵','⭐','🌈','🍕','🏆','💎','🚀','🌍','🎮','📸','💌','🧡','💜','💙','🖤','🤍','💚','💛'];
+const POPULAR_GIFS = [
+  {label:'👍',url:'https://media.tenor.com/W2JtVFR9m5wAAAAM/thumbs-up.gif'},
+  {label:'😂',url:'https://media.tenor.com/bPDk7Pc3X2IAAAAM/laughing.gif'},
+  {label:'❤️',url:'https://media.tenor.com/o656qFKDzeUAAAAM/corazon-heart.gif'},
+  {label:'👏',url:'https://media.tenor.com/D00IG7pBqhAAAAAM/clapping-clap.gif'},
+  {label:'🔥',url:'https://media.tenor.com/kz7aCnrj2JwAAAAM/fire.gif'},
+  {label:'😢',url:'https://media.tenor.com/d-bTcCsG4AQAAAAM/cat-crying-cat.gif'},
+  {label:'🤯',url:'https://media.tenor.com/3JUhHJXEiGQAAAAM/mind-blown.gif'},
+  {label:'🎉',url:'https://media.tenor.com/zJlS6DqAH5gAAAAM/celebrate-confetti.gif'},
+  {label:'😡',url:'https://media.tenor.com/-iCl6yrOqe4AAAAM/angry.gif'},
+  {label:'🤗',url:'https://media.tenor.com/4QxmKz5BVB0AAAAM/virtual-hug-sending.gif'},
+  {label:'👋',url:'https://media.tenor.com/6BqEOyAqfhMAAAAM/wave-hi.gif'},
+  {label:'😍',url:'https://media.tenor.com/MWSI0CKJR9MAAAAM/in-love-love.gif'},
+];
 
-function insertEmoji(){
+function openGifPicker(){
   document.getElementById('emojiPickerOverlay').classList.remove('hidden');
+  document.body.classList.add('modal-open');
+  renderGifGrid(POPULAR_GIFS);
+}
+function closeGifPicker(){
+  document.getElementById('emojiPickerOverlay').classList.add('hidden');
+  document.body.classList.remove('modal-open');
+}
+function renderGifGrid(gifs){
   const grid = document.getElementById('emojiGrid');
-  grid.innerHTML = EMOJI_LIST.map(e =>
-    `<div style="cursor:pointer;padding:6px;border-radius:8px;transition:background .1s;" onclick="pickEmoji('${e}')" onmouseenter="this.style.background='var(--surface-2)'" onmouseleave="this.style.background=''">${e}</div>`
+  if(!gifs.length){
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--muted);font-size:12px;padding:20px;">GIF bulunamadı</div>';
+    return;
+  }
+  grid.innerHTML = gifs.map(g =>
+    `<div style="cursor:pointer;border-radius:10px;overflow:hidden;aspect-ratio:1/1;" onclick="sendGifMessage('${g.url}')">
+      <img src="${g.url}" style="width:100%;height:100%;object-fit:cover;" loading="lazy">
+    </div>`
   ).join('');
 }
-function pickEmoji(emoji){
-  const input = document.getElementById('msgInput');
-  if(input){
-    input.value += emoji;
-    input.focus();
-  }
-  closeEmojiPicker();
+function searchGifs(){
+  const q = (document.getElementById('gifSearchInput').value || '').trim().toLowerCase();
+  if(!q){ renderGifGrid(POPULAR_GIFS); return; }
+  const filtered = POPULAR_GIFS.filter(g => g.label.includes(q));
+  renderGifGrid(filtered.length ? filtered : POPULAR_GIFS);
 }
-function closeEmojiPicker(){
-  document.getElementById('emojiPickerOverlay').classList.add('hidden');
+function sendGifMessage(url){
+  if(!requireFirebase() || !fbAuth.currentUser || !activeChatId) return;
+  closeGifPicker();
+  const ts = Date.now();
+  const msgRef = fbDb.ref('chats/' + activeChatId + '/messages').push();
+  ensureChatMeta(activeChatId, activeChatPeerUid).then(()=>{
+    return msgRef.set({ from: fbAuth.currentUser.uid, mediaUrl: url, mediaType: 'gif', ts });
+  }).then(()=>{
+    const update = { lastMsg: 'GIF 🎬', lastTs: ts, lastSenderUid: fbAuth.currentUser.uid };
+    update['unreadFor/' + activeChatPeerUid] = true;
+    fbDb.ref('chatMeta/' + activeChatId).update(update);
+  });
+}
+
+/* ============================================================
+   MESAJ SİLME / DÜZENLEME — uzun basma ile menü açılır
+   ============================================================ */
+function onMessageLongPress(msgId, fromUid){
+  const isMyMsg = fbAuth.currentUser && fromUid === fbAuth.currentUser.uid;
+  const options = [];
+  if(isMyMsg) options.push('Düzenle', 'Sil');
+  options.push('Kopyala', 'İptal');
+
+  const choice = prompt(options.join(' | ') + '\n\nYapmak istediğin işlemi yaz:');
+  if(!choice) return;
+  const c = choice.trim().toLowerCase();
+  if(c === 'sil' && isMyMsg) deleteMessage(msgId);
+  else if(c === 'düzenle' && isMyMsg) editMessage(msgId);
+  else if(c === 'kopyala') copyMessage(msgId);
+}
+function deleteMessage(msgId){
+  if(!activeChatId || !confirm('Bu mesajı silmek istediğine emin misin?')) return;
+  fbDb.ref('chats/' + activeChatId + '/messages/' + msgId).remove()
+    .then(()=> showToast('Mesaj silindi.'))
+    .catch(()=> showToast('Mesaj silinemedi.'));
+}
+function editMessage(msgId){
+  if(!activeChatId) return;
+  fbDb.ref('chats/' + activeChatId + '/messages/' + msgId + '/text').once('value').then(snap=>{
+    const oldText = snap.val() || '';
+    const newText = prompt('Mesajı düzenle:', oldText);
+    if(newText === null || newText.trim() === oldText) return;
+    fbDb.ref('chats/' + activeChatId + '/messages/' + msgId).update({
+      text: newText.trim(),
+      edited: true,
+      editedAt: Date.now()
+    }).then(()=> showToast('Mesaj düzenlendi.'));
+  });
+}
+function copyMessage(msgId){
+  fbDb.ref('chats/' + activeChatId + '/messages/' + msgId + '/text').once('value').then(snap=>{
+    const text = snap.val() || '';
+    navigator.clipboard.writeText(text).then(()=> showToast('Mesaj kopyalandı.'))
+      .catch(()=> prompt('Kopyala:', text));
+  });
+}
+
+/* Yorum silme — kendi yorumumu posttan kaldır */
+function deleteComment(postId, commentId){
+  if(!confirm('Bu yorumu silmek istediğine emin misin?')) return;
+  fbDb.ref('posts/' + postId + '/comments/' + commentId).remove()
+    .then(()=> showToast('Yorum silindi.'))
+    .catch(()=> showToast('Yorum silinemedi.'));
 }
 
 /* ============================================================
@@ -5828,13 +6008,15 @@ let storyTimer = null;
 function openStoryComposer(){
   storyFile = null; storyDataUrl = null;
   document.getElementById('storyCaption').value = '';
-  document.getElementById('storyDropzone').innerHTML = '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg><span>Fotoğraf veya video seç</span>';
+  document.getElementById('storyDropzone').innerHTML = '<label class="file-input-label" for="storyFileInput"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg><span>📷 Fotoğraf veya video seç</span></label>';
   document.getElementById('storyPublishBtn').disabled = true;
   document.getElementById('storyComposerOverlay').classList.remove('hidden');
+  document.body.classList.add('modal-open');
   document.body.classList.add('follow-list-open');
 }
 function closeStoryComposer(){
   document.getElementById('storyComposerOverlay').classList.add('hidden');
+  document.body.classList.remove('modal-open');
   document.body.classList.remove('follow-list-open');
 }
 function onStoryFileChosen(ev){
