@@ -3896,7 +3896,9 @@ function applyAccountToUI(){
   document.getElementById('statFollowers').textContent = formatStatNumber(followersCount);
   document.getElementById('statFollowing').textContent = formatStatNumber(followingCount);
   // Admin değilse "Admin Paneli" simgesi adada görünmesin, sadece Bio görünsün.
-  document.getElementById('navAdmin').style.display = savedIsAdmin ? 'flex' : 'none';
+  // Admin butonu çizilir ama görünürlüğü CSS ile değil JS ile kontrol edilir
+  const _adminBtn = document.getElementById('navAdmin');
+  if(_adminBtn) _adminBtn.style.display = savedIsAdmin ? 'flex' : 'none';
 }
 
 function goToRegisterScreen(){
@@ -4076,15 +4078,23 @@ function loadUserProfileAndEnter(user){
 function enterAppFromAuth(){
   document.querySelectorAll('#main .screen').forEach(s=>s.classList.remove('active'));
   document.getElementById('screenFeed').classList.add('active');
-  applyAccountToUI();
-  document.getElementById('island').classList.remove('hidden');
-  document.querySelectorAll('.island button').forEach(b=>b.classList.remove('active'));
-  document.getElementById('navFeed').classList.add('active');
+  applyAccountToUI(); // önce UI güncelle (içinde island'ı manipüle eden satır yok)
   saveSession();
   // Presence (çevrimiçi durumu)
   if(fbAuth && fbAuth.currentUser) initPresence(fbAuth.currentUser.uid);
   // Hikaye butonuna profil fotoğrafını koy
-  setTimeout(updateStoryAvatarBtn, 200);
+  setTimeout(updateStoryAvatarBtn, 300);
+  // Adayı göster — applyAccountToUI'den SONRA çağırıyoruz,
+  // navAdmin gizlendikten sonra island açılsın ki layout doğru olsun
+  const island = document.getElementById('island');
+  island.classList.remove('hidden');
+  document.querySelectorAll('.island button').forEach(b => b.classList.remove('active'));
+  document.getElementById('navFeed').classList.add('active');
+  // Ekstra güvenlik: 100ms sonra tekrar göster (bazı iOS sürümlerinde render gecikiyor)
+  setTimeout(()=>{
+    island.classList.remove('hidden');
+    island.style.display = ''; // inline style varsa temizle
+  }, 150);
   // Veri akışlarını başlat
   try{
     initFeedListener();
@@ -4596,8 +4606,6 @@ function openChatThread(chatId, peerUid){
   activeChatPeerUid = peerUid;
 
   document.querySelectorAll('#screenMessages .chat-item').forEach(i=>i.classList.remove('active'));
-
-  // Bu chat'i benim için "okundu" olarak işaretle
   fbDb.ref('chatMeta/' + chatId + '/unreadFor/' + fbAuth.currentUser.uid).set(false).catch(()=>{});
 
   fbDb.ref('users/' + peerUid).once('value').then((snap)=>{
@@ -4621,7 +4629,7 @@ function openChatThread(chatId, peerUid){
     const ids = Object.keys(data).sort((a,b) => (data[a].ts||0) - (data[b].ts||0));
     const myUid = fbAuth.currentUser.uid;
     if(!ids.length){
-      box.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:12.5px;padding:24px 16px;">Henüz mesaj yok. İlk mesajı sen gönder 👋</div>';
+      box.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:12.5px;padding:24px 16px;">Henüz mesaj yok. İlk mesajı sen gönder!</div>';
       return;
     }
     box.innerHTML = ids.map(id => {
@@ -4629,16 +4637,28 @@ function openChatThread(chatId, peerUid){
       const mine = m.from === myUid;
       const t = m.ts ? new Date(m.ts).toTimeString().slice(0,5) : '';
       const editTag = m.edited ? ' <span style="font-size:10px;color:var(--muted);font-style:italic;">düzenlendi</span>' : '';
-      const lp = 'ontouchstart="this._pt=setTimeout(()=>onMessageLongPress(\''+id+'\',\''+m.from+'\'),600)" ontouchend="clearTimeout(this._pt)" oncontextmenu="event.preventDefault();onMessageLongPress(\''+id+'\',\''+m.from+'\')"';
       if(m.mediaUrl){
         const isGif = m.mediaType === 'gif';
-        const media = (m.mediaType==='video' && !isGif) ? `<video src="${m.mediaUrl}" controls style="max-width:220px;border-radius:12px;"></video>` : `<img src="${m.mediaUrl}" style="max-width:220px;border-radius:12px;">`;
-        return `<div class="msg-media" style="${mine?'align-self:flex-end;':''}" ${lp}>${media}<div style="font-size:10px;color:var(--muted);margin-top:3px;">${t}</div></div>`;
+        const media = (m.mediaType==='video' && !isGif)
+          ? '<video src="'+m.mediaUrl+'" controls style="max-width:220px;border-radius:12px;"></video>'
+          : '<img src="'+m.mediaUrl+'" style="max-width:220px;border-radius:12px;">';
+        return '<div class="msg-media" style="'+(mine?'align-self:flex-end;':'')+'">' + media + '<div style="font-size:10px;color:var(--muted);margin-top:3px;">'+t+'</div></div>';
       }
-      return `<div class="msg ${mine?'me':'them'}" ${lp}>${escapeHtml(m.text||'')}${editTag} <span class="time">${t}</span></div>`;
+      return '<div class="msg '+(mine?'me':'them')+'">' + escapeHtml(m.text||'') + editTag + ' <span class="time">'+t+'</span></div>';
     }).join('');
     box.scrollTop = box.scrollHeight;
   });
+
+  // Presence + typing (gecikmeyle, DOM hazır olsun)
+  setTimeout(()=>{
+    if(typeof watchPeerPresence === 'function') watchPeerPresence(peerUid);
+    if(typeof watchPeerTyping === 'function') watchPeerTyping(chatId, peerUid);
+    const inp = document.getElementById('msgInput');
+    if(inp && !inp._typingBound){
+      inp._typingBound = true;
+      inp.addEventListener('input', ()=>{ if(typeof onMsgInputType==='function') onMsgInputType(); });
+    }
+  }, 200);
 }
 
 function escapeHtml(s){
@@ -6358,26 +6378,41 @@ function publishStory(){
   const btn = document.getElementById('storyPublishBtn');
   btn.disabled = true; btn.textContent = 'Yükleniyor...';
   const uid = fbAuth.currentUser.uid;
-  const path = 'stories/' + uid + '/' + Date.now() + '_' + storyFile.name.replace(/[^a-zA-Z0-9._-]/g,'_');
-  fbStorage.ref().child(path).put(storyFile).then(snap=>snap.ref.getDownloadURL()).then(url=>{
-    return fbDb.ref('stories').push().set({
-      uid, url, mediaType: storyMediaType,
-      caption: (document.getElementById('storyCaption').value||'').trim(),
-      username: savedUsername || '@kullanici',
-      userPhoto: savedProfilePhoto || '',
-      ts: Date.now(),
-      expiresAt: Date.now() + 24*60*60*1000 // 24 saat
-    });
-  }).then(()=>{
-    btn.disabled = false; btn.textContent = 'Hikayeyi Paylaş';
-    closeStoryComposer();
-    showToast('Hikayen paylaşıldı 📸');
-    loadStoryStrip();
-  }).catch(err=>{
-    console.error('Story yükleme hatası:', err);
-    btn.disabled = false; btn.textContent = 'Hikayeyi Paylaş';
-    showToast('Hikaye yüklenemedi: ' + (err.message || 'Hata'));
-  });
+  // Kullanıcının güncel profil fotoğrafını Firebase'den çek
+  fbDb.ref('users/' + uid + '/photo').once('value').then(photoSnap => {
+    const currentPhoto = photoSnap.val() || savedProfilePhoto || '';
+    const doUpload = (mediaUrl) => {
+      return fbDb.ref('stories').push().set({
+        uid, url: mediaUrl, mediaType: storyMediaType,
+        caption: (document.getElementById('storyCaption').value||'').trim(),
+        username: savedUsername || '@kullanici',
+        userPhoto: currentPhoto,
+        ts: Date.now(),
+        expiresAt: Date.now() + 24*60*60*1000
+      });
+    };
+    const finish = () => {
+      btn.disabled = false; btn.textContent = 'Hikayeyi Paylaş';
+      closeStoryComposer();
+      showToast('Hikayen paylaşıldı 📸');
+      loadStoryStrip();
+    };
+    if(fbStorage && storyFile){
+      const path = 'stories/' + uid + '/' + Date.now() + '_' + storyFile.name.replace(/[^a-zA-Z0-9._-]/g,'_');
+      fbStorage.ref().child(path).put(storyFile)
+        .then(snap=>snap.ref.getDownloadURL())
+        .then(url => doUpload(url))
+        .then(finish)
+        .catch(err=>{ console.error('Story upload:', err); btn.disabled=false; btn.textContent='Hikayeyi Paylaş'; showToast('Yüklenemedi.'); });
+    } else if(storyDataUrl){
+      compressImageToBase64(storyDataUrl, 800, 0.75)
+        .then(compressed => doUpload(compressed))
+        .then(finish)
+        .catch(()=>{ btn.disabled=false; btn.textContent='Hikayeyi Paylaş'; showToast('Yüklenemedi.'); });
+    } else {
+      btn.disabled=false; btn.textContent='Hikayeyi Paylaş';
+    }
+  }).catch(()=>{ btn.disabled=false; btn.textContent='Hikayeyi Paylaş'; showToast('Hata, tekrar dene.'); });
 }
 
 /* Feed'deki story şeridini yükle — takip edilen kullanıcıların 24 saatlik hikayeleri */
@@ -6389,7 +6424,6 @@ function loadStoryStrip(){
 
   fbDb.ref('stories').orderByChild('expiresAt').startAt(now).limitToLast(50).once('value').then(snap=>{
     const data = snap.val() || {};
-    // Kullanıcıya göre grupla
     const byUser = {};
     Object.keys(data).forEach(id=>{
       const s = data[id];
@@ -6397,18 +6431,28 @@ function loadStoryStrip(){
       if(!byUser[s.uid]) byUser[s.uid] = [];
       byUser[s.uid].push({...s, id});
     });
-    // Her kullanıcı için bir avatar dairesi
     const uids = Object.keys(byUser);
     if(!uids.length){ container.innerHTML = ''; return; }
 
-    container.innerHTML = uids.map(uid=>{
-      const stories = byUser[uid].sort((a,b)=>a.ts-b.ts);
-      const first = stories[0];
-      return `<div class="momentStripItem" onclick="viewUserStories('${uid}')">
-        <div class="storyAvatarRing"><img src="${first.userPhoto || 'https://i.pravatar.cc/60?img=68'}" onerror="this.src='https://i.pravatar.cc/60?img=68'"></div>
-        <span class="momentStripLabel">${(first.username||'@').replace(/^@/,'').slice(0,10)}</span>
-      </div>`;
-    }).join('');
+    // Her uid için gerçek profil fotoğrafını Firebase'den çek
+    Promise.all(uids.map(uid =>
+      fbDb.ref('users/' + uid).once('value').then(us => ({uid, user: us.val()||{}}))
+    )).then(userList => {
+      container.innerHTML = userList.map(({uid, user})=>{
+        const stories = byUser[uid].sort((a,b)=>a.ts-b.ts);
+        const first = stories[0];
+        // Gerçek profil fotoğrafı: önce users tablosundan, yoksa story'deki userPhoto
+        const photo = user.photo || first.userPhoto || 'https://i.pravatar.cc/60?img=68';
+        const uname = (user.username || first.username || '@').replace(/^@/,'').slice(0,10);
+        const isMe = uid === fbAuth.currentUser.uid;
+        return `<div class="momentStripItem" onclick="viewUserStories('${uid}')">
+          <div class="storyAvatarRing${isMe?' seen':''}">
+            <img src="${photo}" onerror="this.src='https://i.pravatar.cc/60?img=68'">
+          </div>
+          <span class="momentStripLabel">${isMe ? 'Senin' : uname}</span>
+        </div>`;
+      }).join('');
+    });
   }).catch(()=>{});
 }
 
@@ -7249,31 +7293,6 @@ function triggerDoubleTapLike(mediaEl, postId){
 /* sendMsg tek yerde tanımlı (yukarıda) */
 
 /* ============================================================
-   openChatThread — presence + typing eklentisi
-   NOT: openChatThread asıl tanımı yukarıda (satır ~4287).
-   Burada sadece presence/typing başlatıyoruz.
-   ============================================================ */
-const _openChatThreadBase = openChatThread; // asıl fonksiyonu sakla
-function openChatThread(chatId, peerUid){
-  // Asıl chat açma işlemi
-  _openChatThreadBase(chatId, peerUid);
-  // Presence ve typing dinleyicilerini başlat
-  setTimeout(()=>{
-    if(typeof watchPeerPresence === 'function') watchPeerPresence(peerUid);
-    if(typeof watchPeerTyping === 'function') watchPeerTyping(chatId, peerUid);
-    const inp = document.getElementById('msgInput');
-    if(inp && !inp._typingBound){
-      inp._typingBound = true;
-      inp.addEventListener('input', ()=>{ if(typeof onMsgInputType==='function') onMsgInputType(); });
-    }
-  }, 150);
-}
-
-/* ============================================================
-   enterAppFromAuth UPDATE — presence başlat
-   (Aşağıdaki override artık gerek yok, yukarıdaki ana fonksiyona presence eklendi)
-   ============================================================ */
-
 /* ============================================================
    NAV_MAP güncelleme — momentFeed eklendi
    ============================================================ */
