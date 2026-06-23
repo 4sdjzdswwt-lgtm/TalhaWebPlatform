@@ -1498,9 +1498,9 @@ tbody tr:hover{background:var(--surface-2);}
               </button>
             </div>
             <div class="auth-divider">veya e-posta ile</div>
-            <div class="field"><label>E-posta</label>
+            <div class="field"><label>E-posta, Kullanıcı Adı veya Telefon</label>
               <div class="field-with-check" id="loginEmailWrap">
-                <input type="email" id="loginEmail" placeholder="ornek@mail.com" oninput="validateEmailLive(this, 'loginEmailWrap')">
+                <input type="text" id="loginEmail" placeholder="ornek@mail.com veya @kullanici" autocomplete="username" autocorrect="off" autocapitalize="off" spellcheck="false" oninput="validateEmailLive(this, 'loginEmailWrap')">
                 <span class="field-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span>
               </div>
             </div>
@@ -2433,6 +2433,27 @@ let savedUsername = '';
 let savedDisplayName = '';
 let savedBio = '';
 let savedEmail = '';
+
+// NAV_MAP — ekran ID'lerini isimle eşleştirir
+const NAV_MAP = {
+  feed:'screenFeed', messages:'screenMessages', profile:'screenProfile',
+  admin:'screenAdmin', saved:'screenSaved', liked:'screenLiked',
+  explore:'screenExplore', reels:'screenReels',
+  otherProfile:'screenOtherProfile'
+};
+
+/* Otomatik giriş bilgisi doldurma — daha önce giriş yapıldıysa email alanını doldur */
+function tryAutoFillLogin(){
+  try{
+    const saved = localStorage.getItem('next_session');
+    if(!saved) return;
+    const s = JSON.parse(saved);
+    if(s && s.email){
+      const loginEl = document.getElementById('loginEmail');
+      if(loginEl && !loginEl.value) loginEl.value = s.email;
+    }
+  }catch(e){}
+}
 let savedPassword = '';
 let savedIsAdmin = false;
 /* Kayıt akışı (şifre oluşturma → e-posta doğrulama → fotoğraf) sürerken
@@ -2535,27 +2556,37 @@ function initAuthState(){
   }
 
   fbAuth.onAuthStateChanged((user)=>{
-    // Kullanıcı şu an aktif olarak kayıt akışının ortasındaysa (şifre/foto adımı vb.)
-    // bu otomatik dinleyici ARAYA GİRİP onu Ana Akış'a fırlatmasın — akışın
-    // kendi "Doğruladım" / "Profili Tamamla" butonları yönlendirmeyi yönetir.
     if(registrationInProgress) return;
 
-    if(user && user.emailVerified){
-      loadUserProfileAndEnter(user);
-    } else if(user && !user.emailVerified){
-      // Hesabı var ama e-postasını henüz doğrulamamış: doğrulama adımına götür
-      savedEmail = user.email;
-      document.querySelectorAll('#main .screen').forEach(s=>s.classList.remove('active'));
-      document.getElementById('screenRegister').classList.add('active');
-      document.getElementById('emailEcho').textContent = savedEmail + ' adresine';
-      switchAuthTab('signup');
-      goReg(3);
-      document.getElementById('island').classList.add('hidden');
+    if(user){
+      // Google/Apple OAuth kullananların emailVerified'ı her zaman true olmayabilir
+      // ama bu sağlayıcılar zaten email'i doğrulamış demektir
+      const isOAuth = user.providerData && user.providerData.some(p =>
+        p.providerId === 'google.com' || p.providerId === 'apple.com'
+      );
+      const canEnter = user.emailVerified || isOAuth;
+
+      if(canEnter){
+        loadUserProfileAndEnter(user);
+      } else {
+        // Email doğrulanmamış — doğrulama adımına götür
+        savedEmail = user.email || '';
+        document.querySelectorAll('#main .screen').forEach(s=>s.classList.remove('active'));
+        document.getElementById('screenRegister').classList.add('active');
+        const echoEl = document.getElementById('emailEcho');
+        if(echoEl) echoEl.textContent = savedEmail + ' adresine';
+        switchAuthTab('signup');
+        goReg(3);
+        document.getElementById('island').classList.add('hidden');
+      }
     } else {
+      // Giriş yapılmamış
       document.querySelectorAll('#main .screen').forEach(s=>s.classList.remove('active'));
       document.getElementById('screenRegister').classList.add('active');
       switchAuthTab('login');
       document.getElementById('island').classList.add('hidden');
+      // Daha önce giriş yapıldıysa email'i önceden doldur
+      tryAutoFillLogin();
     }
   });
 }
@@ -3849,53 +3880,86 @@ function logoutAccount(){
 
 function loginReturning(){
   if(!requireFirebase()){ alert('Bağlantı kurulamadı, sayfayı yenile.'); return; }
-  const email = document.getElementById('loginEmail').value.trim();
+  const identifier = (document.getElementById('loginEmail').value || '').trim();
   const pass = document.getElementById('loginPassword').value.trim();
-  if(!email){ alert('E-posta adresi gir.'); return; }
+  if(!identifier){ alert('E-posta, kullanıcı adı veya telefon numaranı gir.'); return; }
   if(!pass){ alert('Şifreni gir.'); return; }
 
   const btn = document.getElementById('loginBtn');
-  const original = btn ? btn.textContent : '';
+  const original = btn ? btn.textContent : 'Giriş Yap';
   if(btn){ btn.disabled = true; btn.textContent = 'Giriş yapılıyor...'; }
   const resetBtn = () => { if(btn){ btn.disabled = false; btn.textContent = original; } };
 
-  console.log('[NeXT] signInWithEmailAndPassword çağrılıyor...', email);
+  const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier);
+  const isPhone = /^[+\d\s\-()]{7,}$/.test(identifier) && !isEmail;
+  const isUsername = !isEmail && !isPhone;
 
-  // 15 saniye timeout — Firebase yanıt vermezse otomatik iptal et. Bu Sayede
-  // Email/Password yöntemi Firebase Console'da kapalıysa veya başka bir
-  // konfigürasyon sorunu varsa, sonsuza kadar "Giriş yapılıyor..." takılı
-  // kalmak yerine kullanıcıya somut bir hata mesajı gösteriyoruz.
-  const timeoutMs = 15000;
-  const timeoutPromise = new Promise((_, reject) => {
-    setTimeout(()=> reject({ code:'next/timeout', message:'Firebase 15 saniyede yanıt vermedi.' }), timeoutMs);
-  });
+  console.log('[NeXT] Giriş:', isEmail?'email':isPhone?'telefon':'kullaniciadi', identifier);
 
-  Promise.race([
-    fbAuth.signInWithEmailAndPassword(email, pass),
-    timeoutPromise
-  ]).then((cred)=>{
-    console.log('[NeXT] Giriş başarılı:', cred.user.uid, 'verified=', cred.user.emailVerified);
-    resetBtn();
-    if(!cred.user.emailVerified){
-      savedEmail = email;
-      document.getElementById('emailEcho').textContent = savedEmail + ' adresine';
-      switchAuthTab('signup');
-      goReg(3);
-      return;
-    }
-    loadUserProfileAndEnter(cred.user);
-  }).catch((err)=>{
-    resetBtn();
-    console.error('[NeXT] Giriş hatası:', err);
-    if(err && err.code === 'next/timeout'){
-      alert('⚠️ Firebase 15 saniyede yanıt vermedi.\n\n' +
-        'Olası sebep: Firebase Console\'da Email/Password giriş yöntemi etkin değil.\n\n' +
-        'Çözüm: console.firebase.google.com → Authentication → Sign-in method → Email/Password → Enable.\n\n' +
-        'Daha fazla bilgi için tarayıcı konsolunu (F12) kontrol et.');
-      return;
-    }
-    alert(firebaseErrorMessage(err));
-  });
+  const doLogin = (email) => {
+    const timeout = new Promise((_,rej) => setTimeout(()=>rej({code:'next/timeout'}), 15000));
+    Promise.race([
+      fbAuth.signInWithEmailAndPassword(email, pass),
+      timeout
+    ]).then(cred => {
+      resetBtn();
+      console.log('[NeXT] Giriş OK:', cred.user.uid, 'verified=', cred.user.emailVerified);
+      if(!cred.user.emailVerified){
+        savedEmail = email;
+        document.getElementById('emailEcho').textContent = savedEmail + ' adresine';
+        switchAuthTab('signup');
+        goReg(3);
+        return;
+      }
+      loadUserProfileAndEnter(cred.user);
+    }).catch(err => {
+      resetBtn();
+      console.error('[NeXT] Giriş hatası:', err);
+      if(err && err.code === 'next/timeout'){
+        alert('⚠️ Firebase 15 saniyede yanıt vermedi.\n\nOlası sebep: Firebase Console\'da Authorized Domains listesinde sitenin adresi yok.\n\nÇözüm: console.firebase.google.com → Authentication → Settings → Authorized domains → 4sdjzdswwt-lgtm.github.io ekle.');
+        return;
+      }
+      alert(firebaseErrorMessage(err));
+    });
+  };
+
+  if(isEmail){
+    // Direkt email ile giriş
+    doLogin(identifier);
+  } else if(isUsername){
+    // Kullanıcı adından email'i bul
+    const key = identifier.replace(/^@/, '').toLowerCase();
+    fbDb.ref('usernames/' + key).once('value').then(snap => {
+      if(!snap.exists()){
+        resetBtn();
+        alert('@' + key + ' kullanıcı adına sahip bir hesap bulunamadı.\n\nE-posta adresiyle tekrar dene.');
+        return;
+      }
+      const uid = snap.val();
+      return fbDb.ref('users/' + uid + '/email').once('value').then(emailSnap => {
+        if(!emailSnap.val()){
+          resetBtn();
+          alert('Bu hesabın e-postası bulunamadı. E-posta ile dene.');
+          return;
+        }
+        doLogin(emailSnap.val());
+      });
+    }).catch(() => { resetBtn(); alert('Kullanıcı adı aranamadı, internet bağlantını kontrol et.'); });
+  } else if(isPhone){
+    // Telefon numarası ile arama — Firebase Phone Auth yerine DB'de arama
+    const normalized = identifier.replace(/\s/g,'');
+    fbDb.ref('users').orderByChild('phone').equalTo(normalized).limitToFirst(1).once('value').then(snap=>{
+      const data = snap.val();
+      if(!data){
+        resetBtn();
+        alert('Bu telefon numarasıyla kayıtlı hesap bulunamadı.\n\nE-posta veya kullanıcı adıyla dene.');
+        return;
+      }
+      const user = Object.values(data)[0];
+      if(!user.email){ resetBtn(); alert('Hesap bulunamadı.'); return; }
+      doLogin(user.email);
+    }).catch(()=>{ resetBtn(); alert('Telefon aranamadı, e-posta ile dene.'); });
+  }
 }
 
 function loadUserProfileAndEnter(user){
@@ -3971,7 +4035,9 @@ function enterAppFromAuth(){
   document.querySelectorAll('.island button').forEach(b=>b.classList.remove('active'));
   document.getElementById('navFeed').classList.add('active');
   saveSession();
-  // Gerçek veri akışlarını başlat: feed, Anı Yakala şeridi, gelen mesaj/davet dinleyicisi
+  // Presence (çevrimiçi durumu)
+  if(fbAuth && fbAuth.currentUser) initPresence(fbAuth.currentUser.uid);
+  // Veri akışlarını başlat
   try{
     initFeedListener();
     initMomentStripListener();
@@ -6511,26 +6577,33 @@ function closeSearchOverlay(){
   document.body.classList.remove('modal-open','follow-list-open');
 }
 function runGlobalSearch(){
-  const q = (document.getElementById('globalSearchInput').value||'').trim().toLowerCase();
+  // @ işaretini otomatik soy — "talha" ile "@talha" aynı sonucu versin
+  const rawQ = (document.getElementById('globalSearchInput').value||'').trim();
+  const q = rawQ.replace(/^@/, '').toLowerCase();
   const body = document.getElementById('globalSearchBody');
   if(!q){ body.innerHTML = '<div class="followListEmpty">Aramak istediğin kullanıcıyı yaz</div>'; return; }
   if(searchDebounce) clearTimeout(searchDebounce);
   body.innerHTML = '<div class="followListEmpty">Aranıyor...</div>';
   searchDebounce = setTimeout(()=>{
-    if(!fbReady) return;
-    fbDb.ref('users').orderByChild('username').startAt(q).endAt(q + '\uf8ff').limitToFirst(20).once('value').then(snap=>{
+    if(!fbReady){ body.innerHTML='<div class="followListEmpty">Bağlantı yok</div>'; return; }
+    // Tüm kullanıcıları çekip client-side filtrele (Firebase'de partial string match yok)
+    fbDb.ref('users').limitToFirst(200).once('value').then(snap=>{
       const data = snap.val() || {};
       const uids = Object.keys(data).filter(uid => {
         const u = data[uid];
-        return (u.username||'').toLowerCase().includes(q) || (u.displayName||'').toLowerCase().includes(q);
+        const uname = (u.username||'').replace(/^@/,'').toLowerCase();
+        const dname = (u.displayName||'').toLowerCase();
+        const bio = (u.bio||'').toLowerCase();
+        return uname.includes(q) || dname.includes(q) || bio.includes(q);
       });
-      if(!uids.length){ body.innerHTML = '<div class="followListEmpty">Kullanıcı bulunamadı</div>'; return; }
-      body.innerHTML = uids.map(uid => {
+      if(!uids.length){ body.innerHTML = '<div class="followListEmpty">Kullanıcı bulunamadı — başka bir kelime dene</div>'; return; }
+      body.innerHTML = uids.slice(0,30).map(uid => {
         const u = data[uid];
+        const uname = (u.username||'@kullanici').replace(/^@/,'');
         return `<div class="followListRow" onclick="closeSearchOverlay();viewOtherProfile('${uid}')">
           <img src="${u.photo||'https://i.pravatar.cc/60?img=68'}" onerror="this.src='https://i.pravatar.cc/60?img=68'">
           <div class="info">
-            <div class="uname">${escapeHtml(u.username||'@kullanici')}</div>
+            <div class="uname">@${escapeHtml(uname)}</div>
             <div class="ubio">${escapeHtml(u.displayName||u.bio||'')}</div>
           </div>
         </div>`;
@@ -6705,14 +6778,8 @@ function sendEphemeralPhoto(ev){
 }
 
 /* ============================================================
-   NAVİGASYON — goNav'a yeni ekranlar eklendi
+   NAVİGASYON — goNav explore ve reels destekliyor
    ============================================================ */
-const NAV_MAP = {
-  feed:'screenFeed', messages:'screenMessages', profile:'screenProfile',
-  admin:'screenAdmin', saved:'screenSaved', liked:'screenLiked',
-  explore:'screenExplore', reels:'screenReels',
-  otherProfile:'screenOtherProfile'
-};
 function goNav(name, btn){
   document.querySelectorAll('#main .screen').forEach(s=>s.classList.remove('active'));
   const screenId = NAV_MAP[name] || ('screen' + name.charAt(0).toUpperCase() + name.slice(1));
@@ -7106,10 +7173,7 @@ function triggerDoubleTapLike(mediaEl, postId){
   });
 }
 
-/* ============================================================
-   YENİ MESAJ GÖNDERİMİNE REPLY ENTEGRE ET
-   ============================================================ */
-const _origSendMsg = window.sendMsg;
+/* sendMsg override — reply desteği eklendi (orijinal sendMsg'in üzerine yazar) */
 function sendMsg(){
   const input = document.getElementById('msgInput');
   const text = (input.value||'').trim();
@@ -7142,31 +7206,28 @@ function sendMsg(){
 }
 
 /* ============================================================
-   openChatThread UPDATE — presence + typing
+   openChatThread — presence + typing entegrasyonu
    ============================================================ */
-const _origOpenChatThread = window.openChatThread;
+const _openChatThreadBase = window.openChatThread;
 function openChatThread(chatId, peerUid){
-  _origOpenChatThread && _origOpenChatThread(chatId, peerUid);
+  // Ana fonksiyonu çağır (yukarıda tanımlı)
+  if(typeof _openChatThreadBase === 'function') _openChatThreadBase(chatId, peerUid);
   // Ek: presence ve typing
   setTimeout(()=>{
     watchPeerPresence(peerUid);
     watchPeerTyping(chatId, peerUid);
-    // msgInput'a typing event ekle
     const inp = document.getElementById('msgInput');
-    if(inp) inp.oninput = ()=>{ onMsgInputType(); };
+    if(inp && !inp._typingBound){
+      inp._typingBound = true;
+      inp.addEventListener('input', onMsgInputType);
+    }
   }, 200);
 }
 
 /* ============================================================
    enterAppFromAuth UPDATE — presence başlat
+   (Aşağıdaki override artık gerek yok, yukarıdaki ana fonksiyona presence eklendi)
    ============================================================ */
-const _origEnterApp = window.enterAppFromAuth;
-function enterAppFromAuth(){
-  _origEnterApp && _origEnterApp();
-  if(fbAuth && fbAuth.currentUser){
-    initPresence(fbAuth.currentUser.uid);
-  }
-}
 
 function bootApp(){
   initTheme();
