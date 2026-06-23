@@ -4134,15 +4134,21 @@ function initGlobalMessageListener(){
   if(!fbReady || !fbAuth || !fbAuth.currentUser) return;
   const myUid = fbAuth.currentUser.uid;
 
-  if(globalMsgListenerRef){ globalMsgListenerRef.off(); }
-  globalMsgListenerRef = fbDb.ref('chatMeta').orderByChild('users/' + myUid).equalTo(true);
+  if(globalMsgListenerRef){ globalMsgListenerRef.off(); globalMsgListenerRef = null; }
 
-  // İlk başlatmada mevcut ts'leri kaydet (sadece BUNDAN SONRAKI yeni mesajlar bildirim üretsin)
+  // Firebase'de users/{uid} index olmayabilir, o yüzden tüm chatMeta'yı dinle
+  globalMsgListenerRef = fbDb.ref('chatMeta');
+
   let initialized = false;
-  globalMsgListenerRef.once('value').then(snap => {
+  // Başlangıçta tüm mevcut sohbetlerin ts'lerini kaydet
+  fbDb.ref('chatMeta').once('value').then(snap => {
     const data = snap.val() || {};
     Object.keys(data).forEach(cid => {
-      lastSeenMessageTs[cid] = data[cid].lastTs || 0;
+      const meta = data[cid];
+      // Bu sohbetin bana ait olup olmadığını kontrol et
+      if(meta.users && meta.users[myUid]){
+        lastSeenMessageTs[cid] = meta.lastTs || 0;
+      }
     });
     initialized = true;
   });
@@ -4151,16 +4157,14 @@ function initGlobalMessageListener(){
     if(!initialized) return;
     const meta = snap.val() || {};
     const cid = snap.key;
+    // Bu chat bana mı ait?
+    if(!meta.users || !meta.users[myUid]) return;
     const lastTs = meta.lastTs || 0;
     const senderUid = meta.lastSenderUid;
-    // Eğer son mesaj benimse, bildirim gösterme
     if(senderUid === myUid){ lastSeenMessageTs[cid] = lastTs; return; }
-    // Eğer aktif olarak bu sohbetteysem, bildirim gösterme (zaten okudum)
     if(activeChatId === cid){ lastSeenMessageTs[cid] = lastTs; return; }
-    // Daha önce gördüğüm mesajsa, bildirim tekrarlama
-    if(lastTs <= (lastSeenMessageTs[cid] || 0)){ return; }
+    if(lastTs <= (lastSeenMessageTs[cid] || 0)) return;
     lastSeenMessageTs[cid] = lastTs;
-    // Toast bildirimi göster
     showMessageNotification(cid, meta);
   });
 }
@@ -4302,33 +4306,61 @@ function toggleEditUsername(){
 }
 function onEditPhotoChosen(ev){
   const file = ev.target.files[0]; if(!file) return;
-  const error = validatePhotoFile(file);
-  if(error){
-    alert(error);
-    ev.target.value = '';
-    return;
-  }
+  if(file.size > 10 * 1024 * 1024){ alert('Resim 10MB\'dan küçük olmalı.'); ev.target.value=''; return; }
   const reader = new FileReader();
-  reader.onload = function(e){
-    openCropScreen(e.target.result, 'edit');
+  reader.onload = e => {
+    const dataUrl = e.target.result;
+    const preview = document.getElementById('editPreviewImg');
+    preview.src = dataUrl;
+    preview.dataset.pending = dataUrl;
+    showToast('Fotoğraf seçildi. Kaydet\'e bas.');
   };
   reader.readAsDataURL(file);
+  ev.target.value = '';
 }
 function saveProfileEdit(){
+  if(!requireFirebase() || !fbAuth.currentUser){ showToast('Giriş yapmalısın.'); return; }
+  const uid = fbAuth.currentUser.uid;
+  const btn = document.querySelector('#editUsernamePanel .btn-primary') || { disabled:false, textContent:'' };
   const oldName = savedUsername;
-  const newName = document.getElementById('editUsernameInput').value.trim();
-  const pending = document.getElementById('editPreviewImg').dataset.pending;
-  if(newName) savedUsername = newName;
+  const newName = (document.getElementById('editUsernameInput').value||'').trim();
+  const pending = document.getElementById('editPreviewImg').dataset.pending || '';
+
+  if(newName) savedUsername = newName.startsWith('@') ? newName : '@'+newName;
   if(pending) savedProfilePhoto = pending;
-  applyAccountToUI();
-  // Admin panelindeki üye listesi varsa, oradaki kaydı da güncelle
-  const row = document.querySelector(`#memberTable tr[data-name="${oldName.toLowerCase()}"]`);
-  if(row){
-    row.dataset.name = savedUsername.toLowerCase();
-    row.querySelector('.user-cell img').src = savedProfilePhoto;
-    row.querySelector('.user-cell').lastChild.textContent = savedUsername;
+
+  const updates = {};
+  if(newName) updates.username = savedUsername;
+  if(pending) updates.photo = pending;
+  updates.displayName = savedDisplayName || '';
+
+  const save = () => {
+    fbDb.ref('users/' + uid).update(updates).then(()=>{
+      applyAccountToUI();
+      updateStoryAvatarBtn();
+      document.getElementById('editUsernamePanel').classList.add('hidden');
+      document.getElementById('editPreviewImg').removeAttribute('data-pending');
+      showToast('Profil güncellendi ✓');
+      // username değiştiyse usernames tablosunu da güncelle
+      if(newName && oldName !== savedUsername){
+        const oldKey = oldName.replace(/^@/,'').toLowerCase();
+        const newKey = savedUsername.replace(/^@/,'').toLowerCase();
+        fbDb.ref('usernames/' + oldKey).remove();
+        fbDb.ref('usernames/' + newKey).set(uid);
+      }
+    }).catch(()=> showToast('Kaydedilemedi, tekrar dene.'));
+  };
+
+  // Eğer yeni fotoğraf varsa önce sıkıştır
+  if(pending && pending.startsWith('data:')){
+    compressForProfile(pending).then(compressed => {
+      updates.photo = compressed;
+      savedProfilePhoto = compressed;
+      save();
+    });
+  } else {
+    save();
   }
-  document.getElementById('editUsernamePanel').classList.add('hidden');
 }
 
 function exitChatToFeed(){
@@ -4656,10 +4688,12 @@ function openChatThread(chatId, peerUid){
       }
       if(m.mediaUrl){
         const isGif = m.mediaType === 'gif';
-        const media = (m.mediaType==='video' && !isGif)
-          ? '<video src="'+m.mediaUrl+'" controls style="max-width:220px;border-radius:12px;"></video>'
-          : '<img src="'+m.mediaUrl+'" style="max-width:220px;border-radius:12px;">';
-        return '<div class="msg-media" style="'+(mine?'align-self:flex-end;':'')+'">' + media + '<div style="font-size:10px;color:var(--muted);margin-top:3px;">'+t+'</div></div>';
+        if(m.mediaType==='video' && !isGif){
+          return '<div class="msg-media" style="'+(mine?'align-self:flex-end;':'')+'"><video src="'+m.mediaUrl+'" controls playsinline style="max-width:240px;border-radius:12px;display:block;"></video><div style="font-size:10px;color:var(--muted);margin-top:3px;">'+t+'</div></div>';
+        }
+        // Resim — img onerror ile hata göster, loading lazy ile performans
+        const imgEl = '<img src="'+m.mediaUrl+'" loading="lazy" style="max-width:240px;max-height:320px;border-radius:12px;display:block;object-fit:contain;" onerror="this.style.display=\'none\';">';
+        return '<div class="msg-media" style="'+(mine?'align-self:flex-end;':'')+'">'+imgEl+'<div style="font-size:10px;color:var(--muted);margin-top:3px;">'+t+'</div></div>';
       }
       return '<div class="msg '+(mine?'me':'them')+'">' + escapeHtml(m.text||'') + editTag + ' <span class="time">'+t+'</span></div>';
     }).join('');
@@ -4732,37 +4766,35 @@ function sendMsg(){
 
 function sendMedia(ev){
   const file = ev.target.files[0]; if(!file) return;
-  if(!requireFirebase() || !fbAuth.currentUser || !activeChatId){ showToast('Bir sohbet seçmelisin.'); ev.target.value=''; return; }
-  const mediaType = file.type.startsWith('video') ? 'video' : 'image';
+  if(!requireFirebase() || !fbAuth.currentUser || !activeChatId){ showToast('Bir sohbet seç.'); ev.target.value=''; return; }
+  const isVideo = file.type.startsWith('video');
+  ev.target.value = '';
   showToast('Gönderiliyor...');
 
-  const doSendMedia = (url) => {
+  const doSend = (url) => {
     const ts = Date.now();
     const msgRef = fbDb.ref('chats/' + activeChatId + '/messages').push();
     ensureChatMeta(activeChatId, activeChatPeerUid).then(()=>{
-      return msgRef.set({ from: fbAuth.currentUser.uid, mediaUrl: url, mediaType, ts });
+      return msgRef.set({ from: fbAuth.currentUser.uid, mediaUrl: url, mediaType: isVideo?'video':'image', ts });
     }).then(()=>{
-      const update = {
-        lastMsg: mediaType==='video' ? '🎥 Video' : '📷 Fotoğraf',
-        lastTs: ts, lastSenderUid: fbAuth.currentUser.uid
-      };
+      const update = { lastMsg: isVideo?'🎥 Video':'📷 Fotoğraf', lastTs: ts, lastSenderUid: fbAuth.currentUser.uid };
       update['unreadFor/' + activeChatPeerUid] = true;
       fbDb.ref('chatMeta/' + activeChatId).update(update);
     }).catch(()=> showToast('Gönderilemedi.'));
   };
 
-  if(fbStorage && mediaType !== 'image'){
-    // Video için Storage kullan
-    const path = 'chatMedia/' + activeChatId + '/' + Date.now() + '_' + (file.name||'vid').replace(/[^a-zA-Z0-9._-]/g,'_');
-    fbStorage.ref().child(path).put(file).then(snap => snap.ref.getDownloadURL()).then(doSendMedia)
+  if(isVideo){
+    // Video — Firebase Storage gerekir
+    if(!fbStorage){ showToast('Video göndermek için Firebase Storage kurulmalı.'); return; }
+    const path = 'chatMedia/'+activeChatId+'/'+Date.now()+'.mp4';
+    fbStorage.ref().child(path).put(file).then(s=>s.ref.getDownloadURL()).then(doSend)
       .catch(()=> showToast('Video gönderilemedi.'));
   } else {
-    // Resim için base64
+    // Resim — base64 ile (chat için optimize sıkıştırma)
     const reader = new FileReader();
-    reader.onload = e => compressImageToBase64(e.target.result, 800, 0.75).then(doSendMedia);
+    reader.onload = e => compressForChat(e.target.result).then(doSend);
     reader.readAsDataURL(file);
   }
-  ev.target.value = '';
 }
 
 function exitChatThread(){
@@ -5016,19 +5048,15 @@ function publishNewPost(){
   };
 
   // Firebase Storage varsa kullan, yoksa resmi küçültüp base64 kaydet
-  if(fbStorage && newPostFile){
-    const path = 'posts/' + uid + '/' + Date.now() + '_' + (newPostFile.name||'img').replace(/[^a-zA-Z0-9._-]/g,'_');
+  if(fbStorage && newPostFile && newPostMediaType === 'video'){
+    const path = 'posts/'+uid+'/'+Date.now()+'.mp4';
     fbStorage.ref().child(path).put(newPostFile)
       .then(snap => snap.ref.getDownloadURL())
       .then(url => doPublish(url))
-      .catch(() => {
-        // Storage hata verirse base64'e düş
-        if(newPostDataUrl) doPublish(newPostDataUrl);
-        else { btn.disabled=false; btn.textContent='Paylaş'; showToast('Fotoğraf yüklenemedi.'); }
-      });
+      .catch(() => { btn.disabled=false; btn.textContent='Paylaş'; showToast('Video yüklenemedi.'); });
   } else if(newPostDataUrl){
-    // Storage yok — resmi compress edip base64 olarak kaydet
-    compressImageToBase64(newPostDataUrl, 800, 0.75).then(compressed => doPublish(compressed));
+    // Resim — post için optimize sıkıştırma
+    compressForPost(newPostDataUrl).then(compressed => doPublish(compressed));
   } else {
     btn.disabled=false; btn.textContent='Paylaş';
     showToast('Fotoğraf seçilmedi.');
@@ -5036,6 +5064,7 @@ function publishNewPost(){
 }
 
 // Resmi canvas ile küçültüp sıkıştır
+// maxSize: en uzun kenar piksel, quality: 0-1
 function compressImageToBase64(dataUrl, maxSize, quality){
   return new Promise(resolve => {
     const img = new Image();
@@ -5054,6 +5083,13 @@ function compressImageToBase64(dataUrl, maxSize, quality){
     img.src = dataUrl;
   });
 }
+
+// Sohbet için optimize: max 600px, %60 kalite → ~30-50KB base64
+function compressForChat(dataUrl){ return compressImageToBase64(dataUrl, 600, 0.60); }
+// Profil için: max 300px, %80 kalite → ~15-25KB
+function compressForProfile(dataUrl){ return compressImageToBase64(dataUrl, 300, 0.80); }
+// Story/Post için: max 900px, %70 kalite
+function compressForPost(dataUrl){ return compressImageToBase64(dataUrl, 900, 0.70); }
 
 function renderMyPostsGrid(){
   const grid = document.getElementById('myPostsGrid');
@@ -5488,14 +5524,18 @@ function captureMomentFrame(){
     grad.addColorStop(0,'#7c3aed'); grad.addColorStop(1,'#06b6d4');
     ctx.fillStyle = grad; ctx.fillRect(0,0,W,H);
   }
-  momentCapturedDataUrl = canvas.toDataURL('image/jpeg', 0.9);
+  momentCapturedDataUrl = canvas.toDataURL('image/jpeg', 0.85);
 
   setTimeout(()=>{
     stopMomentCamera();
     document.getElementById('momentCaptureOverlay').classList.add('hidden');
     document.getElementById('momentCountdown').classList.add('hidden');
     momentCountdownStarted = false;
-    uploadMyMomentCapture();
+    // Yüklemeden önce sıkıştır (480x480 zaten küçük ama yine de optimize edelim)
+    compressImageToBase64(momentCapturedDataUrl, 480, 0.80).then(compressed => {
+      momentCapturedDataUrl = compressed;
+      uploadMyMomentCapture();
+    });
   }, 650);
 }
 
@@ -6390,47 +6430,48 @@ function onStoryFileChosen(ev){
   reader.readAsDataURL(file);
 }
 function publishStory(){
-  if(!requireFirebase() || !fbAuth.currentUser || !storyFile) return;
-  if(!fbStorage){ showToast('Depolama kullanılamıyor.'); return; }
+  if(!requireFirebase() || !fbAuth.currentUser) return;
+  if(!storyFile && !storyDataUrl){ showToast('Önce bir fotoğraf veya video seç.'); return; }
   const btn = document.getElementById('storyPublishBtn');
-  btn.disabled = true; btn.textContent = 'Yükleniyor...';
+  btn.disabled = true; btn.textContent = 'Paylaşılıyor...';
   const uid = fbAuth.currentUser.uid;
-  // Kullanıcının güncel profil fotoğrafını Firebase'den çek
-  fbDb.ref('users/' + uid + '/photo').once('value').then(photoSnap => {
-    const currentPhoto = photoSnap.val() || savedProfilePhoto || '';
-    const doUpload = (mediaUrl) => {
-      return fbDb.ref('stories').push().set({
-        uid, url: mediaUrl, mediaType: storyMediaType,
-        caption: (document.getElementById('storyCaption').value||'').trim(),
-        username: savedUsername || '@kullanici',
-        userPhoto: currentPhoto,
-        ts: Date.now(),
-        expiresAt: Date.now() + 24*60*60*1000
-      });
-    };
-    const finish = () => {
+  const caption = (document.getElementById('storyCaption').value||'').trim();
+
+  // Güncel profil fotoğrafı
+  const currentPhoto = savedProfilePhoto || '';
+
+  const saveStory = (mediaUrl) => {
+    fbDb.ref('stories').push().set({
+      uid, url: mediaUrl, mediaType: storyMediaType,
+      caption, username: savedUsername || '@kullanici',
+      userPhoto: currentPhoto, ts: Date.now(),
+      expiresAt: Date.now() + 24*60*60*1000
+    }).then(()=>{
       btn.disabled = false; btn.textContent = 'Hikayeyi Paylaş';
       closeStoryComposer();
-      showToast('Hikayen paylaşıldı 📸');
+      showToast('Hikayen paylaşıldı 🎉');
       loadStoryStrip();
-    };
-    if(fbStorage && storyFile){
-      const path = 'stories/' + uid + '/' + Date.now() + '_' + storyFile.name.replace(/[^a-zA-Z0-9._-]/g,'_');
-      fbStorage.ref().child(path).put(storyFile)
-        .then(snap=>snap.ref.getDownloadURL())
-        .then(url => doUpload(url))
-        .then(finish)
-        .catch(err=>{ console.error('Story upload:', err); btn.disabled=false; btn.textContent='Hikayeyi Paylaş'; showToast('Yüklenemedi.'); });
-    } else if(storyDataUrl){
-      compressImageToBase64(storyDataUrl, 800, 0.75)
-        .then(compressed => doUpload(compressed))
-        .then(finish)
-        .catch(()=>{ btn.disabled=false; btn.textContent='Hikayeyi Paylaş'; showToast('Yüklenemedi.'); });
-    } else {
-      btn.disabled=false; btn.textContent='Hikayeyi Paylaş';
-    }
-  }).catch(()=>{ btn.disabled=false; btn.textContent='Hikayeyi Paylaş'; showToast('Hata, tekrar dene.'); });
+    }).catch(err=>{
+      btn.disabled = false; btn.textContent = 'Hikayeyi Paylaş';
+      console.error('Story save error:', err);
+      showToast('Kaydedilemedi: ' + (err.message||'Hata'));
+    });
+  };
+
+  if(storyMediaType === 'video'){
+    if(!fbStorage){ showToast('Video için Firebase Storage gerekli.'); btn.disabled=false; btn.textContent='Hikayeyi Paylaş'; return; }
+    const path = 'stories/'+uid+'/'+Date.now()+'.mp4';
+    fbStorage.ref().child(path).put(storyFile)
+      .then(s=>s.ref.getDownloadURL()).then(saveStory)
+      .catch(()=>{ btn.disabled=false; btn.textContent='Hikayeyi Paylaş'; showToast('Video yüklenemedi.'); });
+  } else {
+    // Resim — base64 ile kaydet
+    const dataUrl = storyDataUrl || '';
+    if(!dataUrl){ btn.disabled=false; btn.textContent='Hikayeyi Paylaş'; return; }
+    compressForPost(dataUrl).then(saveStory);
+  }
 }
+
 
 /* Feed'deki story şeridini yükle — takip edilen kullanıcıların 24 saatlik hikayeleri */
 function loadStoryStrip(){
