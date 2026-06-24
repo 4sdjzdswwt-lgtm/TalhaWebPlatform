@@ -984,9 +984,16 @@ body.light-mode #screenRegister .spam-warning{background:linear-gradient(135deg,
 }
 #navMomentFeed svg{stroke:#fff !important;}
 .notif-badge{
-  position:absolute;top:-2px;right:-4px;min-width:16px;height:16px;
-  border-radius:8px;background:var(--danger);color:#fff;font-size:9px;font-weight:700;
-  display:flex;align-items:center;justify-content:center;padding:0 4px;
+  position:absolute;top:-3px;right:-4px;min-width:18px;height:18px;
+  border-radius:9px;background:#ef4444;color:#fff;font-size:10px;font-weight:800;
+  display:flex;align-items:center;justify-content:center;padding:0 5px;
+  border:2px solid var(--bg);
+  box-shadow:0 0 8px rgba(239,68,68,.6);
+  animation:badgePulse 1.5s ease-in-out infinite;
+}
+@keyframes badgePulse{
+  0%,100%{ box-shadow:0 0 8px rgba(239,68,68,.6); }
+  50%{ box-shadow:0 0 14px rgba(239,68,68,.9); }
 }
 .notif-badge.hidden{display:none;}
 
@@ -1749,14 +1756,17 @@ tbody tr:hover{background:var(--surface-2);}
 
             <div class="regstep" id="reg4">
               <div class="step-title">Profil Fotoğrafı</div>
-              <p class="step-sub">İstediğin fotoğrafı profil fotoğrafı olarak koyabilirsin. Tek kontrol: +18 / uygunsuz içerik olmaması.</p>
-              <div class="upload-zone" id="dropzone" onclick="document.getElementById('fileInput').click()">
+              <p class="step-sub">İstersen şimdi profil fotoğrafı seç, istersen sonra ayarlardan ekle.</p>
+              <div class="upload-zone" id="dropzone" onclick="document.getElementById('fileInput').click()" style="cursor:pointer;">
                 <div class="icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 16V4M12 4l-4 4M12 4l4 4M4 20h16"/></svg></div>
-                <p>Yüklemek için tıkla <span class="accent-text">veya sürükle bırak</span></p>
+                <p>📷 Fotoğraf seçmek için dokun</p>
               </div>
-              <input type="file" id="fileInput" accept="image/*" onchange="onFileChosen(event)">
+              <input type="file" id="fileInput" accept="image/*" onchange="onFileChosen(event)" style="position:absolute;opacity:0;width:1px;height:1px;">
               <div class="analysis-box" id="analysisBox"></div>
-              <div class="row" style="margin-top:18px;"><button class="btn btn-ghost" onclick="goReg(3)">Geri</button><button class="btn btn-primary" id="finishBtn" disabled onclick="finishRegistration()">Profili Tamamla</button></div>
+              <div class="row" style="margin-top:18px;gap:8px;">
+                <button class="btn btn-ghost" onclick="skipProfilePhoto()" style="flex:1;">Atla</button>
+                <button class="btn btn-primary" id="finishBtn" onclick="finishRegistration()" style="flex:1.5;">Profili Tamamla</button>
+              </div>
             </div>
 
           </div>
@@ -2990,7 +3000,7 @@ function createAccountAndSendVerification(){
   const userVal = u.value.trim().replace(/^@/,'');
   const displayVal = dispEl ? dispEl.value.trim() : '';
 
-  const pOk = passVal.length >= 6; // Firebase'in minimum şifre şartı
+  const pOk = passVal.length >= 6;
   const uOk = userVal.length >= 3 && /^[a-zA-Z0-9._]+$/.test(userVal);
 
   document.getElementById('err-password').style.display = pOk ? 'none' : 'block';
@@ -3002,7 +3012,22 @@ function createAccountAndSendVerification(){
   } else {
     document.getElementById('err-username').style.display = 'none';
   }
-  if(!pOk || !uOk) return;
+  if(!pOk){
+    showToast('⚠️ Şifre en az 6 karakter olmalı!');
+    document.getElementById('password').focus();
+    return;
+  }
+  if(!uOk){
+    showToast('⚠️ Kullanıcı adı en az 3 karakter, sadece harf/rakam.');
+    document.getElementById('username').focus();
+    return;
+  }
+
+  if(!savedEmail || !/@/.test(savedEmail)){
+    showToast('⚠️ Önce e-posta gir!');
+    goReg(1);
+    return;
+  }
 
   const btn = document.getElementById('createAccountBtn');
   const resetBtn = () => { btn.disabled = false; btn.textContent = 'Hesabı Oluştur'; };
@@ -3559,20 +3584,33 @@ function cropImageToSquare(dataUrl){
 
 function onFileChosen(ev){
   const file = ev.target.files[0]; if(!file) return;
-  const error = validatePhotoFile(file);
-  const box = document.getElementById('analysisBox');
-  if(error){
-    box.className = 'analysis-box bad';
-    box.innerHTML = `⚠️ ${error}`;
-    document.getElementById('finishBtn').disabled = true;
+  if(file.size > 10 * 1024 * 1024){
+    showToast('Fotoğraf 10MB\'dan küçük olmalı.');
     ev.target.value = '';
     return;
   }
+  const box = document.getElementById('analysisBox');
   const reader = new FileReader();
   reader.onload = function(e){
-    openCropScreen(e.target.result, 'register');
+    // Hızlı sıkıştır ve preview'ı göster
+    compressImageToBase64(e.target.result, 400, 0.85).then(compressed => {
+      savedProfilePhoto = compressed;
+      uploadedImageOk = true;
+      // Dropzone'da fotoğrafı göster
+      const dz = document.getElementById('dropzone');
+      if(dz){
+        dz.innerHTML = `<img src="${compressed}" style="width:96px;height:96px;border-radius:50%;object-fit:cover;border:3px solid var(--accent);">
+          <p style="margin-top:10px;color:var(--accent);font-weight:600;">✓ Fotoğraf seçildi</p>
+          <p style="font-size:11px;color:var(--muted);">Değiştirmek için tekrar dokun</p>`;
+      }
+      box.className = 'analysis-box ok';
+      box.innerHTML = `✅ <b>Fotoğraf hazır</b>`;
+      const finishBtn = document.getElementById('finishBtn');
+      if(finishBtn) finishBtn.disabled = false;
+    });
   };
   reader.readAsDataURL(file);
+  ev.target.value = '';
 }
 
 async function analyzePhoto(dataUrl, mimeType){
@@ -3616,13 +3654,19 @@ async function analyzePhoto(dataUrl, mimeType){
   }
 }
 
+function skipProfilePhoto(){
+  // Profil fotoğrafı seçmeden devam — varsayılan avatar
+  savedProfilePhoto = '';
+  uploadedImageOk = true;
+  finishRegistration();
+}
+
 function finishRegistration(){
-  if(!uploadedImageOk || !savedProfilePhoto) return;
+  // Fotoğraf opsiyonel — yoksa boş geç
   if(!fbReady || !fbAuth || !fbDb){
-    // Firebase yoksa en azından kullanıcıyı bekletmeyelim, demo modunda ilerlesin.
     registrationInProgress = false;
     addMemberToAdminTable();
-    showToast(savedUsername + ', profilin hazır! (bağlantı kısıtlı, demo modu)');
+    showToast(savedUsername + ', profilin hazır! (demo modu)');
     setTimeout(()=>{
       document.getElementById('screenRegister').classList.remove('active');
       showContractAgree();
@@ -3638,8 +3682,10 @@ function finishRegistration(){
     username: savedUsername,
     displayName: savedDisplayName || '',
     email: savedEmail,
-    photo: savedProfilePhoto,
-    isAdmin: savedIsAdmin, postsCount, followersCount, followingCount,
+    photo: savedProfilePhoto || '',
+    bio: '',
+    isAdmin: savedIsAdmin,
+    postsCount: 0, followersCount: 0, followingCount: 0,
     createdAt: Date.now()
   };
 
@@ -3648,18 +3694,18 @@ function finishRegistration(){
 
   Promise.all(writes).then(finishRegistrationUI).catch((err)=>{
     console.error('Profil veritabanına kaydedilemedi:', err);
-    showToast('Not: profil bilgisi sunucuya tam kaydedilemedi, internetini kontrol et');
+    showToast('Not: profil bilgisi tam kaydedilemedi.');
     finishRegistrationUI();
   });
 
   function finishRegistrationUI(){
-    registrationInProgress = false; // kayıt tamamlandı, normal oturum takibi devam edebilir
+    registrationInProgress = false;
     addMemberToAdminTable();
-    showToast(savedUsername + ', profilin hazır!');
+    showToast(savedUsername + ', hoş geldin! 🎉');
     setTimeout(()=>{
       document.getElementById('screenRegister').classList.remove('active');
       showContractAgree();
-    }, 900);
+    }, 700);
   }
 }
 
@@ -3811,10 +3857,13 @@ function refreshFollowButtonState(uid){
   const btn = document.getElementById('otherFollowBtn');
   if(!me || me.uid === uid){ btn.style.display = 'none'; return; }
   btn.style.display = '';
-  fbDb.ref('follows/' + me.uid + '/' + uid).once('value').then(snap=>{
-    const following = snap.exists();
+  Promise.all([
+    fbDb.ref('follows/' + me.uid + '/' + uid).once('value'),
+    fbDb.ref('followRequests/' + uid + '/' + me.uid).once('value')
+  ]).then(([followSnap, reqSnap]) => {
+    const following = followSnap.exists();
+    const requested = reqSnap.exists();
     if(following){
-      // Takip ediyor: yeşil parlayan buton, tıklayınca onayla → takipten çık
       btn.textContent = '✓ Takip Ediyor';
       btn.className = 'btn btn-following';
       btn.onclick = function(){
@@ -3822,10 +3871,19 @@ function refreshFollowButtonState(uid){
           toggleFollowOther();
         }
       };
+    } else if(requested){
+      btn.textContent = '🔒 İstek Gönderildi';
+      btn.className = 'btn btn-ghost';
+      btn.style.border = '1px solid var(--accent)';
+      btn.onclick = function(){
+        if(confirm('Takip isteğini geri çekmek istiyor musun?')){
+          toggleFollowOther();
+        }
+      };
     } else {
-      // Takip etmiyor: birincil mor-mavi "Takip Et" butonu
       btn.textContent = 'Takip Et';
       btn.className = 'btn btn-primary';
+      btn.style.border = '';
       btn.onclick = function(){ toggleFollowOther(); };
     }
     btn.style.flex = '1';
@@ -3839,23 +3897,115 @@ function toggleFollowOther(){
   const targetUid = viewingOtherUid;
   const followRef = fbDb.ref('follows/' + me.uid + '/' + targetUid);
   const followerRef = fbDb.ref('followers/' + targetUid + '/' + me.uid);
+  const requestRef = fbDb.ref('followRequests/' + targetUid + '/' + me.uid);
 
-  followRef.once('value').then(snap=>{
-    const alreadyFollowing = snap.exists();
-    const writes = alreadyFollowing
-      ? [followRef.remove(), followerRef.remove()]
-      : [followRef.set(true), followerRef.set(true)];
-    Promise.all(writes).then(()=>{
-      refreshFollowButtonState(targetUid);
-      refreshOtherFollowCounts(targetUid);
-      if(me.uid) refreshOwnFollowCounts(me.uid);
-      // Takip durumu değiştiyse, gizli profilin gönderi/kilit gösterimini güncelle
-      fbDb.ref('users/' + targetUid).once('value').then(s => {
-        applyOtherProfilePrivacy(targetUid, s.val() || {});
-      });
-      showToast(alreadyFollowing ? 'Takibi bıraktın' : 'Takip ediyorsun ✓');
-      if(!alreadyFollowing) sendFollowNotification(targetUid);
+  // Önce hedef hesap gizli mi kontrol et
+  fbDb.ref('users/' + targetUid).once('value').then(userSnap => {
+    const targetUser = userSnap.val() || {};
+    const isPrivate = targetUser.private === true;
+
+    followRef.once('value').then(snap => {
+      const alreadyFollowing = snap.exists();
+
+      if(alreadyFollowing){
+        // Takipten çık
+        Promise.all([followRef.remove(), followerRef.remove()]).then(()=>{
+          refreshFollowButtonState(targetUid);
+          refreshOtherFollowCounts(targetUid);
+          if(me.uid) refreshOwnFollowCounts(me.uid);
+          fbDb.ref('users/' + targetUid).once('value').then(s => {
+            applyOtherProfilePrivacy(targetUid, s.val() || {});
+          });
+          showToast('Takibi bıraktın');
+        });
+        return;
+      }
+
+      // Yeni takip — gizli hesap mı kontrol et
+      if(isPrivate){
+        // Önce mevcut bir istek var mı bak
+        requestRef.once('value').then(rs => {
+          if(rs.exists()){
+            // İsteği geri çek
+            requestRef.remove().then(()=>{
+              showToast('Takip isteğini geri çektin');
+              refreshFollowButtonState(targetUid);
+            });
+            return;
+          }
+          // Takip isteği gönder
+          requestRef.set({
+            uid: me.uid,
+            username: savedUsername || '@kullanici',
+            photo: savedProfilePhoto || '',
+            ts: Date.now()
+          }).then(()=>{
+            // Karşı tarafa bildirim
+            fbDb.ref('notifications/' + targetUid).push({
+              text: '<b>' + (savedUsername||'@kullanici') + '</b> sana takip isteği gönderdi',
+              photo: savedProfilePhoto || '',
+              targetUid: me.uid,
+              ts: Date.now(),
+              type: 'followRequest',
+              requesterUid: me.uid
+            });
+            showToast('🔒 Takip isteği gönderildi');
+            refreshFollowButtonState(targetUid);
+          });
+        });
+      } else {
+        // Açık hesap — doğrudan takip
+        Promise.all([followRef.set(true), followerRef.set(true)]).then(()=>{
+          refreshFollowButtonState(targetUid);
+          refreshOtherFollowCounts(targetUid);
+          if(me.uid) refreshOwnFollowCounts(me.uid);
+          fbDb.ref('users/' + targetUid).once('value').then(s => {
+            applyOtherProfilePrivacy(targetUid, s.val() || {});
+          });
+          showToast('Takip ediyorsun ✓');
+          sendFollowNotification(targetUid);
+        });
+      }
     });
+  });
+}
+
+/* ============================================================
+   TAKİP İSTEĞİ KABUL / RED
+   ============================================================ */
+function acceptFollowRequest(requesterUid, notifKey){
+  if(!fbReady || !fbAuth.currentUser) return;
+  const myUid = fbAuth.currentUser.uid;
+  // Takipçi ekle + follow ilişkisi kur
+  Promise.all([
+    fbDb.ref('followers/' + myUid + '/' + requesterUid).set(true),
+    fbDb.ref('follows/' + requesterUid + '/' + myUid).set(true),
+    fbDb.ref('followRequests/' + myUid + '/' + requesterUid).remove(),
+    // İstek bildirimini sil
+    notifKey ? fbDb.ref('notifications/' + myUid + '/' + notifKey).remove() : Promise.resolve()
+  ]).then(()=>{
+    // İstek gönderen kişiye "kabul edildi" bildirimi
+    fbDb.ref('notifications/' + requesterUid).push({
+      text: '<b>' + (savedUsername||'@kullanici') + '</b> takip isteğini kabul etti ✓',
+      photo: savedProfilePhoto || '',
+      targetUid: myUid,
+      ts: Date.now(),
+      type: 'followAccept'
+    });
+    showToast('Takip isteği kabul edildi ✓');
+    openNotifications(); // Bildirim listesini yenile
+  });
+}
+
+function rejectFollowRequest(requesterUid, notifKey){
+  if(!fbReady || !fbAuth.currentUser) return;
+  const myUid = fbAuth.currentUser.uid;
+  Promise.all([
+    fbDb.ref('followRequests/' + myUid + '/' + requesterUid).remove(),
+    notifKey ? fbDb.ref('notifications/' + myUid + '/' + notifKey).remove() : Promise.resolve()
+  ]).then(()=>{
+    showToast('İstek reddedildi');
+    openNotifications();
   });
 }
 
@@ -4282,6 +4432,8 @@ function enterAppFromAuth(){
   saveSession();
   // Presence (çevrimiçi durumu)
   if(fbAuth && fbAuth.currentUser) initPresence(fbAuth.currentUser.uid);
+  // Bildirim listener'ı başlat - kırmızı badge için
+  if(fbAuth && fbAuth.currentUser) initNotifListener();
   // Hikaye butonuna profil fotoğrafını koy
   setTimeout(updateStoryAvatarBtn, 300);
   // Adayı göster — applyAccountToUI'den SONRA çağırıyoruz,
@@ -5108,30 +5260,51 @@ function initFeedListener(){
   if(!requireFirebase()) return;
   if(feedPostsRef) feedPostsRef.off();
   const container = document.getElementById('feedPostsContainer');
-  feedPostsRef = fbDb.ref('posts').orderByChild('ts').limitToLast(60);
+  feedPostsRef = fbDb.ref('posts').orderByChild('ts').limitToLast(100);
   feedPostsRef.on('value', (snap)=>{
     const data = snap.val() || {};
     const ids = Object.keys(data).sort((a,b) => (data[b].ts||0) - (data[a].ts||0));
-    if(!ids.length){
-      container.innerHTML = '<div id="feedEmptyState" style="text-align:center;color:var(--muted);font-size:13px;padding:50px 20px;">Henüz hiç gönderi yok. İlk paylaşımı sen yap, ya da yukarıdan bir Anı Yakala başlat!</div>';
-      return;
-    }
     const myUid = fbAuth.currentUser ? fbAuth.currentUser.uid : null;
-    // Tüm post uid'lerini topla, kullanıcı bilgilerini bir kez çek
+
+    // Takip edilen kullanıcı listesini al + silinmiş kontrolü
+    const followsPromise = myUid 
+      ? fbDb.ref('follows/' + myUid).once('value').then(s => s.val() || {})
+      : Promise.resolve({});
+
     const uniqueUids = [...new Set(ids.map(id => data[id].uid).filter(Boolean))];
-    Promise.all(uniqueUids.map(uid =>
+    const deletedPromise = Promise.all(uniqueUids.map(uid =>
       fbDb.ref('users/'+uid+'/deleted').once('value').then(s => ({uid, deleted: s.val() === true}))
-    )).then(results => {
-      const deletedUids = new Set(results.filter(r => r.deleted).map(r => r.uid));
-      // Silinmiş kullanıcıların postlarını filtrele
-      const visibleIds = ids.filter(id => !deletedUids.has(data[id].uid));
+    ));
+
+    Promise.all([followsPromise, deletedPromise]).then(([followingMap, deletedResults]) => {
+      const deletedUids = new Set(deletedResults.filter(r => r.deleted).map(r => r.uid));
+      const followingUids = new Set(Object.keys(followingMap));
+
+      // Filtrele: silinmemiş VE (kendi postu VEYA takip ettiğim biri)
+      const visibleIds = ids.filter(id => {
+        const post = data[id];
+        if(!post.uid || deletedUids.has(post.uid)) return false;
+        // Kendi postlarım her zaman görünür
+        if(post.uid === myUid) return true;
+        // Takip ettiğim biri ise göster
+        return followingUids.has(post.uid);
+      });
+
       if(!visibleIds.length){
-        container.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:13px;padding:50px 20px;">Henüz görünür gönderi yok.</div>';
+        // Hiç gönderi yoksa veya takip etmiyorsa keşfet öner
+        const hasFollowing = followingUids.size > 0;
+        container.innerHTML = `<div style="text-align:center;color:var(--muted);font-size:13.5px;padding:60px 20px;">
+          <div style="font-size:48px;margin-bottom:16px;">📭</div>
+          <div style="font-weight:700;color:var(--text);margin-bottom:8px;">${hasFollowing ? 'Takip ettiklerinden henüz gönderi yok' : 'Akışın boş'}</div>
+          <div style="margin-bottom:16px;">${hasFollowing ? 'Yeni paylaşımları bekle veya yeni kişiler keşfet.' : 'İnsanları keşfedip takip ederek akışını doldur.'}</div>
+          <button class="btn btn-primary" onclick="goNav('explore', document.getElementById('navExplore'))">🔍 Keşfet'e Git</button>
+        </div>`;
         return;
       }
       container.innerHTML = visibleIds.map(id => renderPostCard(id, data[id], myUid)).join('');
-    }).catch(()=>{
-      container.innerHTML = ids.map(id => renderPostCard(id, data[id], myUid)).join('');
+    }).catch(err=>{
+      console.error('Feed yükleme hatası:', err);
+      container.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:13px;padding:50px 20px;">Akış yüklenemedi.</div>';
     });
   }, ()=>{
     container.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:13px;padding:50px 20px;">Akış yüklenemedi, internetini kontrol et.</div>';
@@ -6226,25 +6399,108 @@ function closeNotifications(){
 }
 function loadNotifications(){
   if(!requireFirebase() || !fbAuth.currentUser) return;
+  const myUid = fbAuth.currentUser.uid;
   const body = document.getElementById('notifBody');
   body.innerHTML = '<div class="followListEmpty">Yükleniyor...</div>';
-  fbDb.ref('notifications/' + fbAuth.currentUser.uid).orderByChild('ts').limitToLast(30).once('value').then(snap => {
+  fbDb.ref('notifications/' + myUid).orderByChild('ts').limitToLast(50).once('value').then(snap => {
     const data = snap.val() || {};
-    const items = Object.values(data).sort((a,b)=>(b.ts||0)-(a.ts||0));
+    const items = Object.keys(data).map(k => ({...data[k], key: k}))
+      .sort((a,b)=>(b.ts||0)-(a.ts||0));
     if(!items.length){
       body.innerHTML = '<div class="followListEmpty">Henüz bildirim yok.</div>';
       return;
     }
     body.innerHTML = items.map(n => {
       const ago = formatChatTime(n.ts);
-      return `<div class="notif-row" onclick="${n.targetUid ? "viewOtherProfile('"+n.targetUid+"');closeNotifications();" : ''}">
+      const isUnread = !n.read;
+      const unreadDot = isUnread ? '<span style="position:absolute;top:50%;left:6px;transform:translateY(-50%);width:8px;height:8px;border-radius:50%;background:#ef4444;"></span>' : '';
+      const unreadBg = isUnread ? 'background:rgba(239,68,68,.08);' : '';
+      
+      // Takip isteği bildirimi mi?
+      if(n.type === 'followRequest' && n.requesterUid){
+        return `<div class="notif-row" style="position:relative;padding-left:22px;${unreadBg}">
+          ${unreadDot}
+          <img src="${n.photo || 'https://i.pravatar.cc/60?img=68'}" onerror="this.src='https://i.pravatar.cc/60?img=68'" onclick="viewOtherProfile('${n.requesterUid}');closeNotifications();" style="cursor:pointer;">
+          <div class="txt" style="flex:1;">
+            <div>${n.text || ''}</div>
+            <div style="display:flex;gap:6px;margin-top:8px;">
+              <button onclick="event.stopPropagation();acceptFollowRequest('${n.requesterUid}','${n.key}')" style="flex:1;padding:6px 12px;background:var(--gradient-vivid);border:none;border-radius:8px;color:#fff;font-size:12px;font-weight:600;cursor:pointer;">✓ Kabul Et</button>
+              <button onclick="event.stopPropagation();rejectFollowRequest('${n.requesterUid}','${n.key}')" style="flex:1;padding:6px 12px;background:var(--surface-2);border:1px solid var(--line);border-radius:8px;color:var(--text);font-size:12px;font-weight:600;cursor:pointer;">✕ Reddet</button>
+            </div>
+          </div>
+          <div class="time">${ago}</div>
+        </div>`;
+      }
+      // Normal bildirim
+      return `<div class="notif-row" style="position:relative;padding-left:22px;${unreadBg}" onclick="${n.targetUid ? `markNotifRead('${n.key}');viewOtherProfile('${n.targetUid}');closeNotifications();` : `markNotifRead('${n.key}')`}">
+        ${unreadDot}
         <img src="${n.photo || 'https://i.pravatar.cc/60?img=68'}" onerror="this.src='https://i.pravatar.cc/60?img=68'">
         <div class="txt">${n.text || ''}</div>
         <div class="time">${ago}</div>
       </div>`;
     }).join('');
+    
+    // Tüm bildirimleri okundu olarak işaretle (2 saniye sonra)
+    setTimeout(() => {
+      const updates = {};
+      items.forEach(n => { if(!n.read) updates[n.key + '/read'] = true; });
+      if(Object.keys(updates).length){
+        fbDb.ref('notifications/' + myUid).update(updates);
+      }
+    }, 2000);
+    
+    // Bildirim badge'ini gizle
+    updateNotifBadge(0);
   }).catch(()=>{
     body.innerHTML = '<div class="followListEmpty">Bildirimler yüklenemedi.</div>';
+  });
+}
+
+function markNotifRead(notifKey){
+  if(!fbReady || !fbAuth.currentUser || !notifKey) return;
+  fbDb.ref('notifications/' + fbAuth.currentUser.uid + '/' + notifKey + '/read').set(true);
+}
+
+/* Bildirim badge'ini güncelle - sayıya göre kırmızı kalp gösterir */
+function updateNotifBadge(count){
+  const badge = document.getElementById('notifBadge');
+  if(!badge) return;
+  if(count > 0){
+    badge.textContent = count > 99 ? '99+' : count;
+    badge.classList.remove('hidden');
+    // Kalp ikonunu kırmızıya boya
+    const btn = document.getElementById('notifBtn');
+    if(btn){
+      const svg = btn.querySelector('svg');
+      if(svg){
+        svg.style.color = '#ef4444';
+        svg.style.fill = '#ef4444';
+      }
+    }
+  } else {
+    badge.classList.add('hidden');
+    const btn = document.getElementById('notifBtn');
+    if(btn){
+      const svg = btn.querySelector('svg');
+      if(svg){
+        svg.style.color = '';
+        svg.style.fill = 'none';
+      }
+    }
+  }
+}
+
+/* Real-time bildirim listener — yeni bildirim gelince badge güncellensin */
+let notifListenerRef = null;
+function initNotifListener(){
+  if(!fbReady || !fbAuth.currentUser) return;
+  if(notifListenerRef) notifListenerRef.off();
+  const myUid = fbAuth.currentUser.uid;
+  notifListenerRef = fbDb.ref('notifications/' + myUid);
+  notifListenerRef.on('value', snap => {
+    const data = snap.val() || {};
+    const unreadCount = Object.values(data).filter(n => !n.read).length;
+    updateNotifBadge(unreadCount);
   });
 }
 
