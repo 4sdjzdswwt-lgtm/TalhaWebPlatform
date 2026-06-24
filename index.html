@@ -2065,6 +2065,12 @@ tbody tr:hover{background:var(--surface-2);}
       </div>
       <div class="screen-body">
       <div class="adminWrap" style="padding-top:8px;">
+        <!-- Manuel temizlik butonu -->
+        <div style="background:linear-gradient(135deg,rgba(239,68,68,.1),rgba(239,68,68,.05));border:1px solid rgba(239,68,68,.3);border-radius:14px;padding:14px 16px;margin-bottom:16px;">
+          <h3 style="margin:0 0 6px;font-size:14px;color:#ef4444;">🧹 Veritabanı Temizliği</h3>
+          <p style="margin:0 0 10px;font-size:12px;color:var(--muted);">Silinmiş hesapların kalıntılarını, yetim postları/hikayeleri/sohbetleri tamamen siler.</p>
+          <button onclick="if(confirm('Tüm yetim verileri temizle?\n\nBu işlem geri alınamaz.')) cleanupOrphanedData()" style="background:#ef4444;color:#fff;border:none;border-radius:10px;padding:10px 18px;font-size:13px;font-weight:600;cursor:pointer;">🗑️ Yetim Verileri Temizle</button>
+        </div>
         <div class="stats">
           <div class="stat"><div class="num" id="statTotal">128</div><div class="lbl">Toplam Üye</div></div>
           <div class="stat"><div class="num">3</div><div class="lbl">Bekleyen Şikayet</div></div>
@@ -7696,49 +7702,115 @@ function deleteMyAccount(){
   const user = fbAuth.currentUser;
   const uid = user.uid;
   const usernameKey = (savedUsername || '').replace(/^@/,'').toLowerCase();
-  const displayName = savedDisplayName || savedUsername || 'Kullanıcı';
   showToast('Hesabın siliniyor, bekle...');
 
-  // Neden raporu
+  // Neden raporu (anonim)
   if(reason && reason.trim()){
     fbDb.ref('deletionReasons').push({ uid, reason: reason.trim(), ts: Date.now() }).catch(()=>{});
   }
 
-  // Silinen hesap için iz bırak — başkaları "Silinmiş hesap - @talha" görsün
-  const deletedMarker = {
-    username: '@silinmiş_hesap',
-    displayName: 'Silinmiş hesap - ' + displayName,
-    photo: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMDAgMjAwIj48Y2lyY2xlIGN4PSIxMDAiIGN5PSIxMDAiIHI9IjEwMCIgZmlsbD0iIzM3MzczNyIvPjxjaXJjbGUgY3g9IjEwMCIgY3k9IjgwIiByPSIzMCIgZmlsbD0iIzU1NTU1NSIvPjxwYXRoIGQ9Ik00MCAxNzBjMC0zMyAyNy02MCA2MC02MHM2MCAyNyA2MCA2MHoiIGZpbGw9IiM1NTU1NTUiLz48L3N2Zz4=',
-    bio: 'Bu hesap kullanıcı tarafından silindi',
-    deleted: true,
-    deletedAt: Date.now(),
-    isAdmin: false, postsCount:0, followersCount:0, followingCount:0, private:false
+  // ADIM 1: Bu kullanıcıyla ilgili TÜM izleri sil
+  const cleanup = async () => {
+    try {
+      // 1. Kendi profili
+      await fbDb.ref('users/' + uid).remove();
+      // 2. Kullanıcı adı
+      if(usernameKey) await fbDb.ref('usernames/' + usernameKey).remove();
+      // 3. Takip listeleri (kim kimi takip ediyor)
+      const followingSnap = await fbDb.ref('follows/' + uid).once('value');
+      const following = followingSnap.val() || {};
+      // Takip ettiğim kişilerin takipçi listesinden beni çıkar
+      const removeFromOthers = Object.keys(following).map(targetUid =>
+        fbDb.ref('followers/' + targetUid + '/' + uid).remove()
+      );
+      await Promise.all(removeFromOthers);
+      await fbDb.ref('follows/' + uid).remove();
+      
+      // 4. Takipçiler (beni takip edenlerin follow listesinden beni çıkar)
+      const followersSnap = await fbDb.ref('followers/' + uid).once('value');
+      const followers = followersSnap.val() || {};
+      const removeFromFollowers = Object.keys(followers).map(followerUid =>
+        fbDb.ref('follows/' + followerUid + '/' + uid).remove()
+      );
+      await Promise.all(removeFromFollowers);
+      await fbDb.ref('followers/' + uid).remove();
+
+      // 5. Diğer veri yapıları
+      await Promise.all([
+        fbDb.ref('blocks/' + uid).remove(),
+        fbDb.ref('restrictions/' + uid).remove(),
+        fbDb.ref('notifications/' + uid).remove(),
+        fbDb.ref('presence/' + uid).remove(),
+        fbDb.ref('followRequests/' + uid).remove()
+      ]);
+
+      // 6. Gönderileri sil
+      const postsSnap = await fbDb.ref('posts').orderByChild('uid').equalTo(uid).once('value');
+      const posts = postsSnap.val() || {};
+      await Promise.all(Object.keys(posts).map(pid => fbDb.ref('posts/'+pid).remove()));
+
+      // 7. Hikayeleri sil
+      const storiesSnap = await fbDb.ref('stories').orderByChild('uid').equalTo(uid).once('value');
+      const stories = storiesSnap.val() || {};
+      await Promise.all(Object.keys(stories).map(sid => fbDb.ref('stories/'+sid).remove()));
+
+      // 8. Sohbetlerimi sil — chatMeta'da users[uid] olan tüm chat'ler
+      const chatMetaSnap = await fbDb.ref('chatMeta').once('value');
+      const chatMetas = chatMetaSnap.val() || {};
+      const chatDeletes = [];
+      Object.keys(chatMetas).forEach(chatId => {
+        const meta = chatMetas[chatId];
+        if(meta.users && meta.users[uid]){
+          chatDeletes.push(fbDb.ref('chats/'+chatId).remove());
+          chatDeletes.push(fbDb.ref('chatMeta/'+chatId).remove());
+          chatDeletes.push(fbDb.ref('typing/'+chatId).remove());
+        }
+      });
+      await Promise.all(chatDeletes);
+
+      // 9. Diğer kullanıcıların follow request'lerinden de beni çıkar
+      const allRequestsSnap = await fbDb.ref('followRequests').once('value');
+      const allRequests = allRequestsSnap.val() || {};
+      const reqDeletes = [];
+      Object.keys(allRequests).forEach(targetUid => {
+        if(allRequests[targetUid] && allRequests[targetUid][uid]){
+          reqDeletes.push(fbDb.ref('followRequests/' + targetUid + '/' + uid).remove());
+        }
+      });
+      await Promise.all(reqDeletes);
+
+      // 10. Diğer kullanıcıların notifications'larındaki benimle ilgili kayıtları sil
+      const allNotifsSnap = await fbDb.ref('notifications').once('value');
+      const allNotifs = allNotifsSnap.val() || {};
+      const notifDeletes = [];
+      Object.keys(allNotifs).forEach(targetUid => {
+        const userNotifs = allNotifs[targetUid] || {};
+        Object.keys(userNotifs).forEach(notifKey => {
+          const n = userNotifs[notifKey];
+          if(n.targetUid === uid || n.requesterUid === uid){
+            notifDeletes.push(fbDb.ref('notifications/' + targetUid + '/' + notifKey).remove());
+          }
+        });
+      });
+      await Promise.all(notifDeletes);
+
+      // 11. Story likes / reactions temizle
+      const storyLikesSnap = await fbDb.ref('storyLikes').once('value');
+      const storyLikes = storyLikesSnap.val() || {};
+      const likeDeletes = [];
+      Object.keys(storyLikes).forEach(sid => {
+        if(storyLikes[sid] && storyLikes[sid][uid]){
+          likeDeletes.push(fbDb.ref('storyLikes/' + sid + '/' + uid).remove());
+        }
+      });
+      await Promise.all(likeDeletes);
+
+    } catch(e){
+      console.warn('Temizleme sırasında hata (devam ediliyor):', e);
+    }
   };
 
-  // ADIM 1: Tüm Firebase verilerini sil
-  Promise.allSettled([
-    // Profil yerine silinmiş marker bırak (başkalarının takip listelerinde görünmek için)
-    fbDb.ref('users/' + uid).set(deletedMarker),
-    // Username serbest bırak
-    usernameKey ? fbDb.ref('usernames/' + usernameKey).remove() : Promise.resolve(),
-    // Takip ilişkileri
-    fbDb.ref('follows/' + uid).remove(),
-    fbDb.ref('followers/' + uid).remove(),
-    fbDb.ref('blocks/' + uid).remove(),
-    fbDb.ref('restrictions/' + uid).remove(),
-    fbDb.ref('notifications/' + uid).remove(),
-    fbDb.ref('presence/' + uid).remove(),
-    // Gönderileri sil
-    fbDb.ref('posts').orderByChild('uid').equalTo(uid).once('value').then(snap=>{
-      const ps = snap.val() || {};
-      return Promise.all(Object.keys(ps).map(pid => fbDb.ref('posts/'+pid).remove()));
-    }),
-    // Hikayeleri sil
-    fbDb.ref('stories').orderByChild('uid').equalTo(uid).once('value').then(snap=>{
-      const ss = snap.val() || {};
-      return Promise.all(Object.keys(ss).map(sid => fbDb.ref('stories/'+sid).remove()));
-    })
-  ]).then(()=>{
+  cleanup().then(()=>{
     // ADIM 2: Firebase Auth hesabını sil
     return user.delete();
   }).then(()=>{
@@ -7746,7 +7818,6 @@ function deleteMyAccount(){
     savedEmail=''; savedPassword=''; savedUsername=''; savedProfilePhoto=''; savedBio='';
     try{
       localStorage.removeItem('next_session');
-      // Hesap listesinden de çıkar
       const accs = getAccountsList();
       const filtered = accs.filter(a => a.uid !== uid);
       saveAccountsList(filtered);
@@ -7755,7 +7826,7 @@ function deleteMyAccount(){
     document.getElementById('screenRegister').classList.add('active');
     switchAuthTab('login');
     document.getElementById('island').classList.add('hidden');
-    alert('✓ Hesabın kalıcı olarak silindi.\n\nAynı e-posta ile yeniden kayıt olabilirsin.');
+    alert('✓ Hesabın ve tüm verilerin kalıcı olarak silindi.\n\nAynı e-posta ile yeniden kayıt olabilirsin.');
   }).catch(err=>{
     if(err.code === 'auth/requires-recent-login'){
       alert('Güvenlik için yeniden giriş yapman gerekiyor. Çıkış yapılıyor, tekrar giriş yapıp Sil butonuna bas.');
@@ -9283,6 +9354,137 @@ function sendPhotoFromPreview(){
     compressForChat(_pendingPhotoDataUrl).then(send);
   }
 }
+
+/* ============================================================
+   MANUEL TEMİZLİK — Geçmişteki silinmiş hesap kalıntılarını siler
+   Konsoldan çalıştırılabilir: cleanupOrphanedData()
+   ============================================================ */
+async function cleanupOrphanedData(){
+  if(!fbReady || !fbAuth.currentUser){ console.log('Önce giriş yap'); return; }
+  console.log('🧹 Temizlik başladı...');
+  
+  // Tüm geçerli kullanıcıları al
+  const usersSnap = await fbDb.ref('users').once('value');
+  const allUsers = usersSnap.val() || {};
+  const validUids = new Set(Object.keys(allUsers).filter(uid => !allUsers[uid].deleted));
+  console.log(`Geçerli kullanıcı sayısı: ${validUids.size}`);
+  
+  let deletedCount = 0;
+  
+  // Silinmiş marker'lı kullanıcıları tamamen sil
+  for(const uid of Object.keys(allUsers)){
+    if(allUsers[uid].deleted){
+      await fbDb.ref('users/' + uid).remove();
+      deletedCount++;
+      console.log(`🗑️ Silindi: ${uid}`);
+    }
+  }
+  
+  // Geçersiz UID'li postları sil
+  const postsSnap = await fbDb.ref('posts').once('value');
+  const allPosts = postsSnap.val() || {};
+  for(const pid of Object.keys(allPosts)){
+    const post = allPosts[pid];
+    if(post.uid && !validUids.has(post.uid)){
+      await fbDb.ref('posts/' + pid).remove();
+      console.log(`🗑️ Post silindi: ${pid}`);
+    }
+  }
+  
+  // Geçersiz UID'li hikayeleri sil
+  const storiesSnap = await fbDb.ref('stories').once('value');
+  const allStories = storiesSnap.val() || {};
+  for(const sid of Object.keys(allStories)){
+    const s = allStories[sid];
+    if(s.uid && !validUids.has(s.uid)){
+      await fbDb.ref('stories/' + sid).remove();
+      console.log(`🗑️ Hikaye silindi: ${sid}`);
+    }
+  }
+  
+  // Geçersiz username'leri sil
+  const usernamesSnap = await fbDb.ref('usernames').once('value');
+  const allUsernames = usernamesSnap.val() || {};
+  for(const key of Object.keys(allUsernames)){
+    const uid = allUsernames[key];
+    if(uid && !validUids.has(uid)){
+      await fbDb.ref('usernames/' + key).remove();
+      console.log(`🗑️ Username silindi: ${key}`);
+    }
+  }
+  
+  // Geçersiz follows ilişkileri
+  const followsSnap = await fbDb.ref('follows').once('value');
+  const allFollows = followsSnap.val() || {};
+  for(const followerUid of Object.keys(allFollows)){
+    if(!validUids.has(followerUid)){
+      await fbDb.ref('follows/' + followerUid).remove();
+      continue;
+    }
+    const targets = allFollows[followerUid] || {};
+    for(const targetUid of Object.keys(targets)){
+      if(!validUids.has(targetUid)){
+        await fbDb.ref('follows/' + followerUid + '/' + targetUid).remove();
+      }
+    }
+  }
+  
+  const followersSnap = await fbDb.ref('followers').once('value');
+  const allFollowers = followersSnap.val() || {};
+  for(const targetUid of Object.keys(allFollowers)){
+    if(!validUids.has(targetUid)){
+      await fbDb.ref('followers/' + targetUid).remove();
+      continue;
+    }
+    const fers = allFollowers[targetUid] || {};
+    for(const followerUid of Object.keys(fers)){
+      if(!validUids.has(followerUid)){
+        await fbDb.ref('followers/' + targetUid + '/' + followerUid).remove();
+      }
+    }
+  }
+  
+  // Geçersiz chatMeta'lar
+  const chatMetaSnap = await fbDb.ref('chatMeta').once('value');
+  const allChatMetas = chatMetaSnap.val() || {};
+  for(const cid of Object.keys(allChatMetas)){
+    const meta = allChatMetas[cid];
+    const users = meta.users || {};
+    let hasInvalidUser = false;
+    for(const u of Object.keys(users)){
+      if(!validUids.has(u)){ hasInvalidUser = true; break; }
+    }
+    if(hasInvalidUser){
+      await fbDb.ref('chatMeta/' + cid).remove();
+      await fbDb.ref('chats/' + cid).remove();
+      await fbDb.ref('typing/' + cid).remove();
+      console.log(`🗑️ Sohbet silindi: ${cid}`);
+    }
+  }
+  
+  // Geçersiz notification'lar
+  const notifsSnap = await fbDb.ref('notifications').once('value');
+  const allNotifs = notifsSnap.val() || {};
+  for(const ownerUid of Object.keys(allNotifs)){
+    if(!validUids.has(ownerUid)){
+      await fbDb.ref('notifications/' + ownerUid).remove();
+      continue;
+    }
+    const userNotifs = allNotifs[ownerUid] || {};
+    for(const nkey of Object.keys(userNotifs)){
+      const n = userNotifs[nkey];
+      if((n.targetUid && !validUids.has(n.targetUid)) || (n.requesterUid && !validUids.has(n.requesterUid))){
+        await fbDb.ref('notifications/' + ownerUid + '/' + nkey).remove();
+      }
+    }
+  }
+  
+  console.log(`✅ Temizlik tamamlandı. ${deletedCount} hesap, geçersiz tüm referanslar silindi.`);
+  showToast(`🧹 Temizlik bitti: ${deletedCount} hesap kaldırıldı`);
+}
+
+// Admin için window'a aç
+window.cleanupOrphanedData = cleanupOrphanedData;
 
 function bootApp(){
   initTheme();
