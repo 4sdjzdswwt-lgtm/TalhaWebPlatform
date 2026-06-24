@@ -937,7 +937,95 @@ body.light-mode #screenRegister .spam-warning{background:linear-gradient(135deg,
 }
 .msgNotification.expanded{flex-wrap:wrap;}
 
-/* Sohbet fotoğraf kartı — Apple Messages tarzı büyük yuvarlak köşeli */
+/* ================= FOTOĞRAF ÖNİZLEME (WhatsApp tarzı) ================= */
+.photoPreviewOverlay{
+  position:fixed;inset:0;background:#000;z-index:500;
+  display:flex;flex-direction:column;
+}
+.photoPreviewOverlay.hidden{display:none;}
+.photoPreviewHead{
+  display:flex;align-items:center;gap:14px;padding:14px 16px;
+  background:rgba(0,0,0,.5);backdrop-filter:blur(10px);
+}
+.photoPreviewBack{
+  background:rgba(255,255,255,.1);border:none;color:#fff;
+  width:38px;height:38px;border-radius:50%;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+}
+.photoEphemeralToggle{
+  margin-left:auto;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);
+  color:#fff;padding:8px 12px;border-radius:18px;cursor:pointer;
+  display:flex;align-items:center;gap:5px;
+  transition:background .2s;
+}
+.photoEphemeralToggle.active{
+  background:linear-gradient(135deg,#f59e0b,#ef4444);
+  border-color:transparent;
+  box-shadow:0 0 12px rgba(239,68,68,.4);
+}
+.photoPreviewBody{
+  flex:1;display:flex;align-items:center;justify-content:center;
+  padding:10px;overflow:hidden;
+}
+.photoPreviewBody img,.photoPreviewBody video{
+  max-width:100%;max-height:100%;object-fit:contain;border-radius:12px;
+}
+.photoPreviewFoot{
+  display:flex;align-items:center;gap:10px;
+  padding:14px 16px 24px;background:rgba(0,0,0,.5);backdrop-filter:blur(10px);
+}
+.photoPreviewFoot input{
+  flex:1;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);
+  border-radius:24px;padding:12px 18px;color:#fff;font-size:14px;outline:none;
+  backdrop-filter:blur(4px);
+}
+.photoPreviewFoot input::placeholder{color:rgba(255,255,255,.6);}
+.photoPreviewSend{
+  background:var(--gradient-vivid);border:none;border-radius:50%;
+  width:46px;height:46px;color:#fff;cursor:pointer;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 4px 12px rgba(124,58,237,.4);
+}
+
+/* Telegram tarzı süreli fotoğraf mesajı */
+.ephemeral-msg-card{
+  position:relative;width:200px;height:200px;border-radius:18px;overflow:hidden;
+  background:linear-gradient(135deg,#1e1e3f,#2a1a4a);
+  display:flex;align-items:center;justify-content:center;cursor:pointer;
+  border:2px solid rgba(245,158,11,.4);
+}
+.ephemeral-msg-icon{
+  font-size:48px;color:#f59e0b;
+  filter:drop-shadow(0 0 12px rgba(245,158,11,.5));
+}
+.ephemeral-msg-label{
+  position:absolute;bottom:14px;left:0;right:0;text-align:center;
+  color:#fff;font-size:12px;font-weight:600;
+  background:linear-gradient(transparent,rgba(0,0,0,.6));
+  padding:20px 8px 8px;
+}
+.ephemeral-msg-card.expired{
+  border-color:rgba(255,255,255,.15);
+  background:#1a1a1a;
+}
+.ephemeral-msg-card.expired .ephemeral-msg-icon{
+  color:#666;filter:none;
+}
+.ephemeral-msg-card.warn{
+  border-color:#ef4444;
+  box-shadow:0 0 16px rgba(239,68,68,.4);
+}
+
+/* WhatsApp tarzı süreli fotoğraf seçici butonları */
+.ephOptBtn{
+  background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);
+  border-radius:18px;padding:6px 14px;color:#fff;font-size:11.5px;font-weight:600;
+  cursor:pointer;transition:all .15s;
+}
+.ephOptBtn.active{
+  background:var(--gradient-vivid);border-color:transparent;
+  box-shadow:0 2px 8px rgba(124,58,237,.4);
+}
 .chat-photo-card{
   max-width:260px;border-radius:24px;overflow:hidden;
   position:relative;display:inline-block;
@@ -1942,10 +2030,8 @@ tbody tr:hover{background:var(--surface-2);}
             <button class="icon-btn" onclick="document.getElementById('dmFile').click()" title="Fotoğraf / Galeri">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
             </button>
-            <button class="icon-btn" onclick="document.getElementById('dmEphemeral').click()" title="Süreli Fotoğraf" style="font-size:16px;">⏱️</button>
             <button class="icon-btn" onclick="openGifPicker()" title="GIF" style="font-size:12px;font-weight:800;color:var(--accent);letter-spacing:-0.5px;">GIF</button>
-            <input type="file" id="dmFile" accept="image/*,video/*" onchange="sendMedia(event)" style="display:none;">
-            <input type="file" id="dmEphemeral" accept="image/*" onchange="sendEphemeralPhoto(event)" style="display:none;">
+            <input type="file" id="dmFile" accept="image/*,video/*" onchange="openPhotoPreview(event)" style="display:none;">
             <input type="text" id="msgInput" placeholder="Mesaj..." onkeydown="if(event.key==='Enter') sendMsg()">
             <button class="send" onclick="sendMsg()" title="Gönder"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 11l18-8-8 18-2-8-8-2z"/></svg></button>
           </div>
@@ -2232,6 +2318,31 @@ tbody tr:hover{background:var(--surface-2);}
   </div>
 </div>
 
+<!-- ================= FOTOĞRAF ÖNİZLEME OVERLAY (WhatsApp tarzı) ================= -->
+<div class="photoPreviewOverlay hidden" id="photoPreviewOverlay">
+  <div class="photoPreviewHead">
+    <button class="photoPreviewBack" onclick="closePhotoPreview()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" width="24" height="24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+    </button>
+    <span id="photoPreviewTitle" style="color:#fff;font-weight:600;font-size:15px;">Fotoğraf Gönder</span>
+    <!-- Süreli mod toggle -->
+    <button class="photoEphemeralToggle" id="photoEphemeralBtn" onclick="togglePhotoEphemeral()" title="Bir kez göster">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+      <span id="photoEphemeralLabel" style="font-size:10px;font-weight:600;">Normal</span>
+    </button>
+  </div>
+  <div class="photoPreviewBody">
+    <img id="photoPreviewImg" src="">
+    <video id="photoPreviewVid" controls playsinline style="display:none;"></video>
+  </div>
+  <div class="photoPreviewFoot">
+    <input type="text" id="photoPreviewCaption" placeholder="Açıklama ekle..." maxlength="200" onkeydown="if(event.key==='Enter') sendPhotoFromPreview()">
+    <button class="photoPreviewSend" onclick="sendPhotoFromPreview()" title="Gönder">
+      <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M3 11l18-8-8 18-2-8-8-2z"/></svg>
+    </button>
+  </div>
+</div>
+
 <!-- ================= YORUM CHAT EKRANI ================= -->
 <div class="followListOverlay hidden" id="commentSheetOverlay" onclick="if(event.target===this) closeCommentSheet()">
   <div class="followListSheet" style="max-height:88vh;display:flex;flex-direction:column;">
@@ -2345,26 +2456,42 @@ tbody tr:hover{background:var(--surface-2);}
 </div>
 
 <!-- ================= HİKAYE (STORY) OLUŞTURMA ================= -->
-<div class="followListOverlay hidden" id="storyComposerOverlay" onclick="if(event.target===this) closeStoryComposer()">
-  <div class="followListSheet" style="max-height:85vh;">
-    <div class="followListHead">
-      <h3>Hikaye Ekle</h3>
-      <button class="followListClose" onclick="closeStoryComposer()">✕</button>
+<div class="hidden" id="storyComposerOverlay" style="position:fixed;inset:0;background:#000;z-index:600;display:flex;flex-direction:column;">
+  <!-- Üst bar -->
+  <div style="padding:14px 16px;display:flex;justify-content:space-between;align-items:center;background:rgba(0,0,0,.4);z-index:5;">
+    <button onclick="closeStoryComposer()" style="background:rgba(255,255,255,.1);border:none;border-radius:50%;width:40px;height:40px;color:#fff;font-size:22px;cursor:pointer;">✕</button>
+    <h3 style="color:#fff;font-size:15px;font-weight:700;margin:0;">Hikaye</h3>
+    <!-- Yazı ekleme butonu -->
+    <button onclick="addStoryTextOverlay()" id="addStoryTextBtn" style="background:rgba(255,255,255,.1);border:none;border-radius:50%;width:40px;height:40px;color:#fff;font-size:20px;cursor:pointer;display:none;" title="Yazı Ekle">Aa</button>
+  </div>
+  
+  <!-- Ana içerik alanı -->
+  <div style="flex:1;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;" id="storyPreviewArea">
+    <!-- Fotoğraf seçilmemişse upload zone -->
+    <div class="upload-zone" id="storyDropzone" 
+         onclick="document.getElementById('storyFileInput').click()"
+         style="min-height:300px;width:90%;cursor:pointer;border:2px dashed rgba(255,255,255,.3);border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:rgba(255,255,255,.6);font-size:14px;background:rgba(255,255,255,.05);">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="20" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+      <span style="font-weight:600;color:#fff;font-size:16px;">📷 Fotoğraf veya Video Seç</span>
+      <span style="font-size:12px;">Buraya dokun</span>
     </div>
-    <div style="padding:16px;">
-      <div class="upload-zone" id="storyDropzone" 
-           onclick="document.getElementById('storyFileInput').click()"
-           style="min-height:180px;cursor:pointer;border:2px dashed var(--accent);border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:var(--muted);font-size:13.5px;background:var(--surface-2);">
-        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="20" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
-        <span style="font-weight:600;color:var(--accent);">📷 Fotoğraf veya Video Seç</span>
-        <span style="font-size:11px;color:var(--muted);">Buraya dokun</span>
-      </div>
-      <input type="file" id="storyFileInput" accept="image/*,video/*" onchange="onStoryFileChosen(event)" style="position:absolute;opacity:0;width:1px;height:1px;">
-      <div class="field" style="margin-top:14px;">
-        <input type="text" id="storyCaption" placeholder="Bir şeyler yaz... (opsiyonel)" style="width:100%;">
-      </div>
-      <button class="btn btn-primary" id="storyPublishBtn" style="width:100%;margin-top:10px;" onclick="publishStory()" disabled>Hikayeyi Paylaş</button>
+    <input type="file" id="storyFileInput" accept="image/*,video/*" onchange="onStoryFileChosen(event)" style="position:absolute;opacity:0;width:1px;height:1px;">
+    
+    <!-- Seçilen fotoğraf preview'ı (gizli, fotoğraf seçince görünür) -->
+    <div id="storyMediaPreview" style="display:none;width:100%;height:100%;position:relative;">
+      <img id="storyPreviewImg" src="" style="width:100%;height:100%;object-fit:contain;">
+      <video id="storyPreviewVid" style="width:100%;height:100%;object-fit:contain;display:none;" autoplay loop muted playsinline></video>
+      
+      <!-- Sürüklenebilir metin overlay'leri buraya gelecek -->
+      <div id="storyTextOverlaysContainer" style="position:absolute;inset:0;pointer-events:none;"></div>
     </div>
+  </div>
+  
+  <!-- Alt bar -->
+  <div style="padding:12px 16px 20px;background:rgba(0,0,0,.4);" id="storyComposerBottomBar">
+    <!-- Gizli caption (Instagram'da bu yok ama altta saklı) -->
+    <input type="hidden" id="storyCaption" value="">
+    <button class="btn btn-primary" id="storyPublishBtn" style="width:100%;background:var(--gradient-vivid);border:none;border-radius:30px;padding:14px;font-size:15px;font-weight:700;color:#fff;cursor:pointer;" onclick="publishStory()" disabled>Hikayeyi Paylaş</button>
   </div>
 </div>
 
@@ -2383,6 +2510,8 @@ tbody tr:hover{background:var(--surface-2);}
   <img id="storyViewerImg" src="" style="width:100%;height:100%;object-fit:contain;">
   <video id="storyViewerVid" style="width:100%;height:100%;object-fit:contain;display:none;" autoplay muted playsinline></video>
   <div id="storyViewerCaption" style="position:absolute;bottom:90px;left:0;right:0;text-align:center;color:#fff;font-size:16px;font-weight:600;text-shadow:0 2px 8px rgba(0,0,0,.7);padding:0 20px;"></div>
+  <!-- Sürüklenmiş text overlay'ler (Instagram tarzı) -->
+  <div id="storyViewerTextOverlays" style="position:absolute;inset:0;pointer-events:none;"></div>
   
   <!-- Alt bar: emoji tepkileri + yanıt kutusu -->
   <div class="storyBottomBar" id="storyBottomBar" onclick="event.stopPropagation()">
@@ -5117,32 +5246,131 @@ function sendMedia(ev){
   if(!requireFirebase() || !fbAuth.currentUser || !activeChatId){ showToast('Bir sohbet seç.'); ev.target.value=''; return; }
   const isVideo = file.type.startsWith('video');
   ev.target.value = '';
+
+  if(isVideo){
+    // Video — direkt gönder
+    if(!fbStorage){ showToast('Video göndermek için Firebase Storage gerekli.'); return; }
+    showToast('Video gönderiliyor...');
+    const path = 'chatMedia/'+activeChatId+'/'+Date.now()+'.mp4';
+    fbStorage.ref().child(path).put(file).then(s=>s.ref.getDownloadURL()).then(url=>{
+      const ts = Date.now();
+      const msgRef = fbDb.ref('chats/' + activeChatId + '/messages').push();
+      ensureChatMeta(activeChatId, activeChatPeerUid).then(()=>{
+        return msgRef.set({ from: fbAuth.currentUser.uid, mediaUrl: url, mediaType: 'video', ts });
+      }).then(()=>{
+        const update = { lastMsg: '🎥 Video', lastTs: ts, lastSenderUid: fbAuth.currentUser.uid };
+        update['unreadFor/' + activeChatPeerUid] = true;
+        fbDb.ref('chatMeta/' + activeChatId).update(update);
+      });
+    }).catch(()=> showToast('Video gönderilemedi.'));
+    return;
+  }
+
+  // Resim — WhatsApp tarzı preview ekranı aç
+  const reader = new FileReader();
+  reader.onload = e => {
+    openPhotoPreview(e.target.result);
+  };
+  reader.readAsDataURL(file);
+}
+
+/* ============================================================
+   WHATSAPP TARZI FOTOĞRAF PREVIEW EKRANI
+   - Tam ekran fotoğraf
+   - Altta açıklama yazma kutusu
+   - Süreli fotoğraf toggle butonu (1, 3, 5, 10 saniye veya kalıcı)
+   - Gönder butonu
+   ============================================================ */
+let pendingPhotoDataUrl = null;
+let pendingPhotoEphemeralSecs = 0; // 0 = kalıcı, >0 = süreli
+
+function openPhotoPreview(dataUrl){
+  pendingPhotoDataUrl = dataUrl;
+  pendingPhotoEphemeralSecs = 0;
+  let overlay = document.getElementById('photoPreviewOverlay');
+  if(!overlay){
+    overlay = document.createElement('div');
+    overlay.id = 'photoPreviewOverlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:#000;z-index:600;display:flex;flex-direction:column;';
+    document.body.appendChild(overlay);
+  }
+  overlay.style.display = 'flex';
+  overlay.innerHTML = `
+    <!-- Üst bar: kapat -->
+    <div style="padding:12px 16px;display:flex;justify-content:space-between;align-items:center;background:rgba(0,0,0,.5);">
+      <button onclick="closePhotoPreview()" style="background:rgba(255,255,255,.1);border:none;border-radius:50%;width:38px;height:38px;color:#fff;font-size:20px;cursor:pointer;">✕</button>
+      <div style="color:#fff;font-size:14px;font-weight:600;">Fotoğraf Önizleme</div>
+      <div style="width:38px;"></div>
+    </div>
+    <!-- Resim alanı -->
+    <div style="flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:10px;">
+      <img src="${dataUrl}" style="max-width:100%;max-height:100%;object-fit:contain;border-radius:8px;">
+    </div>
+    <!-- Alt: açıklama + butonlar -->
+    <div style="padding:12px 16px 20px;background:rgba(0,0,0,.5);">
+      <!-- Süreli fotoğraf opsiyon barı -->
+      <div id="ephemeralOptions" style="display:flex;gap:6px;margin-bottom:10px;justify-content:center;">
+        <button onclick="setPhotoEphemeral(0)" id="ephOpt0" class="ephOptBtn active">Normal</button>
+        <button onclick="setPhotoEphemeral(3)" id="ephOpt3" class="ephOptBtn">3sn</button>
+        <button onclick="setPhotoEphemeral(5)" id="ephOpt5" class="ephOptBtn">5sn</button>
+        <button onclick="setPhotoEphemeral(10)" id="ephOpt10" class="ephOptBtn">10sn</button>
+        <button onclick="setPhotoEphemeral(-1)" id="ephOptOnce" class="ephOptBtn">1 Kez</button>
+      </div>
+      <!-- Açıklama + gönder -->
+      <div style="display:flex;gap:8px;align-items:center;">
+        <input type="text" id="photoPreviewCaption" placeholder="Açıklama ekleyin..." style="flex:1;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.2);border-radius:24px;padding:12px 18px;color:#fff;font-size:14px;outline:none;">
+        <button onclick="sendPhotoFromPreview()" style="background:var(--gradient-vivid);border:none;border-radius:50%;width:48px;height:48px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#fff;">
+          <svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22"><path d="M3 11l18-8-8 18-2-8-8-2z"/></svg>
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+function closePhotoPreview(){
+  const overlay = document.getElementById('photoPreviewOverlay');
+  if(overlay) overlay.style.display = 'none';
+  pendingPhotoDataUrl = null;
+  pendingPhotoEphemeralSecs = 0;
+}
+
+function setPhotoEphemeral(secs){
+  pendingPhotoEphemeralSecs = secs;
+  document.querySelectorAll('.ephOptBtn').forEach(b => b.classList.remove('active'));
+  const id = secs === 0 ? 'ephOpt0' : (secs === -1 ? 'ephOptOnce' : 'ephOpt' + secs);
+  const el = document.getElementById(id);
+  if(el) el.classList.add('active');
+}
+
+function sendPhotoFromPreview(){
+  if(!pendingPhotoDataUrl || !activeChatId || !fbAuth.currentUser) return;
+  const captionEl = document.getElementById('photoPreviewCaption');
+  const caption = captionEl ? captionEl.value.trim() : '';
+  const ephSecs = pendingPhotoEphemeralSecs;
+  closePhotoPreview();
   showToast('Gönderiliyor...');
 
-  const doSend = (url) => {
+  compressForChat(pendingPhotoDataUrl).then(compressed => {
     const ts = Date.now();
     const msgRef = fbDb.ref('chats/' + activeChatId + '/messages').push();
+    const msgData = {
+      from: fbAuth.currentUser.uid,
+      mediaUrl: compressed,
+      mediaType: ephSecs !== 0 ? 'ephemeral' : 'image',
+      ts
+    };
+    if(ephSecs !== 0) msgData.ephemeralSecs = ephSecs; // -1 = 1 kez, >0 = saniye
+    if(caption) msgData.caption = caption;
+
     ensureChatMeta(activeChatId, activeChatPeerUid).then(()=>{
-      return msgRef.set({ from: fbAuth.currentUser.uid, mediaUrl: url, mediaType: isVideo?'video':'image', ts });
+      return msgRef.set(msgData);
     }).then(()=>{
-      const update = { lastMsg: isVideo?'🎥 Video':'📷 Fotoğraf', lastTs: ts, lastSenderUid: fbAuth.currentUser.uid };
+      const lastMsg = ephSecs !== 0 ? '🔥 Süreli fotoğraf' : '📷 Fotoğraf';
+      const update = { lastMsg, lastTs: ts, lastSenderUid: fbAuth.currentUser.uid };
       update['unreadFor/' + activeChatPeerUid] = true;
       fbDb.ref('chatMeta/' + activeChatId).update(update);
     }).catch(()=> showToast('Gönderilemedi.'));
-  };
-
-  if(isVideo){
-    // Video — Firebase Storage gerekir
-    if(!fbStorage){ showToast('Video göndermek için Firebase Storage kurulmalı.'); return; }
-    const path = 'chatMedia/'+activeChatId+'/'+Date.now()+'.mp4';
-    fbStorage.ref().child(path).put(file).then(s=>s.ref.getDownloadURL()).then(doSend)
-      .catch(()=> showToast('Video gönderilemedi.'));
-  } else {
-    // Resim — base64 ile (chat için optimize sıkıştırma)
-    const reader = new FileReader();
-    reader.onload = e => compressForChat(e.target.result).then(doSend);
-    reader.readAsDataURL(file);
-  }
+  });
 }
 
 function exitChatThread(){
@@ -6757,21 +6985,28 @@ let storyTimer = null;
 
 function openStoryComposer(){
   storyFile = null; storyDataUrl = null;
+  storyTextOverlays = [];
   document.getElementById('storyCaption').value = '';
-  document.getElementById('storyDropzone').innerHTML = `
-    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="20" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
-    <span style="font-weight:600;color:var(--accent);">📷 Fotoğraf veya Video Seç</span>
-    <span style="font-size:11px;color:var(--muted);">Buraya dokun</span>
-  `;
+  // Dropzone'u göster, preview'ı gizle
+  const dz = document.getElementById('storyDropzone');
+  if(dz) dz.style.display = 'flex';
+  const preview = document.getElementById('storyMediaPreview');
+  if(preview) preview.style.display = 'none';
+  const overlaysContainer = document.getElementById('storyTextOverlaysContainer');
+  if(overlaysContainer) overlaysContainer.innerHTML = '';
+  const addTextBtn = document.getElementById('addStoryTextBtn');
+  if(addTextBtn) addTextBtn.style.display = 'none';
   document.getElementById('storyPublishBtn').disabled = true;
+  document.getElementById('storyPublishBtn').textContent = 'Hikayeyi Paylaş';
   document.getElementById('storyComposerOverlay').classList.remove('hidden');
+  document.getElementById('storyComposerOverlay').style.display = 'flex';
   document.body.classList.add('modal-open');
-  document.body.classList.add('follow-list-open');
 }
 function closeStoryComposer(){
   document.getElementById('storyComposerOverlay').classList.add('hidden');
+  document.getElementById('storyComposerOverlay').style.display = 'none';
   document.body.classList.remove('modal-open');
-  document.body.classList.remove('follow-list-open');
+  storyTextOverlays = [];
 }
 function onStoryFileChosen(ev){
   const file = ev.target.files[0]; if(!file) return;
@@ -6781,13 +7016,121 @@ function onStoryFileChosen(ev){
   const reader = new FileReader();
   reader.onload = (e)=>{
     storyDataUrl = e.target.result;
-    const dz = document.getElementById('storyDropzone');
-    dz.innerHTML = storyMediaType === 'video'
-      ? '<video src="'+storyDataUrl+'" style="width:100%;max-height:200px;border-radius:12px;" controls></video>'
-      : '<img src="'+storyDataUrl+'" style="width:100%;max-height:200px;border-radius:12px;object-fit:cover;">';
+    // Dropzone'u gizle, preview'ı göster
+    document.getElementById('storyDropzone').style.display = 'none';
+    const preview = document.getElementById('storyMediaPreview');
+    const img = document.getElementById('storyPreviewImg');
+    const vid = document.getElementById('storyPreviewVid');
+    preview.style.display = 'block';
+    if(storyMediaType === 'video'){
+      img.style.display = 'none';
+      vid.style.display = 'block';
+      vid.src = storyDataUrl;
+    } else {
+      img.style.display = 'block';
+      vid.style.display = 'none';
+      img.src = storyDataUrl;
+    }
+    // Aa butonu görünsün
+    document.getElementById('addStoryTextBtn').style.display = 'block';
+    // Mevcut text overlay'leri temizle
+    document.getElementById('storyTextOverlaysContainer').innerHTML = '';
+    storyTextOverlays = [];
     document.getElementById('storyPublishBtn').disabled = false;
   };
   reader.readAsDataURL(file);
+}
+
+/* ============================================================
+   HİKAYE METİN OVERLAY — Instagram tarzı sürüklenebilir yazı
+   ============================================================ */
+let storyTextOverlays = []; // {id, text, x, y, color, fontSize}
+let storyTextIdCounter = 0;
+
+function addStoryTextOverlay(){
+  const text = prompt('Hikayene yazı ekle:', '');
+  if(!text || !text.trim()) return;
+  const colors = ['#ffffff','#ef4444','#f59e0b','#10b981','#3b82f6','#a855f7','#ec4899','#000000'];
+  const color = colors[Math.floor(Math.random()*colors.length)];
+  const id = ++storyTextIdCounter;
+  // Ortaya yerleştir
+  storyTextOverlays.push({id, text:text.trim(), x:50, y:50, color, fontSize:28});
+  renderStoryTextOverlays();
+}
+
+function renderStoryTextOverlays(){
+  const container = document.getElementById('storyTextOverlaysContainer');
+  if(!container) return;
+  container.style.pointerEvents = 'none';
+  container.innerHTML = storyTextOverlays.map(t => `
+    <div class="storyTextItem" data-overlay-id="${t.id}" 
+         style="position:absolute;left:${t.x}%;top:${t.y}%;transform:translate(-50%,-50%);color:${t.color};font-size:${t.fontSize}px;font-weight:700;text-shadow:0 2px 8px rgba(0,0,0,.7);cursor:move;pointer-events:auto;user-select:none;-webkit-user-select:none;padding:6px 12px;max-width:80%;word-break:break-word;text-align:center;background:rgba(0,0,0,.25);border-radius:8px;backdrop-filter:blur(2px);">
+      ${escapeHtml(t.text)}
+      <button onclick="removeStoryTextOverlay(${t.id})" style="position:absolute;top:-10px;right:-10px;background:#ef4444;border:none;border-radius:50%;width:22px;height:22px;color:#fff;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
+    </div>
+  `).join('');
+  // Sürükleme bağla
+  container.querySelectorAll('.storyTextItem').forEach(el => bindStoryTextDrag(el));
+}
+
+function removeStoryTextOverlay(id){
+  storyTextOverlays = storyTextOverlays.filter(t => t.id !== id);
+  renderStoryTextOverlays();
+}
+
+function bindStoryTextDrag(el){
+  const id = parseInt(el.dataset.overlayId);
+  let startX = 0, startY = 0, startLeftPct = 0, startTopPct = 0;
+  let dragging = false;
+  const container = el.parentElement;
+
+  const onStart = (clientX, clientY) => {
+    dragging = true;
+    const overlay = storyTextOverlays.find(t => t.id === id);
+    if(!overlay) return;
+    startX = clientX; startY = clientY;
+    startLeftPct = overlay.x; startTopPct = overlay.y;
+  };
+  const onMove = (clientX, clientY) => {
+    if(!dragging) return;
+    const overlay = storyTextOverlays.find(t => t.id === id);
+    if(!overlay) return;
+    const rect = container.getBoundingClientRect();
+    const dxPct = ((clientX - startX) / rect.width) * 100;
+    const dyPct = ((clientY - startY) / rect.height) * 100;
+    overlay.x = Math.max(5, Math.min(95, startLeftPct + dxPct));
+    overlay.y = Math.max(5, Math.min(95, startTopPct + dyPct));
+    el.style.left = overlay.x + '%';
+    el.style.top = overlay.y + '%';
+  };
+  const onEnd = () => { dragging = false; };
+
+  // Touch
+  el.addEventListener('touchstart', e => {
+    if(e.target.tagName === 'BUTTON') return;
+    e.preventDefault();
+    onStart(e.touches[0].clientX, e.touches[0].clientY);
+  }, {passive:false});
+  el.addEventListener('touchmove', e => {
+    if(!dragging) return;
+    e.preventDefault();
+    onMove(e.touches[0].clientX, e.touches[0].clientY);
+  }, {passive:false});
+  el.addEventListener('touchend', onEnd);
+  // Mouse
+  el.addEventListener('mousedown', e => {
+    if(e.target.tagName === 'BUTTON') return;
+    e.preventDefault();
+    onStart(e.clientX, e.clientY);
+    const moveHandler = ev => onMove(ev.clientX, ev.clientY);
+    const upHandler = () => {
+      onEnd();
+      document.removeEventListener('mousemove', moveHandler);
+      document.removeEventListener('mouseup', upHandler);
+    };
+    document.addEventListener('mousemove', moveHandler);
+    document.addEventListener('mouseup', upHandler);
+  });
 }
 function publishStory(){
   if(!requireFirebase() || !fbAuth.currentUser) return;
@@ -6797,16 +7140,21 @@ function publishStory(){
   const uid = fbAuth.currentUser.uid;
   const caption = (document.getElementById('storyCaption').value||'').trim();
 
-  // Güncel profil fotoğrafı
   const currentPhoto = savedProfilePhoto || '';
+  const overlays = storyTextOverlays.slice(); // Kopyala
 
   const saveStory = (mediaUrl) => {
-    fbDb.ref('stories').push().set({
+    const storyData = {
       uid, url: mediaUrl, mediaType: storyMediaType,
       caption, username: savedUsername || '@kullanici',
       userPhoto: currentPhoto, ts: Date.now(),
       expiresAt: Date.now() + 24*60*60*1000
-    }).then(()=>{
+    };
+    // Text overlay'leri kaydet
+    if(overlays.length){
+      storyData.textOverlays = overlays;
+    }
+    fbDb.ref('stories').push().set(storyData).then(()=>{
       btn.disabled = false; btn.textContent = 'Hikayeyi Paylaş';
       closeStoryComposer();
       showToast('Hikayen paylaşıldı 🎉');
@@ -6848,50 +7196,60 @@ function loadStoryStrip(){
   const momentItems = document.getElementById('momentStripItems');
   if(momentItems) momentItems.innerHTML = '';
 
-  fbDb.ref('stories').orderByChild('expiresAt').startAt(now).limitToLast(50).once('value').then(snap=>{
-    const data = snap.val() || {};
-    const byUser = {};
-    Object.keys(data).forEach(id=>{
-      const s = data[id];
-      if(!s.uid || s.expiresAt < now) return;
-      if(!byUser[s.uid]) byUser[s.uid] = [];
-      byUser[s.uid].push({...s, id});
-    });
+  // Takip edilenler listesini çek
+  fbDb.ref('follows/' + myUid).once('value').then(followSnap => {
+    const followingMap = followSnap.val() || {};
+    const followingUids = new Set(Object.keys(followingMap));
 
-    const myStoryRing = document.getElementById('myStoryRing');
-    const myStoryLabel = document.getElementById('myStoryLabel');
-    const iHaveStory = !!byUser[myUid];
-    if(myStoryRing){
-      if(iHaveStory){ myStoryRing.classList.add('has-story'); if(myStoryLabel) myStoryLabel.textContent='Hikayem'; }
-      else { myStoryRing.classList.remove('has-story'); if(myStoryLabel) myStoryLabel.textContent='Hikaye Ekle'; }
-    }
-
-    const otherUids = Object.keys(byUser).filter(uid => uid !== myUid);
-    if(!otherUids.length){ container.innerHTML=''; return; }
-
-    Promise.all(otherUids.map(uid =>
-      fbDb.ref('users/'+uid).once('value').then(us=>({uid, user:us.val()||{}}))
-    )).then(userList=>{
-      // Filtrele: silinmiş hesaplar + aslında benim olan duplicate hesaplar
-      const visibleUsers = userList.filter(({user}) => {
-        if(user.deleted) return false;
-        // Email veya username eşleşiyorsa benim duplicate hesabımdır, gizle
-        const uEmail = (user.email||'').toLowerCase();
-        const uName = (user.username||'').toLowerCase().replace(/^@/,'');
-        if(myEmail && uEmail && uEmail === myEmail) return false;
-        if(myUsernameLower && uName && uName === myUsernameLower) return false;
-        return true;
+    return fbDb.ref('stories').orderByChild('expiresAt').startAt(now).limitToLast(50).once('value').then(snap=>{
+      const data = snap.val() || {};
+      const byUser = {};
+      Object.keys(data).forEach(id=>{
+        const s = data[id];
+        if(!s.uid || s.expiresAt < now) return;
+        if(!byUser[s.uid]) byUser[s.uid] = [];
+        byUser[s.uid].push({...s, id});
       });
-      container.innerHTML = visibleUsers.map(({uid,user})=>{
-        const stories = byUser[uid].sort((a,b)=>a.ts-b.ts);
-        const first = stories[0];
-        const photo = user.photo || first.userPhoto || 'https://i.pravatar.cc/60?img=68';
-        const uname = (user.username||first.username||'@kullanici').replace(/^@/,'').slice(0,10);
-        return `<div class="momentStripItem" onclick="viewUserStories('${uid}')">
-          <div class="storyAvatarRing"><img src="${photo}" onerror="this.src='https://i.pravatar.cc/60?img=68'"></div>
-          <span class="momentStripLabel">${uname}</span>
-        </div>`;
-      }).join('');
+
+      const myStoryRing = document.getElementById('myStoryRing');
+      const myStoryLabel = document.getElementById('myStoryLabel');
+      const iHaveStory = !!byUser[myUid];
+      if(myStoryRing){
+        if(iHaveStory){ myStoryRing.classList.add('has-story'); if(myStoryLabel) myStoryLabel.textContent='Hikayem'; }
+        else { myStoryRing.classList.remove('has-story'); if(myStoryLabel) myStoryLabel.textContent='Hikaye Ekle'; }
+      }
+
+      // SADECE takip ettiklerimi göster (kendi uid hariç)
+      const otherUids = Object.keys(byUser).filter(uid => 
+        uid !== myUid && followingUids.has(uid)
+      );
+      
+      if(!otherUids.length){ container.innerHTML=''; return; }
+
+      Promise.all(otherUids.map(uid =>
+        fbDb.ref('users/'+uid).once('value').then(us=>({uid, user:us.val()||{}}))
+      )).then(userList=>{
+        // Filtrele: silinmiş hesaplar + aslında benim duplicate hesaplarım
+        const visibleUsers = userList.filter(({user}) => {
+          if(user.deleted) return false;
+          const uEmail = (user.email||'').toLowerCase();
+          const uName = (user.username||'').toLowerCase().replace(/^@/,'');
+          if(myEmail && uEmail && uEmail === myEmail) return false;
+          if(myUsernameLower && uName && uName === myUsernameLower) return false;
+          return true;
+        });
+        if(!visibleUsers.length){ container.innerHTML=''; return; }
+        container.innerHTML = visibleUsers.map(({uid,user})=>{
+          const stories = byUser[uid].sort((a,b)=>a.ts-b.ts);
+          const first = stories[0];
+          const photo = user.photo || first.userPhoto || 'https://i.pravatar.cc/60?img=68';
+          const uname = (user.username||first.username||'@kullanici').replace(/^@/,'').slice(0,10);
+          return `<div class="momentStripItem" onclick="viewUserStories('${uid}')">
+            <div class="storyAvatarRing"><img src="${photo}" onerror="this.src='https://i.pravatar.cc/60?img=68'"></div>
+            <span class="momentStripLabel">${uname}</span>
+          </div>`;
+        }).join('');
+      });
     });
   }).catch(()=>{});
 }
@@ -6953,6 +7311,20 @@ function showStoryAtIndex(idx){
   document.getElementById('storyViewerName').textContent = s.username || '@kullanici';
   document.getElementById('storyViewerTime').textContent = formatChatTime(s.ts);
   document.getElementById('storyViewerCaption').textContent = s.caption || '';
+  
+  // Text overlay'leri render et (Instagram tarzı)
+  const overlaysContainer = document.getElementById('storyViewerTextOverlays');
+  if(overlaysContainer){
+    if(s.textOverlays && s.textOverlays.length){
+      overlaysContainer.innerHTML = s.textOverlays.map(t => `
+        <div style="position:absolute;left:${t.x}%;top:${t.y}%;transform:translate(-50%,-50%);color:${t.color||'#fff'};font-size:${t.fontSize||28}px;font-weight:700;text-shadow:0 2px 8px rgba(0,0,0,.7);padding:6px 12px;max-width:80%;word-break:break-word;text-align:center;background:rgba(0,0,0,.25);border-radius:8px;backdrop-filter:blur(2px);pointer-events:none;">
+          ${escapeHtml(t.text||'')}
+        </div>
+      `).join('');
+    } else {
+      overlaysContainer.innerHTML = '';
+    }
+  }
 
   // Sil butonu — sadece kendi hikayemizde göster
   const delBtn = document.getElementById('storyDeleteBtn');
@@ -7844,25 +8216,66 @@ NAV_MAP['reels'] = 'screenMomentFeed';
 function renderEphemeralMsg(msgId, m, isMine, timeStr, chatId){
   const views = m.viewCount || 0;
   const align = isMine ? 'align-self:flex-end;' : '';
-  if(views >= 2 || m.expired){
-    return `<div class="msg-media" style="${align}"><div style="width:190px;height:110px;border-radius:14px;background:var(--surface-2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;border:1px solid var(--line);"><span style="font-size:22px;">👁️</span><span style="font-size:12px;color:var(--muted);font-weight:600;">Görüntülendi</span></div><div style="font-size:10px;color:var(--muted);margin-top:3px;">${timeStr}</div></div>`;
+  const secs = m.ephemeralSecs;
+  const label = secs === -1 ? '1 Kez' : (secs > 0 ? secs + ' Saniye' : 'Süreli');
+  
+  if(views >= 1 || m.expired){
+    return `<div class="msg-media" style="${align}">
+      <div class="ephemeral-msg-card expired">
+        <span class="ephemeral-msg-icon" style="font-size:42px;">👁️</span>
+        <div class="ephemeral-msg-label" style="color:#888;">Görüntülendi</div>
+      </div>
+      <div style="font-size:10px;color:var(--muted);margin-top:3px;text-align:${isMine?'right':'left'};">${timeStr}</div>
+    </div>`;
   }
-  if(views === 1){
-    return `<div class="msg-media" style="${align}"><div onclick="openEphemeralPhoto('${msgId}','${chatId}')" style="width:190px;border-radius:14px;background:var(--surface-2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;border:2px solid var(--warn);padding:14px;cursor:pointer;"><span style="font-size:22px;">⚠️</span><span style="font-size:11px;color:var(--warn);font-weight:600;text-align:center;">1 hakkın kaldı!<br>Bakınca silinecek.</span></div><div style="font-size:10px;color:var(--muted);margin-top:3px;">${timeStr}</div></div>`;
-  }
-  return `<div class="msg-media" style="${align}"><div onclick="openEphemeralPhoto('${msgId}','${chatId}')" style="width:190px;height:110px;border-radius:14px;background:var(--surface-2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;border:1.5px solid var(--accent);cursor:pointer;"><span style="font-size:28px;">📷</span><span style="font-size:12px;color:var(--accent);font-weight:700;">Fotoğrafı Aç</span><span style="font-size:10px;color:var(--muted);">2 kez bakılabilir</span></div><div style="font-size:10px;color:var(--muted);margin-top:3px;">${timeStr}</div></div>`;
+  
+  return `<div class="msg-media" style="${align}">
+    <div class="ephemeral-msg-card" onclick="openEphemeralPhoto('${msgId}','${chatId}')">
+      <span class="ephemeral-msg-icon">🔥</span>
+      <div class="ephemeral-msg-label">📷 Fotoğrafı Aç · ${label}</div>
+    </div>
+    <div style="font-size:10px;color:var(--muted);margin-top:3px;text-align:${isMine?'right':'left'};">${timeStr}</div>
+  </div>`;
 }
+
 function openEphemeralPhoto(msgId, chatId){
   if(!fbReady || !fbAuth.currentUser) return;
   fbDb.ref('chats/'+chatId+'/messages/'+msgId).once('value').then(snap=>{
     const m = snap.val();
-    if(!m || !m.mediaUrl || m.expired || (m.viewCount||0) >= 2) return;
+    if(!m || !m.mediaUrl || m.expired || (m.viewCount||0) >= 1) return;
+    
+    // Tam ekran göster + sayaç
     const overlay = document.createElement('div');
-    overlay.style.cssText = 'position:fixed;inset:0;background:#000;z-index:400;display:flex;align-items:center;justify-content:center;';
+    overlay.style.cssText = 'position:fixed;inset:0;background:#000;z-index:500;display:flex;align-items:center;justify-content:center;flex-direction:column;';
     const newCount = (m.viewCount||0) + 1;
-    overlay.innerHTML = `<img src="${m.mediaUrl}" style="max-width:100%;max-height:100%;object-fit:contain;"><button onclick="this.parentElement.remove();updateEphemeralViews('${msgId}','${chatId}',${newCount})" style="position:absolute;top:20px;right:20px;background:rgba(0,0,0,.6);border:none;color:#fff;font-size:24px;width:44px;height:44px;border-radius:50%;cursor:pointer;">✕</button>`;
+    
+    // Üst bar — kapatma
+    overlay.innerHTML = `
+      <div style="position:absolute;top:0;left:0;right:0;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;background:linear-gradient(rgba(0,0,0,.6),transparent);z-index:2;">
+        <span style="color:#ef4444;font-weight:700;font-size:14px;">🔥 Süreli Fotoğraf</span>
+        <button onclick="closeEphemeralAndExpire('${msgId}','${chatId}',${newCount})" style="background:rgba(0,0,0,.5);border:none;color:#fff;font-size:22px;width:42px;height:42px;border-radius:50%;cursor:pointer;">✕</button>
+      </div>
+      <img src="${m.mediaUrl}" style="max-width:100%;max-height:100%;object-fit:contain;">
+      <div style="position:absolute;bottom:30px;left:0;right:0;text-align:center;color:#fff;font-size:13px;background:rgba(0,0,0,.6);padding:10px;backdrop-filter:blur(8px);">
+        ⚠️ Bu fotoğraf kapatıldığında <b>silinecek</b>
+      </div>
+    `;
     document.body.appendChild(overlay);
   });
+}
+
+function closeEphemeralAndExpire(msgId, chatId, newCount){
+  // Overlay'i kapat
+  const overlays = document.querySelectorAll('[style*="z-index:500"]');
+  overlays.forEach(o => {
+    if(o.querySelector('img')) o.remove();
+  });
+  // Firebase'de görüntülendi olarak işaretle
+  if(newCount >= 1){
+    fbDb.ref('chats/'+chatId+'/messages/'+msgId).update({
+      viewCount: 1, expired: true, mediaUrl: ''
+    });
+  }
 }
 function updateEphemeralViews(msgId, chatId, newCount){
   if(!fbReady) return;
@@ -8752,6 +9165,123 @@ function likeStory(){
     console.error('Story beğeni hatası:', err);
     showToast('İşlem başarısız');
   });
+}
+
+/* ============================================================
+   FOTOĞRAF ÖNİZLEME — WhatsApp tarzı
+   Fotoğraf seçince önizleme açılır, açıklama yazılır, süreli toggle var
+   ============================================================ */
+let _pendingPhotoFile = null;
+let _pendingPhotoDataUrl = null;
+let _pendingPhotoIsVideo = false;
+let _pendingPhotoEphemeral = false;
+
+function openPhotoPreview(ev){
+  const file = ev.target.files[0];
+  if(!file) return;
+  if(!activeChatId){ showToast('Bir sohbet seç.'); ev.target.value=''; return; }
+  ev.target.value = '';
+
+  _pendingPhotoFile = file;
+  _pendingPhotoIsVideo = file.type.startsWith('video');
+  _pendingPhotoEphemeral = false;
+
+  const reader = new FileReader();
+  reader.onload = e => {
+    _pendingPhotoDataUrl = e.target.result;
+    const img = document.getElementById('photoPreviewImg');
+    const vid = document.getElementById('photoPreviewVid');
+    if(_pendingPhotoIsVideo){
+      img.style.display='none';
+      vid.style.display=''; vid.src = e.target.result;
+    } else {
+      vid.style.display='none'; vid.src='';
+      img.style.display=''; img.src = e.target.result;
+    }
+    // Süreli toggle'ı resetle (video için kapalı)
+    const epBtn = document.getElementById('photoEphemeralBtn');
+    const epLabel = document.getElementById('photoEphemeralLabel');
+    if(epBtn) epBtn.classList.remove('active');
+    if(epLabel) epLabel.textContent = 'Normal';
+    // Video için süreli butonu gizle
+    if(epBtn) epBtn.style.display = _pendingPhotoIsVideo ? 'none' : 'flex';
+    
+    document.getElementById('photoPreviewCaption').value = '';
+    document.getElementById('photoPreviewOverlay').classList.remove('hidden');
+    setTimeout(()=>document.getElementById('photoPreviewCaption').focus(), 300);
+  };
+  reader.readAsDataURL(file);
+}
+
+function closePhotoPreview(){
+  document.getElementById('photoPreviewOverlay').classList.add('hidden');
+  _pendingPhotoFile = null;
+  _pendingPhotoDataUrl = null;
+  _pendingPhotoIsVideo = false;
+  _pendingPhotoEphemeral = false;
+  const vid = document.getElementById('photoPreviewVid');
+  if(vid){ vid.pause(); vid.src = ''; }
+}
+
+function togglePhotoEphemeral(){
+  _pendingPhotoEphemeral = !_pendingPhotoEphemeral;
+  const btn = document.getElementById('photoEphemeralBtn');
+  const label = document.getElementById('photoEphemeralLabel');
+  if(_pendingPhotoEphemeral){
+    btn.classList.add('active');
+    if(label) label.textContent = '1 Kez';
+    showToast('🔥 Süreli fotoğraf: 1 kez görüntülenebilir');
+  } else {
+    btn.classList.remove('active');
+    if(label) label.textContent = 'Normal';
+  }
+}
+
+function sendPhotoFromPreview(){
+  if(!_pendingPhotoDataUrl || !activeChatId || !fbAuth.currentUser){
+    showToast('Sohbet açık değil'); return;
+  }
+  const caption = (document.getElementById('photoPreviewCaption').value||'').trim();
+  const isEphemeral = _pendingPhotoEphemeral;
+  const isVideo = _pendingPhotoIsVideo;
+  const peerUid = activeChatPeerUid;
+  const chatId = activeChatId;
+  
+  // Önce overlay'i kapat (kullanıcı bekletilmesin)
+  closePhotoPreview();
+  showToast(isEphemeral ? '🔥 Süreli fotoğraf gönderiliyor...' : 'Gönderiliyor...');
+
+  const send = (url) => {
+    const ts = Date.now();
+    const msgData = {
+      from: fbAuth.currentUser.uid,
+      mediaUrl: url,
+      mediaType: isEphemeral ? 'ephemeral' : (isVideo ? 'video' : 'image'),
+      ts
+    };
+    if(isEphemeral){ msgData.ephemeralSecs = 5; msgData.viewCount = 0; }
+    if(caption) msgData.caption = caption;
+
+    const msgRef = fbDb.ref('chats/' + chatId + '/messages').push();
+    ensureChatMeta(chatId, peerUid).then(()=>{
+      return msgRef.set(msgData);
+    }).then(()=>{
+      const lastMsgText = isEphemeral ? '🔥 Süreli fotoğraf' : (isVideo ? '🎥 Video' : '📷 Fotoğraf');
+      const update = { lastMsg: caption || lastMsgText, lastTs: ts, lastSenderUid: fbAuth.currentUser.uid };
+      update['unreadFor/' + peerUid] = true;
+      fbDb.ref('chatMeta/' + chatId).update(update);
+    }).catch(()=> showToast('Gönderilemedi'));
+  };
+
+  if(isVideo){
+    if(!fbStorage){ showToast('Video için Firebase Storage gerekli.'); return; }
+    const path = 'chatMedia/'+chatId+'/'+Date.now()+'.mp4';
+    fbStorage.ref().child(path).put(_pendingPhotoFile)
+      .then(s=>s.ref.getDownloadURL()).then(send)
+      .catch(()=>showToast('Video gönderilemedi.'));
+  } else {
+    compressForChat(_pendingPhotoDataUrl).then(send);
+  }
 }
 
 function bootApp(){
