@@ -505,7 +505,8 @@ body.moment-active #island{display:none !important;}
 .auth-divider::before,.auth-divider::after{content:'';flex:1;height:1px;background:var(--line);}
 
 .search svg{width:14px;height:14px;flex-shrink:0;}
-.list-body{overflow-y:auto;flex:1;}
+.list-body{overflow-y:auto;overflow-x:hidden;flex:1;}
+.list-body .chat-item{touch-action:pan-y;}
 .chat-item{display:flex;align-items:center;gap:13px;padding:13px 16px;cursor:pointer;border-left:2px solid transparent;}
 .chat-item:hover{background:var(--surface);}
 .chat-item.active{background:var(--surface);border-left-color:var(--accent);}
@@ -6580,13 +6581,14 @@ function publishStory(){
 function loadStoryStrip(){
   if(!fbReady || !fbAuth || !fbAuth.currentUser) return;
   const myUid = fbAuth.currentUser.uid;
+  const myEmail = (fbAuth.currentUser.email || '').toLowerCase();
+  const myUsernameLower = (savedUsername || '').toLowerCase().replace(/^@/,'');
   const now = Date.now();
   const container = document.getElementById('storyStripItems');
   if(!container) return;
 
   updateStoryAvatarBtn();
 
-  // momentStripItems'ı temizle (Anı Yakala paylaşımları story strip'te görünmemeli)
   const momentItems = document.getElementById('momentStripItems');
   if(momentItems) momentItems.innerHTML = '';
 
@@ -6614,8 +6616,16 @@ function loadStoryStrip(){
     Promise.all(otherUids.map(uid =>
       fbDb.ref('users/'+uid).once('value').then(us=>({uid, user:us.val()||{}}))
     )).then(userList=>{
-      // Silinmiş hesapları filtrele - story göstermesin
-      const visibleUsers = userList.filter(({user}) => !user.deleted);
+      // Filtrele: silinmiş hesaplar + aslında benim olan duplicate hesaplar
+      const visibleUsers = userList.filter(({user}) => {
+        if(user.deleted) return false;
+        // Email veya username eşleşiyorsa benim duplicate hesabımdır, gizle
+        const uEmail = (user.email||'').toLowerCase();
+        const uName = (user.username||'').toLowerCase().replace(/^@/,'');
+        if(myEmail && uEmail && uEmail === myEmail) return false;
+        if(myUsernameLower && uName && uName === myUsernameLower) return false;
+        return true;
+      });
       container.innerHTML = visibleUsers.map(({uid,user})=>{
         const stories = byUser[uid].sort((a,b)=>a.ts-b.ts);
         const first = stories[0];
@@ -8135,7 +8145,7 @@ function deleteChatCompletely(chatId, peerUid){
   if(!confirm('Bu sohbeti silmek istediğine emin misin?\n\nTüm mesajlar kalıcı olarak silinecek.')) return;
 
   // Animasyonlu kaldırma — UI'dan önce çık
-  const item = document.querySelector(`#chatList .chat-item[data-chat-id="${chatId}"]`);
+  const item = document.querySelector(`#chatListBody .chat-item[data-chat-id="${chatId}"]`);
   if(item){
     item.style.transition = 'all .3s ease';
     item.style.height = item.offsetHeight + 'px';
@@ -8174,25 +8184,26 @@ function deleteChatCompletely(chatId, peerUid){
 let activeSwipedItem = null; // Bir anda sadece bir tane açık olabilir
 
 function attachSwipeToDelete(){
-  document.querySelectorAll('#chatList .chat-item').forEach(item => {
+  document.querySelectorAll('#chatListBody .chat-item').forEach(item => {
     if(item._swipeBound) return;
     item._swipeBound = true;
-    item.style.position = 'relative';
+    // Chat-item'ın position:relative olduğundan emin ol
+    if(getComputedStyle(item).position === 'static') item.style.position = 'relative';
     item.style.transition = 'transform .25s cubic-bezier(.2,.8,.2,1)';
+    item.style.willChange = 'transform';
 
     let startX = 0, startY = 0, currentX = 0, swiping = false, swipeDirection = null;
-    const THRESHOLD = 60;       // Buton görünür eşiği (px)
-    const FULL_SWIPE = 200;     // Otomatik silme eşiği (px)
-    const BUTTON_WIDTH = 80;    // Sil butonu genişliği
+    const THRESHOLD = 60;
+    const FULL_SWIPE = 180;
+    const BUTTON_WIDTH = 80;
 
-    // Sil butonu hazırla
     const ensureDeleteBtn = () => {
       let btn = item.querySelector('.swipe-delete-btn');
       if(!btn){
         btn = document.createElement('button');
         btn.className = 'swipe-delete-btn';
         btn.innerHTML = `
-          <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" width="22" height="22">
+          <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" width="20" height="20">
             <path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M10 11v6M14 11v6M5 6l1 14a2 2 0 002 2h8a2 2 0 002-2l1-14"/>
           </svg>
           <span style="font-size:11px;font-weight:600;margin-top:3px;">Sil</span>
