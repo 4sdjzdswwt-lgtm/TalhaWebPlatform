@@ -65,6 +65,16 @@ body.light-mode{
 }
 html,body{height:100%;overflow:hidden;}
 html,body{scroll-behavior:smooth;}
+
+/* Responsive: Tablet ve PC desteği */
+@media (min-width:768px){
+  #main{max-width:520px;margin:0 auto;height:100dvh;border-left:1px solid var(--line);border-right:1px solid var(--line);box-shadow:0 0 40px rgba(0,0,0,.5);}
+  .island{max-width:480px;left:50%;transform:translateX(-50%);}
+}
+@media (min-width:1024px){
+  body{display:flex;align-items:flex-start;justify-content:center;}
+  #main{max-width:580px;height:100dvh;}
+}
 *{-webkit-overflow-scrolling:touch;}
 *{box-sizing:border-box;}
 body{margin:0;background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;transition:background-color .3s ease, color .3s ease;}
@@ -2889,6 +2899,62 @@ function generateSymbolicCode(){
 
 function createAccountAndSendVerification(){
   if(!requireFirebase()){ alert('Bağlantı kurulamadı, sayfayı yenile.'); return; }
+
+  // === GOOGLE/APPLE OAUTH AKIŞI ===
+  // Eğer kullanıcı Google/Apple ile zaten Firebase'e kayıt olmuşsa,
+  // sadece kullanıcı adı + isim alıp profili kaydedip e-posta doğrulama adımına geçer
+  if(window._socialSignupUid && window._socialSignupUser){
+    const userVal = (document.getElementById('username').value||'').trim().replace(/^@/,'');
+    const dispEl = document.getElementById('displayName');
+    const displayVal = dispEl ? dispEl.value.trim() : '';
+    if(userVal.length < 3 || !/^[a-zA-Z0-9._]+$/.test(userVal)){
+      document.getElementById('err-username').textContent = 'Kullanıcı adı en az 3 karakter, sadece harf/rakam/./_';
+      document.getElementById('err-username').style.display = 'block'; return;
+    }
+    const btn = document.getElementById('createAccountBtn');
+    btn.disabled = true; btn.textContent = 'Profil kaydediliyor...';
+    const u = window._socialSignupUser;
+    const usernameKey = userVal.toLowerCase();
+    fbDb.ref('usernames/' + usernameKey).once('value').then(snap=>{
+      if(snap.exists() && snap.val() !== window._socialSignupUid){
+        btn.disabled=false; btn.textContent='Hesabı Oluştur';
+        suggestAlternativeUsernames(usernameKey); return;
+      }
+      savedUsername = '@' + userVal;
+      savedDisplayName = displayVal;
+      savedEmail = u.email || '';
+      savedProfilePhoto = u.photoURL || '';
+      const profileData = {
+        username: '@'+userVal, displayName: displayVal,
+        email: savedEmail, photo: savedProfilePhoto, bio: '',
+        isAdmin: false, postsCount:0, followersCount:0, followingCount:0,
+        createdAt: Date.now(), authProvider: 'google'
+      };
+      return Promise.all([
+        fbDb.ref('usernames/' + usernameKey).set(window._socialSignupUid),
+        fbDb.ref('users/' + window._socialSignupUid).set(profileData)
+      ]).then(()=>{
+        // Onay video ekranını da görsün — adım 3
+        document.getElementById('emailEcho').textContent = savedEmail + ' adresine';
+        generateSymbolicCode();
+        goReg(3);
+        // Google'da email zaten doğrulu olduğundan, "Profil Tamamla"yı manuel basabilir
+        // Veya direkt adım 4'e atla
+        const pwdRow = document.getElementById('password') ? document.getElementById('password').closest('.field') : null;
+        if(pwdRow) pwdRow.style.display = '';
+        window._socialSignupUid = null;
+        window._socialSignupUser = null;
+        btn.disabled=false; btn.textContent='Hesabı Oluştur';
+        showToast('Profilin kaydedildi! E-posta doğrulamayı atlayıp devam edebilirsin.');
+      });
+    }).catch(err=>{
+      console.error('Google profil kayıt hatası:', err);
+      btn.disabled=false; btn.textContent='Hesabı Oluştur';
+      showToast('Profil kaydedilemedi, tekrar dene.');
+    });
+    return;
+  }
+  // === NORMAL E-POSTA/ŞİFRE AKIŞI ===
   const p = document.getElementById('password'), u = document.getElementById('username');
   const dispEl = document.getElementById('displayName');
   const passVal = p.value.trim();
@@ -4701,14 +4767,17 @@ function initChatListListener(){
       }
       body.innerHTML = rows.map(r => {
         const u = r.peer || {};
+        const isDeleted = u.deleted === true;
         const fallbackName = u.email ? '@' + u.email.split('@')[0] : '@kullanici';
-        const displayName = u.username || fallbackName;
-        // Bu sohbette okunmamış mesaj var mı?
+        const displayName = isDeleted ? (u.displayName || 'Silinmiş hesap') : (u.username || fallbackName);
+        const photo = u.photo || 'https://i.pravatar.cc/60?img=68';
         const myUid = fbAuth.currentUser.uid;
         const isUnread = !!(r.meta.unreadFor && r.meta.unreadFor[myUid]);
         return `
-        <div class="chat-item ${activeChatId===r.cid?'active':''} ${isUnread?'unread':''}" onclick="openChatThread('${r.cid}','${r.peerUid}')">
-          <img src="${u.photo || 'https://i.pravatar.cc/60?img=68'}" onerror="this.src='https://i.pravatar.cc/60?img=68'">
+        <div class="chat-item ${activeChatId===r.cid?'active':''} ${isUnread?'unread':''}" 
+             data-chat-id="${r.cid}" data-peer-uid="${r.peerUid}" 
+             onclick="if(this.style.transform){this.style.transform='';const b=this.querySelector('.swipe-delete-btn');if(b)b.remove();return;}openChatThread('${r.cid}','${r.peerUid}')">
+          <img src="${photo}" onerror="this.src='https://i.pravatar.cc/60?img=68'" style="${isDeleted?'filter:grayscale(1) opacity(0.7);':''}">
           <div class="meta">
             <div class="name">${escapeHtml(displayName)}${isUnread?'<span class="unread-dot"></span>':''}</div>
             <div class="preview">${escapeHtml((r.meta.lastMsg || 'Sohbete başla').toString().slice(0,40))}</div>
@@ -4716,6 +4785,7 @@ function initChatListListener(){
           <span class="chat-time">${formatChatTime(r.meta.lastTs)}</span>
         </div>`;
       }).join('');
+      setTimeout(attachSwipeToDelete, 100);
     });
   });
 }
@@ -4739,10 +4809,13 @@ function openChatThread(chatId, peerUid){
 
   fbDb.ref('users/' + peerUid).once('value').then((snap)=>{
     const peer = snap.val() || {};
+    const isDeleted = peer.deleted === true;
     const fallbackName = peer.email ? '@' + peer.email.split('@')[0] : '@kullanici';
-    document.getElementById('chatName').textContent = peer.username || fallbackName;
+    const displayName = isDeleted ? (peer.displayName || 'Silinmiş hesap') : (peer.username || fallbackName);
+    document.getElementById('chatName').textContent = displayName;
     document.getElementById('chatHeadImg').src = peer.photo || 'https://i.pravatar.cc/60?img=68';
-    document.getElementById('chatStatus').textContent = '';
+    document.getElementById('chatHeadImg').style.filter = isDeleted ? 'grayscale(1) opacity(0.7)' : '';
+    document.getElementById('chatStatus').textContent = isDeleted ? '⚠️ Bu hesap silinmiş' : '';
   });
 
   document.getElementById('dmWrap').classList.add('view-chat');
@@ -4752,7 +4825,7 @@ function openChatThread(chatId, peerUid){
   box.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:12.5px;padding:24px 16px;">Yükleniyor...</div>';
 
   if(activeChatMessagesRef) activeChatMessagesRef.off();
-  activeChatMessagesRef = fbDb.ref('chats/' + chatId + '/messages').limitToLast(200);
+  activeChatMessagesRef = fbDb.ref('chats/' + chatId + '/messages').limitToLast(500);
   activeChatMessagesRef.on('value', (snap)=>{
     const data = snap.val() || {};
     const ids = Object.keys(data).sort((a,b) => (data[a].ts||0) - (data[b].ts||0));
@@ -4773,11 +4846,12 @@ function openChatThread(chatId, peerUid){
       if(m.mediaUrl){
         const isGif = m.mediaType === 'gif';
         if(m.mediaType==='video' && !isGif){
-          return '<div class="msg-media" style="'+(mine?'align-self:flex-end;':'')+'"><video src="'+m.mediaUrl+'" controls playsinline style="max-width:240px;border-radius:12px;display:block;"></video><div style="font-size:10px;color:var(--muted);margin-top:3px;">'+t+'</div></div>';
+          return '<div class="msg-media" style="'+(mine?'align-self:flex-end;':'')+'"><video src="'+m.mediaUrl+'" controls playsinline style="max-width:200px;border-radius:12px;display:block;cursor:pointer;" onclick="openChatImageFullscreen(\''+m.mediaUrl+'\')"></video><div style="font-size:10px;color:var(--muted);margin-top:3px;">'+t+'</div></div>';
         }
-        // Resim — img onerror ile hata göster, loading lazy ile performans
-        const imgEl = '<img src="'+m.mediaUrl+'" loading="lazy" style="max-width:240px;max-height:320px;border-radius:12px;display:block;object-fit:contain;" onerror="this.style.display=\'none\';">';
-        return '<div class="msg-media" style="'+(mine?'align-self:flex-end;':'')+'">'+imgEl+'<div style="font-size:10px;color:var(--muted);margin-top:3px;">'+t+'</div></div>';
+        // Resim — küçük göster, tıklayınca büyüt. GIF ise otomatik oynar
+        const escapedUrl = (m.mediaUrl||'').replace(/'/g, '%27');
+        const imgEl = '<img src="'+m.mediaUrl+'" loading="lazy" style="max-width:160px;max-height:200px;border-radius:12px;display:block;object-fit:cover;cursor:zoom-in;" onclick="openChatImageFullscreen(\''+escapedUrl+'\')" onerror="this.style.opacity=0.3;">';
+        return '<div class="msg-media" style="'+(mine?'align-self:flex-end;':'')+'">'+imgEl+'<div style="font-size:10px;color:var(--muted);margin-top:3px;">'+t+(isGif?' · GIF':'')+'</div></div>';
       }
       return '<div class="msg '+(mine?'me':'them')+'">' + escapeHtml(m.text||'') + editTag + ' <span class="time">'+t+'</span></div>';
     }).join('');
@@ -6045,55 +6119,8 @@ function checkSocialSignInRedirect(){
     if(err && err.code) console.warn('Redirect dönüş hatası:', err.code);
   });
 }
-function handleSocialSignInResult(result){
-  if(!result || !result.user) return;
-  const user = result.user;
-  // Bu kullanıcı zaten kayıtlı mı kontrol et
-  fbDb.ref('users/' + user.uid).once('value').then((snap)=>{
-    if(snap.exists()){
-      // Mevcut kullanıcı — direkt akışa al
-      savedEmail = user.email || '';
-      loadUserProfileAndEnter(user);
-    } else {
-      // Yeni kullanıcı — temel profil bilgisini Firebase'e yaz, kullanıcı adı seçtir
-      const fallbackUsername = '@' + (user.displayName || user.email || 'kullanici').toString().toLowerCase().replace(/[^a-z0-9_]/g,'').slice(0,18) || ('@user' + user.uid.slice(0,6));
-      savedEmail = user.email || '';
-      savedUsername = fallbackUsername;
-      savedProfilePhoto = user.photoURL || '';
-      savedIsAdmin = false;
-      postsCount = 0; followersCount = 0; followingCount = 0;
-      const usernameKey = fallbackUsername.replace(/^@/,'').toLowerCase();
-      // Kullanıcı adı çakışırsa rastgele 4 haneli ek koy
-      fbDb.ref('usernames/' + usernameKey).once('value').then((unameSnap)=>{
-        let finalKey = usernameKey;
-        let finalUsername = fallbackUsername;
-        if(unameSnap.exists()){
-          const suffix = Math.floor(1000 + Math.random()*9000);
-          finalKey = usernameKey + suffix;
-          finalUsername = fallbackUsername + suffix;
-        }
-        savedUsername = finalUsername;
-        const profileData = {
-          username: finalUsername, email: savedEmail, photo: savedProfilePhoto,
-          isAdmin: false, postsCount:0, followersCount:0, followingCount:0,
-          bio: 'Merhaba, ben buradayım 👋',
-          createdAt: Date.now(),
-          authProvider: (result.credential && result.credential.providerId) || (user.providerData[0] && user.providerData[0].providerId) || 'oauth'
-        };
-        Promise.all([
-          fbDb.ref('usernames/' + finalKey).set(user.uid),
-          fbDb.ref('users/' + user.uid).set(profileData)
-        ]).then(()=>{
-          showToast('Hoş geldin ' + finalUsername + '!');
-          loadUserProfileAndEnter(user);
-        }).catch((err)=>{
-          console.error('Sosyal giriş profili kaydedilemedi:', err);
-          loadUserProfileAndEnter(user);
-        });
-      });
-    }
-  });
-}
+/* duplicate handleSocialSignInResult removed */
+
 
 /* ============================================================
    HESABI DONDUR / HESABI SİL — Drawer'dan tetiklenir
@@ -6117,57 +6144,8 @@ function freezeMyAccount(){
   }).catch(()=> showToast('Dondurulamadı, internetini kontrol et.'));
 }
 
-function deleteMyAccount(){
-  if(!requireFirebase() || !fbAuth.currentUser){ showToast('Önce giriş yapmalısın.'); return; }
-  const confirmMsg = '⚠️ HESABINI KALICI OLARAK SİLECEKSİN\n\n' +
-    'Bu işlem GERİ ALINAMAZ. Şunlar silinir:\n' +
-    '• Profil bilgilerin\n' +
-    '• Tüm gönderilerin\n' +
-    '• Tüm beğenilerin, kayıtların\n' +
-    '• Mesaj geçmişin\n\n' +
-    'Devam etmek istiyor musun?';
-  if(!confirm(confirmMsg)) return;
-  if(!confirm('Son onay: Hesabını GERÇEKTEN siliyorsun. Emin misin?')) return;
+/* duplicate deleteMyAccount removed */
 
-  const user = fbAuth.currentUser;
-  const uid = user.uid;
-  showToast('Hesabın siliniyor...');
-
-  // 1) DB temizliği — kullanıcı düğümleri, posts, follows, vb.
-  const cleanupTasks = [
-    fbDb.ref('users/' + uid).remove(),
-    fbDb.ref('follows/' + uid).remove(),
-    fbDb.ref('followers/' + uid).remove()
-  ];
-  // Kullanıcı adını da serbest bırak (başka biri alabilsin)
-  const usernameKey = (savedUsername || '').replace(/^@/,'').toLowerCase();
-  if(usernameKey) cleanupTasks.push(fbDb.ref('usernames/' + usernameKey).remove());
-
-  Promise.allSettled(cleanupTasks).then(()=>{
-    // 2) Firebase Auth hesabını sil
-    user.delete().then(()=>{
-      showToast('Hesabın kalıcı olarak silindi. Hoşça kal 👋');
-      setTimeout(()=>{
-        // Kayıt ekranına dön
-        document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-        document.getElementById('screenRegister').classList.add('active');
-        switchAuthTab('login');
-        document.getElementById('island').classList.add('hidden');
-        // Yerel state'i sıfırla
-        savedEmail = ''; savedPassword = ''; savedUsername = ''; savedProfilePhoto = '';
-        localStorage.removeItem('next_session');
-      }, 900);
-    }).catch((err)=>{
-      // Genellikle 'auth/requires-recent-login' — son zamanlarda giriş yapmamışsa
-      if(err.code === 'auth/requires-recent-login'){
-        alert('Güvenlik için yakın zamanda yeniden giriş yapmalısın. Şimdi çıkış yapacağız, tekrar giriş yapıp tekrar denersen hesabın silinecek.');
-        logoutAccount();
-      } else {
-        showToast(firebaseErrorMessage(err));
-      }
-    });
-  });
-}
 
 /* Anı Yakala davetini kabul et — sohbet listesindeki davet toast'ından
    tetiklenir. Kullanıcıyı bekleme ekranına alır ve "invited" statusüne
@@ -6354,28 +6332,10 @@ const _origOpenFollowList = typeof openFollowList === 'function' ? openFollowLis
 })();
 
 /* ============================================================
-   GIF SEÇİCİ — popüler reaksiyon GIF'leri
+   GIF SEÇİCİ — popüler reaksiyon GIF'leri (geniş havuz aşağıda)
    ============================================================ */
-const POPULAR_GIFS = [
-  {label:'👍',url:'https://media.tenor.com/W2JtVFR9m5wAAAAM/thumbs-up.gif'},
-  {label:'😂',url:'https://media.tenor.com/bPDk7Pc3X2IAAAAM/laughing.gif'},
-  {label:'❤️',url:'https://media.tenor.com/o656qFKDzeUAAAAM/corazon-heart.gif'},
-  {label:'👏',url:'https://media.tenor.com/D00IG7pBqhAAAAAM/clapping-clap.gif'},
-  {label:'🔥',url:'https://media.tenor.com/kz7aCnrj2JwAAAAM/fire.gif'},
-  {label:'😢',url:'https://media.tenor.com/d-bTcCsG4AQAAAAM/cat-crying-cat.gif'},
-  {label:'🤯',url:'https://media.tenor.com/3JUhHJXEiGQAAAAM/mind-blown.gif'},
-  {label:'🎉',url:'https://media.tenor.com/zJlS6DqAH5gAAAAM/celebrate-confetti.gif'},
-  {label:'😡',url:'https://media.tenor.com/-iCl6yrOqe4AAAAM/angry.gif'},
-  {label:'🤗',url:'https://media.tenor.com/4QxmKz5BVB0AAAAM/virtual-hug-sending.gif'},
-  {label:'👋',url:'https://media.tenor.com/6BqEOyAqfhMAAAAM/wave-hi.gif'},
-  {label:'😍',url:'https://media.tenor.com/MWSI0CKJR9MAAAAM/in-love-love.gif'},
-];
+/* OLD POPULAR_GIFS array kaldırıldı, yeni geniş POPULAR_GIFS obje yapısı kullanılıyor */
 
-function openGifPicker(){
-  document.getElementById('emojiPickerOverlay').classList.remove('hidden');
-  document.body.classList.add('modal-open');
-  renderGifGrid(POPULAR_GIFS);
-}
 function closeGifPicker(){
   document.getElementById('emojiPickerOverlay').classList.add('hidden');
   document.body.classList.remove('modal-open');
@@ -6977,46 +6937,8 @@ function handleSocialSignInResult(result){
 }
 
 /* Override createAccountAndSendVerification for Google OAuth flow */
-const _origCreateAccount = window.createAccountAndSendVerification;
-function createAccountAndSendVerification(){
-  // Eğer Google OAuth flow'undaysak, direkt profil kaydet
-  if(window._socialSignupUid){
-    const userVal = (document.getElementById('username').value||'').trim().replace(/^@/,'');
-    const displayVal = (document.getElementById('displayName').value||'').trim();
-    if(userVal.length < 3){ alert('Kullanıcı adı en az 3 karakter olmalı.'); return; }
-    const btn = document.getElementById('createAccountBtn');
-    btn.disabled = true; btn.textContent = 'Kaydediliyor...';
-    const usernameKey = userVal.toLowerCase();
-    fbDb.ref('usernames/' + usernameKey).once('value').then(snap=>{
-      if(snap.exists() && snap.val() !== window._socialSignupUid){
-        btn.disabled=false; btn.textContent='Hesabı Oluştur';
-        suggestAlternativeUsernames(usernameKey); return;
-      }
-      const profileData = {
-        username: '@'+userVal, displayName: displayVal,
-        email: savedEmail, photo: savedProfilePhoto,
-        isAdmin: false, postsCount:0, followersCount:0, followingCount:0,
-        createdAt: Date.now(), authProvider: 'google'
-      };
-      Promise.all([
-        fbDb.ref('usernames/' + usernameKey).set(window._socialSignupUid),
-        fbDb.ref('users/' + window._socialSignupUid).set(profileData)
-      ]).then(()=>{
-        savedUsername = '@'+userVal;
-        savedDisplayName = displayVal;
-        const u = window._socialSignupUser;
-        window._socialSignupUid = null; window._socialSignupUser = null;
-        const pwdRow = document.getElementById('password') ? document.getElementById('password').closest('.field') : null;
-        if(pwdRow) pwdRow.style.display = '';
-        btn.disabled=false; btn.textContent='Hesabı Oluştur';
-        loadUserProfileAndEnter(u);
-      }).catch(()=>{ btn.disabled=false; btn.textContent='Hesabı Oluştur'; showToast('Kaydedilemedi, tekrar dene.'); });
-    });
-    return;
-  }
-  // Normal email/password flow
-  if(typeof _origCreateAccount === 'function') _origCreateAccount();
-}
+/* duplicate createAccount override removed */
+
 
 /* ============================================================
    HESAP SİLME — tam silme
@@ -7024,48 +6946,81 @@ function createAccountAndSendVerification(){
 function deleteMyAccount(){
   if(!requireFirebase() || !fbAuth.currentUser){ showToast('Önce giriş yapmalısın.'); return; }
   const reason = prompt('Hesabını neden silmek istiyorsun? (isteğe bağlı)');
-  if(reason === null) return; // iptal
+  if(reason === null) return;
   if(!confirm('⚠️ Hesabını KALICI olarak silmek istediğine emin misin?\n\nTüm gönderilerin, mesajların, takip listelerin silinecek.\n\nBu işlem GERİ ALINAMAZ.')) return;
   if(!confirm('Son onay: Gerçekten silmek istiyor musun?')) return;
 
   const user = fbAuth.currentUser;
   const uid = user.uid;
-  showToast('Hesabın siliniyor...');
+  const usernameKey = (savedUsername || '').replace(/^@/,'').toLowerCase();
+  const displayName = savedDisplayName || savedUsername || 'Kullanıcı';
+  showToast('Hesabın siliniyor, bekle...');
 
-  // Neden raporunu kaydet
+  // Neden raporu
   if(reason && reason.trim()){
     fbDb.ref('deletionReasons').push({ uid, reason: reason.trim(), ts: Date.now() }).catch(()=>{});
   }
 
-  // Tüm kullanıcı verisini sil
-  const usernameKey = (savedUsername||'').replace(/^@/,'').toLowerCase();
+  // Silinen hesap için iz bırak — başkaları "Silinmiş hesap - @talha" görsün
+  const deletedMarker = {
+    username: '@silinmiş_hesap',
+    displayName: 'Silinmiş hesap - ' + displayName,
+    photo: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMDAgMjAwIj48Y2lyY2xlIGN4PSIxMDAiIGN5PSIxMDAiIHI9IjEwMCIgZmlsbD0iIzM3MzczNyIvPjxjaXJjbGUgY3g9IjEwMCIgY3k9IjgwIiByPSIzMCIgZmlsbD0iIzU1NTU1NSIvPjxwYXRoIGQ9Ik00MCAxNzBjMC0zMyAyNy02MCA2MC02MHM2MCAyNyA2MCA2MHoiIGZpbGw9IiM1NTU1NTUiLz48L3N2Zz4=',
+    bio: 'Bu hesap kullanıcı tarafından silindi',
+    deleted: true,
+    deletedAt: Date.now(),
+    isAdmin: false, postsCount:0, followersCount:0, followingCount:0, private:false
+  };
+
+  // ADIM 1: Tüm Firebase verilerini sil
   Promise.allSettled([
-    fbDb.ref('users/' + uid).remove(),
+    // Profil yerine silinmiş marker bırak (başkalarının takip listelerinde görünmek için)
+    fbDb.ref('users/' + uid).set(deletedMarker),
+    // Username serbest bırak
+    usernameKey ? fbDb.ref('usernames/' + usernameKey).remove() : Promise.resolve(),
+    // Takip ilişkileri
     fbDb.ref('follows/' + uid).remove(),
     fbDb.ref('followers/' + uid).remove(),
+    fbDb.ref('blocks/' + uid).remove(),
+    fbDb.ref('restrictions/' + uid).remove(),
     fbDb.ref('notifications/' + uid).remove(),
-    usernameKey ? fbDb.ref('usernames/' + usernameKey).remove() : Promise.resolve(),
+    fbDb.ref('presence/' + uid).remove(),
     // Gönderileri sil
     fbDb.ref('posts').orderByChild('uid').equalTo(uid).once('value').then(snap=>{
       const ps = snap.val() || {};
       return Promise.all(Object.keys(ps).map(pid => fbDb.ref('posts/'+pid).remove()));
+    }),
+    // Hikayeleri sil
+    fbDb.ref('stories').orderByChild('uid').equalTo(uid).once('value').then(snap=>{
+      const ss = snap.val() || {};
+      return Promise.all(Object.keys(ss).map(sid => fbDb.ref('stories/'+sid).remove()));
     })
   ]).then(()=>{
-    user.delete().then(()=>{
-      // State'i sıfırla
-      savedEmail=''; savedPassword=''; savedUsername=''; savedProfilePhoto=''; savedBio='';
-      try{ localStorage.removeItem('next_session'); }catch(e){}
-      document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-      document.getElementById('screenRegister').classList.add('active');
-      switchAuthTab('login');
-      document.getElementById('island').classList.add('hidden');
-      alert('Hesabın kalıcı olarak silindi. Hoşça kal 👋\n\nAynı e-posta ile yeniden kayıt olabilirsin.');
-    }).catch(err=>{
-      if(err.code === 'auth/requires-recent-login'){
-        alert('Güvenlik için yeniden giriş yapman gerekiyor. Şimdi çıkış yapılacak, tekrar giriş yap ve sil butonuna bas.');
-        logoutAccount();
-      } else { showToast(firebaseErrorMessage(err)); }
-    });
+    // ADIM 2: Firebase Auth hesabını sil
+    return user.delete();
+  }).then(()=>{
+    // ADIM 3: Local state temizle
+    savedEmail=''; savedPassword=''; savedUsername=''; savedProfilePhoto=''; savedBio='';
+    try{
+      localStorage.removeItem('next_session');
+      // Hesap listesinden de çıkar
+      const accs = getAccountsList();
+      const filtered = accs.filter(a => a.uid !== uid);
+      saveAccountsList(filtered);
+    }catch(e){}
+    document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+    document.getElementById('screenRegister').classList.add('active');
+    switchAuthTab('login');
+    document.getElementById('island').classList.add('hidden');
+    alert('✓ Hesabın kalıcı olarak silindi.\n\nAynı e-posta ile yeniden kayıt olabilirsin.');
+  }).catch(err=>{
+    if(err.code === 'auth/requires-recent-login'){
+      alert('Güvenlik için yeniden giriş yapman gerekiyor. Çıkış yapılıyor, tekrar giriş yapıp Sil butonuna bas.');
+      logoutAccount();
+    } else {
+      console.error('Hesap silme hatası:', err);
+      showToast('Hesap silinemedi: ' + (err.message||'Hata'));
+    }
   });
 }
 
@@ -7227,12 +7182,7 @@ let exploreInitialized = false;
 function initExplore(){
   if(exploreInitialized) return;
   exploreInitialized = true;
-  // Hashtag chips
-  const chips = document.getElementById('exploreHashtagChips');
-  if(chips) chips.innerHTML = TRENDING_TAGS.map(t=>
-    `<div class="hashtagChip" onclick="searchByHashtag('${t}')">${t}</div>`
-  ).join('');
-  // Grid
+  initExtendedHashtags();
   loadExploreGrid();
 }
 function loadExploreGrid(){
@@ -7932,6 +7882,377 @@ function messageOtherUserDirectly(peerUid, text){
   const u = { lastMsg: text, lastTs: ts, lastSenderUid: myUid };
   u['unreadFor/' + peerUid] = true;
   ensureChatMeta(chatId, peerUid).then(()=> fbDb.ref('chatMeta/'+chatId).update(u));
+}
+
+/* ============================================================
+   GENİŞ GIF HAVUZU — TENOR API yerine sabit popüler GIF'ler
+   ============================================================ */
+const POPULAR_GIFS = {
+  'kahkaha': [
+    'https://media.tenor.com/jXTGcOPjvgYAAAAi/laughing.gif',
+    'https://media.tenor.com/Q7iIK5qBhxsAAAAi/lol-laughing.gif',
+    'https://media.tenor.com/QnoQiTGwZxcAAAAi/laugh.gif'
+  ],
+  'aşk': [
+    'https://media.tenor.com/Tm9LH-_aLUkAAAAi/love-heart.gif',
+    'https://media.tenor.com/ZTQDk_C7r6gAAAAi/heart-love.gif',
+    'https://media.tenor.com/h--rZxiruXcAAAAi/love-you.gif'
+  ],
+  'mutlu': [
+    'https://media.tenor.com/JxIyOnQuG18AAAAi/happy.gif',
+    'https://media.tenor.com/AnIs7nUMpYsAAAAi/yay.gif',
+    'https://media.tenor.com/0qC3xJq9-pkAAAAi/excited.gif'
+  ],
+  'üzgün': [
+    'https://media.tenor.com/EkGgB-3pZX0AAAAi/sad-crying.gif',
+    'https://media.tenor.com/jHzAhqYbgScAAAAi/sad.gif'
+  ],
+  'şaşkın': [
+    'https://media.tenor.com/9wWzN5oOY1cAAAAi/shocked.gif',
+    'https://media.tenor.com/p_E8MQEUm98AAAAi/wow-amazed.gif'
+  ],
+  'tamam': [
+    'https://media.tenor.com/sAFy7HKvqYIAAAAi/thumbs-up-ok.gif',
+    'https://media.tenor.com/CkY_oNNJSF8AAAAi/ok-okay.gif'
+  ],
+  'selam': [
+    'https://media.tenor.com/B2gkX2onUEMAAAAi/hi-hello.gif',
+    'https://media.tenor.com/3eqx-vIY9j8AAAAi/hello-wave.gif'
+  ],
+  'teşekkür': [
+    'https://media.tenor.com/sP3UoQ7HqTsAAAAi/thank-you.gif',
+    'https://media.tenor.com/eqYWaG9oQNgAAAAi/thanks.gif'
+  ],
+  'dans': [
+    'https://media.tenor.com/4_aBGSWPjwUAAAAi/happy-dance.gif',
+    'https://media.tenor.com/Pe2OPaSnyMQAAAAi/party-dance.gif'
+  ],
+  'alkış': [
+    'https://media.tenor.com/Z5IIN8RZS2EAAAAi/clap-applause.gif',
+    'https://media.tenor.com/lFsiNlrzVtcAAAAi/clapping.gif'
+  ],
+  'ateş': [
+    'https://media.tenor.com/ekUz0_TKjLEAAAAi/fire.gif',
+    'https://media.tenor.com/Zo9_Itug9q0AAAAi/lit-fire.gif'
+  ],
+  'gözyaşı': [
+    'https://media.tenor.com/Wr6QBGDmZbcAAAAi/cry.gif'
+  ],
+  'tepki': [
+    'https://media.tenor.com/wWfNZ-y_2ywAAAAi/facepalm.gif',
+    'https://media.tenor.com/d0AyN-zRwhYAAAAi/eye-roll.gif'
+  ]
+};
+function getAllGifs(){
+  return Object.values(POPULAR_GIFS).flat();
+}
+function searchGifsLocal(query){
+  if(!query || !query.trim()) return getAllGifs();
+  const q = query.toLowerCase().trim();
+  let results = [];
+  Object.keys(POPULAR_GIFS).forEach(key => {
+    if(key.includes(q) || q.includes(key)) results = results.concat(POPULAR_GIFS[key]);
+  });
+  return results.length ? results : getAllGifs();
+}
+
+/* GIF picker'ı aç — özelleştirilmiş */
+function openGifPicker(){
+  const overlay = document.getElementById('emojiPickerOverlay');
+  if(!overlay) return;
+  overlay.classList.remove('hidden');
+  document.body.classList.add('modal-open');
+  // GIF arama kutusunu ekle
+  const grid = document.getElementById('emojiGrid');
+  if(grid){
+    grid.parentElement.innerHTML = `
+      <input type="text" id="gifSearchInput" placeholder="GIF ara (örn: kahkaha, aşk, ateş)..." oninput="renderGifGridFiltered(this.value)" style="width:100%;padding:10px 14px;border-radius:12px;border:1px solid var(--line);background:var(--surface-2);color:var(--text);font-size:13px;outline:none;margin-bottom:10px;">
+      <div id="emojiGrid" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;max-height:60vh;overflow-y:auto;"></div>
+    `;
+  }
+  renderGifGridFiltered('');
+}
+function renderGifGridFiltered(query){
+  const grid = document.getElementById('emojiGrid');
+  if(!grid) return;
+  const gifs = searchGifsLocal(query);
+  grid.innerHTML = gifs.map(url =>
+    `<img src="${url}" loading="lazy" onclick="sendGifFromPicker('${url}')" style="width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:10px;cursor:pointer;background:var(--surface-2);" onerror="this.style.opacity=0.3;">`
+  ).join('');
+}
+function sendGifFromPicker(url){
+  if(!fbAuth.currentUser || !activeChatId){ showToast('Sohbet açılmadı'); return; }
+  // Yorum modunda mı?
+  if(window._commentGifMode){
+    window._commentGifMode = false;
+    if(activeCommentPostId){
+      fbDb.ref('posts/' + activeCommentPostId + '/comments').push({
+        uid: fbAuth.currentUser.uid,
+        username: savedUsername || '@kullanici',
+        userPhoto: savedProfilePhoto || '',
+        mediaUrl: url, mediaType: 'gif', ts: Date.now()
+      });
+    }
+  } else {
+    // DM modunda
+    const ts = Date.now();
+    fbDb.ref('chats/'+activeChatId+'/messages').push().set({
+      from: fbAuth.currentUser.uid,
+      mediaUrl: url, mediaType: 'gif', ts
+    });
+    const u = { lastMsg: '🎞️ GIF', lastTs: ts, lastSenderUid: fbAuth.currentUser.uid };
+    u['unreadFor/' + activeChatPeerUid] = true;
+    ensureChatMeta(activeChatId, activeChatPeerUid).then(()=> fbDb.ref('chatMeta/'+activeChatId).update(u));
+  }
+  document.getElementById('emojiPickerOverlay').classList.add('hidden');
+  document.body.classList.remove('modal-open');
+}
+
+/* ============================================================
+   SOHBET RESMI BÜYÜTME — küçük göster, tıklayınca tam ekran
+   ============================================================ */
+function openChatImageFullscreen(url){
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.95);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px;';
+  overlay.innerHTML = `
+    <img src="${url}" style="max-width:100%;max-height:100%;object-fit:contain;border-radius:8px;">
+    <button onclick="this.parentElement.remove()" style="position:absolute;top:20px;right:20px;background:rgba(0,0,0,.6);border:none;color:#fff;font-size:24px;width:44px;height:44px;border-radius:50%;cursor:pointer;">✕</button>
+  `;
+  overlay.onclick = (e) => { if(e.target === overlay) overlay.remove(); };
+  document.body.appendChild(overlay);
+}
+
+/* ============================================================
+   KOMPLE SOHBET SİLME (sola kaydır → çöp kutusu)
+   ============================================================ */
+function deleteChatCompletely(chatId, peerUid){
+  if(!fbReady || !fbAuth.currentUser) return;
+  if(!confirm('Bu sohbeti tamamen silmek istediğine emin misin? Tüm mesajlar gidecek.')) return;
+  const myUid = fbAuth.currentUser.uid;
+  // Sadece kendi tarafımız için sil — diğer kullanıcının sohbeti bozulmasın
+  Promise.allSettled([
+    fbDb.ref('chats/' + chatId).remove(),
+    fbDb.ref('chatMeta/' + chatId).remove(),
+    fbDb.ref('typing/' + chatId).remove()
+  ]).then(()=>{
+    showToast('Sohbet silindi.');
+    // Eğer bu sohbet açıksa kapat
+    if(activeChatId === chatId){
+      activeChatId = null;
+      activeChatPeerUid = null;
+      document.getElementById('dmWrap').classList.remove('view-chat');
+    }
+    initChatListListener();
+  });
+}
+
+/* Sohbet listesinde swipe-to-delete bağla */
+function attachSwipeToDelete(){
+  document.querySelectorAll('#chatList .chat-item').forEach(item => {
+    if(item._swipeBound) return;
+    item._swipeBound = true;
+    let startX = 0, currentX = 0, swiping = false;
+    item.addEventListener('touchstart', e => {
+      startX = e.touches[0].clientX;
+      swiping = true;
+    }, {passive:true});
+    item.addEventListener('touchmove', e => {
+      if(!swiping) return;
+      currentX = e.touches[0].clientX;
+      const diff = currentX - startX;
+      if(diff < 0 && diff > -120){
+        item.style.transform = 'translateX(' + diff + 'px)';
+        item.style.transition = 'none';
+      }
+    }, {passive:true});
+    item.addEventListener('touchend', e => {
+      const diff = currentX - startX;
+      item.style.transition = 'transform .2s';
+      if(diff < -80){
+        // Swipe yeterli — sil butonu göster
+        item.style.transform = 'translateX(-80px)';
+        // Sil butonu ekle
+        if(!item.querySelector('.swipe-delete-btn')){
+          const btn = document.createElement('button');
+          btn.className = 'swipe-delete-btn';
+          btn.innerHTML = '🗑️';
+          btn.style.cssText = 'position:absolute;right:0;top:0;height:100%;width:80px;background:#ef4444;color:#fff;border:none;font-size:24px;cursor:pointer;display:flex;align-items:center;justify-content:center;';
+          btn.onclick = (ev) => {
+            ev.stopPropagation();
+            const chatId = item.dataset.chatId;
+            const peerUid = item.dataset.peerUid;
+            deleteChatCompletely(chatId, peerUid);
+          };
+          item.style.position = 'relative';
+          item.style.overflow = 'visible';
+          item.appendChild(btn);
+        }
+      } else {
+        item.style.transform = '';
+        const oldBtn = item.querySelector('.swipe-delete-btn');
+        if(oldBtn) oldBtn.remove();
+      }
+      swiping = false;
+    });
+  });
+}
+
+/* ============================================================
+   KEŞFET — TAB FİLTRESİ TOGGLE + Aktif filtrelerin chip listesi
+   ============================================================ */
+let activeFilters = []; // {type:'tab'|'hashtag', value}
+
+function setExploreTab(tab, btn){
+  // Toggle: aynı tab'a basılırsa kapat
+  if(exploreCurrentTab === tab){
+    exploreCurrentTab = 'all';
+    document.querySelectorAll('.exploreTab').forEach(b => b.classList.remove('active'));
+    const allBtn = document.querySelector('.exploreTab[onclick*="\'all\'"]');
+    if(allBtn) allBtn.classList.add('active');
+    activeFilters = activeFilters.filter(f => f.type !== 'tab');
+  } else {
+    exploreCurrentTab = tab;
+    document.querySelectorAll('.exploreTab').forEach(b => b.classList.remove('active'));
+    if(btn) btn.classList.add('active');
+    activeFilters = activeFilters.filter(f => f.type !== 'tab');
+    if(tab !== 'all') activeFilters.push({type:'tab', value:tab});
+  }
+  renderActiveFilters();
+  const q = (document.getElementById('exploreSearchInput').value||'').trim();
+  if(q) runExploreSearch(); else loadExploreGrid();
+}
+
+function searchByHashtag(tag){
+  // Toggle: aynı hashtag'e basınca kaldır
+  const exists = activeFilters.find(f => f.type === 'hashtag' && f.value === tag);
+  document.querySelectorAll('.hashtagChip').forEach(c => {
+    if(c.textContent === tag) c.classList.toggle('active');
+  });
+  if(exists){
+    activeFilters = activeFilters.filter(f => !(f.type === 'hashtag' && f.value === tag));
+  } else {
+    activeFilters.push({type:'hashtag', value:tag});
+  }
+  renderActiveFilters();
+  document.getElementById('exploreSearchInput').value = activeFilters.filter(f=>f.type==='hashtag').map(f=>f.value).join(' ');
+  if(activeFilters.filter(f=>f.type==='hashtag').length){
+    runExploreSearch();
+  } else {
+    loadExploreGrid();
+  }
+}
+
+function renderActiveFilters(){
+  let container = document.getElementById('activeFiltersBar');
+  if(!container){
+    const parent = document.getElementById('exploreHashtagChips');
+    if(!parent) return;
+    container = document.createElement('div');
+    container.id = 'activeFiltersBar';
+    container.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;';
+    parent.parentElement.insertBefore(container, parent);
+  }
+  if(!activeFilters.length){ container.innerHTML = ''; return; }
+  container.innerHTML = activeFilters.map((f,i) => `
+    <span style="display:inline-flex;align-items:center;gap:5px;padding:5px 10px;background:var(--gradient-vivid);color:#fff;border-radius:14px;font-size:11.5px;font-weight:600;">
+      ${escapeHtml(f.value)}
+      <button onclick="removeFilter(${i})" style="background:none;border:none;color:#fff;cursor:pointer;font-size:14px;padding:0;line-height:1;">✕</button>
+    </span>
+  `).join('');
+}
+
+function removeFilter(idx){
+  const f = activeFilters[idx];
+  if(!f) return;
+  if(f.type === 'tab'){
+    exploreCurrentTab = 'all';
+    document.querySelectorAll('.exploreTab').forEach(b => b.classList.remove('active'));
+    const allBtn = document.querySelector('.exploreTab[onclick*="\'all\'"]');
+    if(allBtn) allBtn.classList.add('active');
+  } else if(f.type === 'hashtag'){
+    document.querySelectorAll('.hashtagChip').forEach(c => {
+      if(c.textContent === f.value) c.classList.remove('active');
+    });
+  }
+  activeFilters.splice(idx, 1);
+  renderActiveFilters();
+  document.getElementById('exploreSearchInput').value = activeFilters.filter(f=>f.type==='hashtag').map(f=>f.value).join(' ');
+  if(activeFilters.length || (document.getElementById('exploreSearchInput').value||'').trim()){
+    runExploreSearch();
+  } else {
+    loadExploreGrid();
+  }
+}
+
+/* DAHA FAZLA HASHTAG */
+const EXTENDED_HASHTAGS = [
+  '#photography','#travel','#food','#nature','#art','#music','#fashion','#fitness','#tech','#lifestyle',
+  '#aşk','#dostluk','#aile','#kahvaltı','#tatil','#deniz','#dağ','#kedi','#köpek','#kitap',
+  '#sinema','#dizi','#oyun','#spor','#futbol','#araba','#motosiklet','#yemek','#tatlı','#kahve',
+  '#çay','#doğa','#çiçek','#gökyüzü','#günbatımı','#manzara','#selfie','#arkadaşlık','#parti','#konser'
+];
+function initExtendedHashtags(){
+  const chips = document.getElementById('exploreHashtagChips');
+  if(!chips) return;
+  chips.innerHTML = EXTENDED_HASHTAGS.map(t =>
+    `<div class="hashtagChip" onclick="searchByHashtag('${t}')">${t}</div>`
+  ).join('');
+}
+
+/* ============================================================
+   HİKAYE BEĞENİ + SİL DÜZELTMESİ
+   ============================================================ */
+function deleteCurrentStory(ev){
+  if(ev) ev.stopPropagation();
+  if(!currentStoryFirebaseKey || !fbReady || !fbAuth.currentUser){
+    showToast('Hikaye bilgisi yok'); return;
+  }
+  if(!confirm('Bu hikayeyi silmek istediğine emin misin?')) return;
+  if(storyTimer){ clearInterval(storyTimer); storyTimer = null; }
+  fbDb.ref('stories/' + currentStoryFirebaseKey).remove().then(()=>{
+    currentStoryList = currentStoryList.filter(s => s.id !== currentStoryFirebaseKey);
+    showToast('✓ Hikaye silindi');
+    if(!currentStoryList.length){
+      closeStoryViewer();
+    } else {
+      showStoryAtIndex(Math.min(currentStoryIdx, currentStoryList.length - 1));
+    }
+    loadStoryStrip();
+  }).catch(err=>{
+    console.error('Story silme hatası:', err);
+    showToast('Silinemedi: ' + (err.message||'Hata'));
+  });
+}
+
+function likeStory(){
+  if(!fbReady || !fbAuth.currentUser || !currentStoryFirebaseKey){
+    showToast('Hikaye bilgisi yok'); return;
+  }
+  const myUid = fbAuth.currentUser.uid;
+  const ref = fbDb.ref('storyLikes/' + currentStoryFirebaseKey + '/' + myUid);
+  const btn = document.getElementById('storyLikeBtn');
+  ref.once('value').then(s => {
+    if(s.exists()){
+      ref.remove();
+      if(btn) btn.classList.remove('liked');
+      showToast('Beğeni kaldırıldı');
+    } else {
+      ref.set(true);
+      if(btn) btn.classList.add('liked');
+      showToast('❤️ Hikaye beğenildi!');
+      const ownerUid = currentStoryList[currentStoryIdx] && currentStoryList[currentStoryIdx].uid;
+      if(ownerUid && ownerUid !== myUid){
+        fbDb.ref('notifications/' + ownerUid).push({
+          text: '<b>' + (savedUsername||'@kullanici') + '</b> hikayeni beğendi ❤️',
+          photo: savedProfilePhoto || '',
+          targetUid: myUid, ts: Date.now(), type: 'storyLike'
+        });
+      }
+    }
+  }).catch(err=>{
+    console.error('Story beğeni hatası:', err);
+    showToast('İşlem başarısız');
+  });
 }
 
 function bootApp(){
