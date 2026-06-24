@@ -936,7 +936,21 @@ body.light-mode #screenRegister .spam-warning{background:linear-gradient(135deg,
 }
 .msgNotification.expanded{flex-wrap:wrap;}
 
-/* Ada mesaj badge */
+/* Sohbet fotoğraf kartı — Apple Messages tarzı büyük yuvarlak köşeli */
+.chat-photo-card{
+  max-width:260px;border-radius:24px;overflow:hidden;
+  position:relative;display:inline-block;
+  background:transparent;margin:4px 0;
+}
+.chat-photo-card img,.chat-photo-card video{
+  width:100%;height:auto;max-height:340px;
+  object-fit:cover;display:block;
+  border-radius:24px;cursor:pointer;
+}
+.chat-photo-time{
+  font-size:10px;color:var(--muted);
+  text-align:right;padding:2px 6px 0;
+}
 .island-badge{
   position:absolute;top:-3px;right:-4px;min-width:16px;height:16px;
   border-radius:8px;background:#ef4444;color:#fff;font-size:9px;font-weight:700;
@@ -3674,15 +3688,23 @@ function openOtherProfile(){
 
   fbDb.ref('users/' + viewingOtherUid).once('value').then((snap)=>{
     const u = snap.val() || {};
-    // Username gösterimi — eğer kayıtlı yoksa, email'in @ önündeki kısmı
+    const isDeleted = u.deleted === true;
     const fallbackName = u.email ? '@' + u.email.split('@')[0] : '@kullanici';
-    const displayName = u.username || fallbackName;
-    document.getElementById('otherProfileTitle').textContent = (displayName || 'Profil').replace(/^@/,'');
+    const displayName = isDeleted ? (u.displayName || 'Silinmiş hesap') : (u.username || fallbackName);
+    document.getElementById('otherProfileTitle').textContent = isDeleted ? 'Silinmiş hesap' : (displayName || 'Profil').replace(/^@/,'');
     document.getElementById('otherProfileName').textContent = displayName;
-    document.getElementById('otherProfileEmail').textContent = u.bio || '';
+    document.getElementById('otherProfileEmail').textContent = isDeleted ? '⚠️ Bu hesap silinmiş' : (u.bio || '');
     document.getElementById('otherProfileAvatar').src = u.photo || 'https://i.pravatar.cc/120?img=68';
+    document.getElementById('otherProfileAvatar').style.filter = isDeleted ? 'grayscale(1) opacity(0.7)' : '';
     document.getElementById('otherProfileLocation').textContent = u.location || '';
-    document.getElementById('otherStatPosts').textContent = formatStatNumber(u.postsCount || 0);
+    document.getElementById('otherStatPosts').textContent = isDeleted ? '0' : formatStatNumber(u.postsCount || 0);
+    if(isDeleted){
+      // Silinmiş hesapta takip et / mesaj butonları gizle
+      const followBtn = document.getElementById('followOtherBtn');
+      if(followBtn) followBtn.style.display = 'none';
+      const msgBtn = document.querySelector('#screenOtherProfile button[onclick*="messageOtherUser"]');
+      if(msgBtn) msgBtn.style.display = 'none';
+    }
     refreshOtherFollowCounts(viewingOtherUid);
     refreshFollowButtonState(viewingOtherUid);
     // Gizli profil kontrolü — başkasıysa ve takip etmiyorsa içerik kilitli
@@ -4845,13 +4867,14 @@ function openChatThread(chatId, peerUid){
       }
       if(m.mediaUrl){
         const isGif = m.mediaType === 'gif';
+        const align = mine ? 'align-self:flex-end;' : 'align-self:flex-start;';
         if(m.mediaType==='video' && !isGif){
-          return '<div class="msg-media" style="'+(mine?'align-self:flex-end;':'')+'"><video src="'+m.mediaUrl+'" controls playsinline style="max-width:200px;border-radius:12px;display:block;cursor:pointer;" onclick="openChatImageFullscreen(\''+m.mediaUrl+'\')"></video><div style="font-size:10px;color:var(--muted);margin-top:3px;">'+t+'</div></div>';
+          return '<div class="msg-media chat-photo-card" style="'+align+'"><video src="'+m.mediaUrl+'" controls playsinline></video><div class="chat-photo-time">'+t+'</div></div>';
         }
-        // Resim — küçük göster, tıklayınca büyüt. GIF ise otomatik oynar
+        // Resim/GIF — büyük yuvarlak köşeli kart (örnekteki gibi)
         const escapedUrl = (m.mediaUrl||'').replace(/'/g, '%27');
-        const imgEl = '<img src="'+m.mediaUrl+'" loading="lazy" style="max-width:160px;max-height:200px;border-radius:12px;display:block;object-fit:cover;cursor:zoom-in;" onclick="openChatImageFullscreen(\''+escapedUrl+'\')" onerror="this.style.opacity=0.3;">';
-        return '<div class="msg-media" style="'+(mine?'align-self:flex-end;':'')+'">'+imgEl+'<div style="font-size:10px;color:var(--muted);margin-top:3px;">'+t+(isGif?' · GIF':'')+'</div></div>';
+        const imgEl = '<img src="'+m.mediaUrl+'" loading="lazy" onclick="openChatImageFullscreen(\''+escapedUrl+'\')" onerror="this.style.opacity=0.3;">';
+        return '<div class="msg-media chat-photo-card" style="'+align+'">'+imgEl+'<div class="chat-photo-time">'+t+(isGif?' · GIF':'')+'</div></div>';
       }
       return '<div class="msg '+(mine?'me':'them')+'">' + escapeHtml(m.text||'') + editTag + ' <span class="time">'+t+'</span></div>';
     }).join('');
@@ -5079,7 +5102,22 @@ function initFeedListener(){
       return;
     }
     const myUid = fbAuth.currentUser ? fbAuth.currentUser.uid : null;
-    container.innerHTML = ids.map(id => renderPostCard(id, data[id], myUid)).join('');
+    // Tüm post uid'lerini topla, kullanıcı bilgilerini bir kez çek
+    const uniqueUids = [...new Set(ids.map(id => data[id].uid).filter(Boolean))];
+    Promise.all(uniqueUids.map(uid =>
+      fbDb.ref('users/'+uid+'/deleted').once('value').then(s => ({uid, deleted: s.val() === true}))
+    )).then(results => {
+      const deletedUids = new Set(results.filter(r => r.deleted).map(r => r.uid));
+      // Silinmiş kullanıcıların postlarını filtrele
+      const visibleIds = ids.filter(id => !deletedUids.has(data[id].uid));
+      if(!visibleIds.length){
+        container.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:13px;padding:50px 20px;">Henüz görünür gönderi yok.</div>';
+        return;
+      }
+      container.innerHTML = visibleIds.map(id => renderPostCard(id, data[id], myUid)).join('');
+    }).catch(()=>{
+      container.innerHTML = ids.map(id => renderPostCard(id, data[id], myUid)).join('');
+    });
   }, ()=>{
     container.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:13px;padding:50px 20px;">Akış yüklenemedi, internetini kontrol et.</div>';
   });
@@ -6534,6 +6572,10 @@ function loadStoryStrip(){
 
   updateStoryAvatarBtn();
 
+  // momentStripItems'ı temizle (Anı Yakala paylaşımları story strip'te görünmemeli)
+  const momentItems = document.getElementById('momentStripItems');
+  if(momentItems) momentItems.innerHTML = '';
+
   fbDb.ref('stories').orderByChild('expiresAt').startAt(now).limitToLast(50).once('value').then(snap=>{
     const data = snap.val() || {};
     const byUser = {};
@@ -6558,7 +6600,9 @@ function loadStoryStrip(){
     Promise.all(otherUids.map(uid =>
       fbDb.ref('users/'+uid).once('value').then(us=>({uid, user:us.val()||{}}))
     )).then(userList=>{
-      container.innerHTML = userList.map(({uid,user})=>{
+      // Silinmiş hesapları filtrele - story göstermesin
+      const visibleUsers = userList.filter(({user}) => !user.deleted);
+      container.innerHTML = visibleUsers.map(({uid,user})=>{
         const stories = byUser[uid].sort((a,b)=>a.ts-b.ts);
         const first = stories[0];
         const photo = user.photo || first.userPhoto || 'https://i.pravatar.cc/60?img=68';
