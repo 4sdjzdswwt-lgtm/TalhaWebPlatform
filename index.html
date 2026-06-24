@@ -951,6 +951,20 @@ body.light-mode #screenRegister .spam-warning{background:linear-gradient(135deg,
   font-size:10px;color:var(--muted);
   text-align:right;padding:2px 6px 0;
 }
+/* Swipe-to-Delete — sil butonu */
+.swipe-delete-btn{
+  position:absolute;right:0;top:0;height:100%;
+  width:80px;background:#ef4444;color:#fff;border:none;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  cursor:pointer;font-size:11px;font-weight:600;
+  opacity:0;transition:opacity .2s,background .15s;
+  z-index:1;
+}
+.swipe-delete-btn:active{background:#dc2626;}
+
+/* Chat item — overflow visible swipe butonu için */
+.chat-item{position:relative;background:var(--bg);}
+
 .island-badge{
   position:absolute;top:-3px;right:-4px;min-width:16px;height:16px;
   border-radius:8px;background:#ef4444;color:#fff;font-size:9px;font-weight:700;
@@ -8118,74 +8132,201 @@ function openChatImageFullscreen(url){
    ============================================================ */
 function deleteChatCompletely(chatId, peerUid){
   if(!fbReady || !fbAuth.currentUser) return;
-  if(!confirm('Bu sohbeti tamamen silmek istediğine emin misin? Tüm mesajlar gidecek.')) return;
-  const myUid = fbAuth.currentUser.uid;
-  // Sadece kendi tarafımız için sil — diğer kullanıcının sohbeti bozulmasın
+  if(!confirm('Bu sohbeti silmek istediğine emin misin?\n\nTüm mesajlar kalıcı olarak silinecek.')) return;
+
+  // Animasyonlu kaldırma — UI'dan önce çık
+  const item = document.querySelector(`#chatList .chat-item[data-chat-id="${chatId}"]`);
+  if(item){
+    item.style.transition = 'all .3s ease';
+    item.style.height = item.offsetHeight + 'px';
+    requestAnimationFrame(() => {
+      item.style.transform = 'translateX(-100%)';
+      item.style.opacity = '0';
+      item.style.height = '0';
+      item.style.padding = '0';
+      item.style.margin = '0';
+    });
+    setTimeout(() => item.remove(), 320);
+  }
+
   Promise.allSettled([
     fbDb.ref('chats/' + chatId).remove(),
     fbDb.ref('chatMeta/' + chatId).remove(),
     fbDb.ref('typing/' + chatId).remove()
   ]).then(()=>{
     showToast('Sohbet silindi.');
-    // Eğer bu sohbet açıksa kapat
     if(activeChatId === chatId){
       activeChatId = null;
       activeChatPeerUid = null;
       document.getElementById('dmWrap').classList.remove('view-chat');
     }
-    initChatListListener();
+    setTimeout(initChatListListener, 400);
   });
 }
 
-/* Sohbet listesinde swipe-to-delete bağla */
+/* ============================================================
+   SWIPE-TO-DELETE — iOS Messages tarzı
+   - Sola kaydır → kırmızı "Sil" butonu çıkar
+   - Eşik geçilirse buton görünür kalır
+   - %70 kaydırılırsa otomatik silme tetiklenir
+   - Başka yere dokununca eski hale döner
+   ============================================================ */
+let activeSwipedItem = null; // Bir anda sadece bir tane açık olabilir
+
 function attachSwipeToDelete(){
   document.querySelectorAll('#chatList .chat-item').forEach(item => {
     if(item._swipeBound) return;
     item._swipeBound = true;
-    let startX = 0, currentX = 0, swiping = false;
+    item.style.position = 'relative';
+    item.style.transition = 'transform .25s cubic-bezier(.2,.8,.2,1)';
+
+    let startX = 0, startY = 0, currentX = 0, swiping = false, swipeDirection = null;
+    const THRESHOLD = 60;       // Buton görünür eşiği (px)
+    const FULL_SWIPE = 200;     // Otomatik silme eşiği (px)
+    const BUTTON_WIDTH = 80;    // Sil butonu genişliği
+
+    // Sil butonu hazırla
+    const ensureDeleteBtn = () => {
+      let btn = item.querySelector('.swipe-delete-btn');
+      if(!btn){
+        btn = document.createElement('button');
+        btn.className = 'swipe-delete-btn';
+        btn.innerHTML = `
+          <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" width="22" height="22">
+            <path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M10 11v6M14 11v6M5 6l1 14a2 2 0 002 2h8a2 2 0 002-2l1-14"/>
+          </svg>
+          <span style="font-size:11px;font-weight:600;margin-top:3px;">Sil</span>
+        `;
+        item.appendChild(btn);
+      }
+      return btn;
+    };
+
     item.addEventListener('touchstart', e => {
+      // Eğer başka bir item açıksa onu kapat
+      if(activeSwipedItem && activeSwipedItem !== item){
+        activeSwipedItem.style.transform = '';
+        const otherBtn = activeSwipedItem.querySelector('.swipe-delete-btn');
+        if(otherBtn) otherBtn.style.opacity = '0';
+        activeSwipedItem = null;
+      }
       startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
       swiping = true;
-    }, {passive:true});
+      swipeDirection = null;
+      item.style.transition = 'none';
+    }, {passive: true});
+
     item.addEventListener('touchmove', e => {
       if(!swiping) return;
-      currentX = e.touches[0].clientX;
-      const diff = currentX - startX;
-      if(diff < 0 && diff > -120){
-        item.style.transform = 'translateX(' + diff + 'px)';
-        item.style.transition = 'none';
-      }
-    }, {passive:true});
-    item.addEventListener('touchend', e => {
-      const diff = currentX - startX;
-      item.style.transition = 'transform .2s';
-      if(diff < -80){
-        // Swipe yeterli — sil butonu göster
-        item.style.transform = 'translateX(-80px)';
-        // Sil butonu ekle
-        if(!item.querySelector('.swipe-delete-btn')){
-          const btn = document.createElement('button');
-          btn.className = 'swipe-delete-btn';
-          btn.innerHTML = '🗑️';
-          btn.style.cssText = 'position:absolute;right:0;top:0;height:100%;width:80px;background:#ef4444;color:#fff;border:none;font-size:24px;cursor:pointer;display:flex;align-items:center;justify-content:center;';
-          btn.onclick = (ev) => {
-            ev.stopPropagation();
-            const chatId = item.dataset.chatId;
-            const peerUid = item.dataset.peerUid;
-            deleteChatCompletely(chatId, peerUid);
-          };
-          item.style.position = 'relative';
-          item.style.overflow = 'visible';
-          item.appendChild(btn);
+      const dx = e.touches[0].clientX - startX;
+      const dy = e.touches[0].clientY - startY;
+
+      // İlk hareket — yatay mı dikey mi karar ver
+      if(swipeDirection === null){
+        if(Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > 10){
+          swipeDirection = 'vertical';
+          return;
         }
-      } else {
-        item.style.transform = '';
-        const oldBtn = item.querySelector('.swipe-delete-btn');
-        if(oldBtn) oldBtn.remove();
+        if(Math.abs(dx) > 10) swipeDirection = 'horizontal';
       }
+
+      // Dikey scroll'a izin ver, yatay swipe'ı engelle
+      if(swipeDirection !== 'horizontal') return;
+
+      currentX = dx;
+      if(dx < 0){
+        // Sola kaydırma — sil butonu göster
+        ensureDeleteBtn();
+        const offset = Math.max(dx, -FULL_SWIPE - 50);
+        item.style.transform = `translateX(${offset}px)`;
+        const btn = item.querySelector('.swipe-delete-btn');
+        if(btn){
+          btn.style.opacity = Math.min(1, Math.abs(dx) / THRESHOLD);
+          // Full swipe rengini değiştir
+          if(Math.abs(dx) >= FULL_SWIPE){
+            btn.style.background = '#b91c1c';
+            btn.style.width = Math.abs(dx) + 'px';
+          } else {
+            btn.style.background = '#ef4444';
+            btn.style.width = BUTTON_WIDTH + 'px';
+          }
+        }
+      } else if(activeSwipedItem === item && dx > 0){
+        // Açıkken sağa kaydırırsa kapat
+        const offset = Math.min(0, -BUTTON_WIDTH + dx);
+        item.style.transform = `translateX(${offset}px)`;
+      }
+    }, {passive: true});
+
+    item.addEventListener('touchend', e => {
+      if(!swiping) return;
       swiping = false;
+      item.style.transition = 'transform .25s cubic-bezier(.2,.8,.2,1)';
+      const dx = currentX;
+
+      if(dx <= -FULL_SWIPE){
+        // FULL SWIPE — otomatik silme
+        item.style.transform = 'translateX(-100%)';
+        const chatId = item.dataset.chatId;
+        const peerUid = item.dataset.peerUid;
+        setTimeout(() => deleteChatCompletely(chatId, peerUid), 150);
+        activeSwipedItem = null;
+      } else if(dx <= -THRESHOLD){
+        // EŞİK geçildi — buton görünür kal
+        item.style.transform = `translateX(-${BUTTON_WIDTH}px)`;
+        const btn = item.querySelector('.swipe-delete-btn');
+        if(btn){
+          btn.style.opacity = '1';
+          btn.style.width = BUTTON_WIDTH + 'px';
+          btn.style.background = '#ef4444';
+        }
+        activeSwipedItem = item;
+      } else {
+        // Yetersiz swipe — geri kapat
+        item.style.transform = '';
+        const btn = item.querySelector('.swipe-delete-btn');
+        if(btn) btn.style.opacity = '0';
+        if(activeSwipedItem === item) activeSwipedItem = null;
+      }
+      currentX = 0;
     });
+
+    // Sil butonu tıklaması
+    item.addEventListener('click', e => {
+      const btn = e.target.closest('.swipe-delete-btn');
+      if(btn){
+        e.stopPropagation();
+        e.preventDefault();
+        const chatId = item.dataset.chatId;
+        const peerUid = item.dataset.peerUid;
+        deleteChatCompletely(chatId, peerUid);
+        return;
+      }
+      // Item açıksa, tıklama onu kapatsın (sohbet açma)
+      if(activeSwipedItem === item){
+        item.style.transform = '';
+        const dbtn = item.querySelector('.swipe-delete-btn');
+        if(dbtn) dbtn.style.opacity = '0';
+        activeSwipedItem = null;
+        e.stopPropagation();
+        e.preventDefault();
+      }
+    }, true);
   });
+
+  // Document'a tıklayınca açık olan kapansın
+  if(!document._swipeCloseBound){
+    document._swipeCloseBound = true;
+    document.addEventListener('click', e => {
+      if(activeSwipedItem && !e.target.closest('.chat-item')){
+        activeSwipedItem.style.transform = '';
+        const btn = activeSwipedItem.querySelector('.swipe-delete-btn');
+        if(btn) btn.style.opacity = '0';
+        activeSwipedItem = null;
+      }
+    });
+  }
 }
 
 /* ============================================================
