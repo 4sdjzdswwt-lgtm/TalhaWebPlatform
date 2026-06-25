@@ -1048,13 +1048,13 @@ body.light-mode #screenRegister .spam-warning{background:linear-gradient(135deg,
   box-shadow:0 2px 8px rgba(124,58,237,.4);
 }
 .chat-photo-card{
-  max-width:260px;border-radius:24px;overflow:hidden;
+  width:240px;max-width:70vw;border-radius:24px;overflow:hidden;
   position:relative;display:inline-block;
   background:transparent;margin:4px 0;
 }
 .chat-photo-card img,.chat-photo-card video{
-  width:100%;max-width:260px;height:auto;max-height:340px;min-height:120px;
-  object-fit:contain;display:block;
+  width:100%;aspect-ratio:1/1;height:auto;
+  object-fit:cover;display:block;
   border-radius:24px;cursor:pointer;
   background:var(--surface-2);
 }
@@ -8299,16 +8299,21 @@ function openEphemeralPhoto(msgId, chatId){
     const m = snap.val();
     if(!m || !m.mediaUrl || m.expired || (m.viewCount||0) >= 1) return;
     
+    // Önceki açık ephemeral overlay varsa kaldır
+    const existing = document.getElementById('ephemeralViewerOverlay');
+    if(existing) existing.remove();
+
     // Tam ekran göster + sayaç
     const overlay = document.createElement('div');
+    overlay.id = 'ephemeralViewerOverlay';
     overlay.style.cssText = 'position:fixed;inset:0;background:#000;z-index:500;display:flex;align-items:center;justify-content:center;flex-direction:column;';
     const newCount = (m.viewCount||0) + 1;
-    
-    // Üst bar — kapatma
+
+    // Üst bar — kapatma. Boş alana tıklayınca da kapansın.
     overlay.innerHTML = `
       <div style="position:absolute;top:0;left:0;right:0;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;background:linear-gradient(rgba(0,0,0,.6),transparent);z-index:2;">
         <span style="color:#ef4444;font-weight:700;font-size:14px;">🔥 Süreli Fotoğraf</span>
-        <button onclick="closeEphemeralAndExpire('${msgId}','${chatId}',${newCount})" style="background:rgba(0,0,0,.5);border:none;color:#fff;font-size:22px;width:42px;height:42px;border-radius:50%;cursor:pointer;">✕</button>
+        <button id="ephemeralCloseBtn" style="background:rgba(0,0,0,.5);border:none;color:#fff;font-size:22px;width:42px;height:42px;border-radius:50%;cursor:pointer;z-index:3;">✕</button>
       </div>
       <img src="${m.mediaUrl}" style="max-width:100%;max-height:100%;object-fit:contain;">
       <div style="position:absolute;bottom:30px;left:0;right:0;text-align:center;color:#fff;font-size:13px;background:rgba(0,0,0,.6);padding:10px;backdrop-filter:blur(8px);">
@@ -8316,16 +8321,19 @@ function openEphemeralPhoto(msgId, chatId){
       </div>
     `;
     document.body.appendChild(overlay);
+
+    // Kapatma — buton + boş alana tıklama (img hariç)
+    const doClose = () => closeEphemeralAndExpire(msgId, chatId, newCount);
+    overlay.querySelector('#ephemeralCloseBtn').addEventListener('click', (e)=>{ e.stopPropagation(); doClose(); });
+    overlay.addEventListener('click', (e)=>{ if(e.target === overlay) doClose(); });
   });
 }
 
 function closeEphemeralAndExpire(msgId, chatId, newCount){
-  // Overlay'i kapat
-  const overlays = document.querySelectorAll('[style*="z-index:500"]');
-  overlays.forEach(o => {
-    if(o.querySelector('img')) o.remove();
-  });
-  // Firebase'de görüntülendi olarak işaretle
+  // Overlay'i ID ile bul ve kaldır — güvenilir
+  const overlay = document.getElementById('ephemeralViewerOverlay');
+  if(overlay) overlay.remove();
+  // Firebase'de görüntülendi olarak işaretle (artık tekrar açılamaz)
   if(newCount >= 1){
     fbDb.ref('chats/'+chatId+'/messages/'+msgId).update({
       viewCount: 1, expired: true, mediaUrl: ''
