@@ -3880,26 +3880,43 @@ function isBlockedPair(uid){
   return myBlockedSet.has(uid) || blockedMeSet.has(uid);
 }
 
-/* Login sonrası iki yönlü engel listelerini canlı dinle. */
+/* Login sonrası iki yönlü engel listelerini canlı dinle.
+   ÖNEMLİ: Bu fonksiyon hiçbir koşulda uygulama açılışını kilitlememeli.
+   Firebase kuralları tüm 'blocks' ağacını okumaya izin vermezse sessizce
+   geç, akışı asla durdurma. */
 function initBlockListeners(myUid){
   if(!myUid || !fbDb) return;
-  // 1) Benim engellediklerim
-  fbDb.ref('blocks/' + myUid).on('value', snap=>{
-    myBlockedSet = new Set(Object.keys(snap.val() || {}));
-    onBlockSetsChanged();
-  });
-  // 2) Beni engelleyenler — blocks ağacını tarayıp uid'imi içerenleri bul
-  fbDb.ref('blocks').on('value', snap=>{
-    const all = snap.val() || {};
-    const next = new Set();
-    Object.keys(all).forEach(otherUid=>{
-      if(otherUid !== myUid && all[otherUid] && all[otherUid][myUid]){
-        next.add(otherUid);
-      }
+  try{
+    // 1) Benim engellediklerim (kendi düğümüm — her zaman okunabilir)
+    fbDb.ref('blocks/' + myUid).on('value', snap=>{
+      try{
+        myBlockedSet = new Set(Object.keys(snap.val() || {}));
+        onBlockSetsChanged();
+      }catch(e){ console.warn('blocks(mine) işlenemedi:', e); }
+    }, err=>{ console.warn('blocks(mine) okunamadı:', err && err.message); });
+  }catch(e){ console.warn('initBlockListeners(mine) hata:', e); }
+
+  try{
+    // 2) Beni engelleyenler — tüm blocks ağacını taramak gerekir.
+    //    Güvenlik kuralları izin vermezse (permission denied) sessizce atla.
+    fbDb.ref('blocks').on('value', snap=>{
+      try{
+        const all = snap.val() || {};
+        const next = new Set();
+        Object.keys(all).forEach(otherUid=>{
+          if(otherUid !== myUid && all[otherUid] && all[otherUid][myUid]){
+            next.add(otherUid);
+          }
+        });
+        blockedMeSet = next;
+        onBlockSetsChanged();
+      }catch(e){ console.warn('blocks(all) işlenemedi:', e); }
+    }, err=>{
+      // En sık görülen durum: kurallar global 'blocks' okumasına izin vermiyor.
+      // Bu normaldir; ben engellediklerimi yine de uygularım, akış kilitlenmez.
+      console.warn('blocks(all) okunamadı (kurallar engelliyor olabilir):', err && err.message);
     });
-    blockedMeSet = next;
-    onBlockSetsChanged();
-  });
+  }catch(e){ console.warn('initBlockListeners(all) hata:', e); }
 }
 
 /* Engel listesi değişince görünür içerikleri tazele */
@@ -4643,8 +4660,8 @@ function enterAppFromAuth(){
   saveSession();
   // Presence (çevrimiçi durumu)
   if(fbAuth && fbAuth.currentUser) initPresence(fbAuth.currentUser.uid);
-  // Engelleme listelerini başlat (çift yönlü)
-  if(fbAuth && fbAuth.currentUser) initBlockListeners(fbAuth.currentUser.uid);
+  // Engelleme listelerini başlat (çift yönlü) — asla akışı durdurmasın
+  try{ if(fbAuth && fbAuth.currentUser) initBlockListeners(fbAuth.currentUser.uid); }catch(e){ console.warn('initBlockListeners atlandı:', e); }
   // Bildirim listener'ı başlat - kırmızı badge için
   if(fbAuth && fbAuth.currentUser) initNotifListener();
   // Hikaye butonuna profil fotoğrafını koy
@@ -9644,23 +9661,35 @@ window.hideStoryUser = hideStoryUser;
 window.unhideAllStoryUsers = unhideAllStoryUsers;
 
 function bootApp(){
-  initTheme();
+  try{ initTheme(); }catch(err){ console.warn('initTheme hatası:', err); }
   try{
     // Önce: sosyal giriş redirect'inden döndüysek sonuçları topla
     checkSocialSignInRedirect();
     initAuthState();
   }catch(err){
     console.error('initAuthState hatası:', err);
-    document.getElementById('screenFeed').classList.add('active');
-    document.getElementById('island').classList.remove('hidden');
+    try{
+      document.getElementById('screenFeed').classList.add('active');
+      document.getElementById('island').classList.remove('hidden');
+    }catch(e){}
   }
-  const splash = document.getElementById('appSplash');
-  setTimeout(()=>{
+  // Splash'i HER KOŞULDA kaldır — başlangıçta ne olursa olsun ekran açık kalsın
+  const removeSplash = ()=>{
+    const splash = document.getElementById('appSplash');
+    if(!splash) return;
     splash.classList.add('hide');
-    setTimeout(()=>splash.remove(), 550);
-  }, 900);
+    setTimeout(()=>{ if(splash && splash.parentNode) splash.remove(); }, 550);
+  };
+  setTimeout(removeSplash, 900);
+  // Emniyet kemeri: 4 saniye sonra splash hâlâ duruyorsa zorla kaldır
+  setTimeout(removeSplash, 4000);
 }
-bootApp();
+// DOM hazır olduğunda başlat (script body sonunda ama yine de garanti altına alıyoruz)
+if(document.readyState === 'loading'){
+  document.addEventListener('DOMContentLoaded', bootApp);
+} else {
+  bootApp();
+}
 </script>
 </body>
 </html>
