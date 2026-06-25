@@ -2504,8 +2504,8 @@ tbody tr:hover{background:var(--surface-2);}
 <!-- HİKAYE GÖRÜNTÜLEYICI (tam ekran) -->
 <div class="storyViewer hidden" id="storyViewer" onclick="advanceStory(event)">
   <div class="storyViewerHeader">
-    <img id="storyViewerAvatar" src="https://i.pravatar.cc/60?img=68">
-    <div>
+    <img id="storyViewerAvatar" src="https://i.pravatar.cc/60?img=68" style="cursor:pointer;" onclick="event.stopPropagation();goToStoryOwnerProfile()">
+    <div onclick="event.stopPropagation();goToStoryOwnerProfile()" style="cursor:pointer;">
       <div id="storyViewerName" style="font-size:14px;font-weight:700;color:#fff;">@kullanici</div>
       <div id="storyViewerTime" style="font-size:11px;color:rgba(255,255,255,.7);">2s</div>
     </div>
@@ -3896,7 +3896,7 @@ function openOtherProfile(){
     document.getElementById('otherStatPosts').textContent = isDeleted ? '0' : formatStatNumber(u.postsCount || 0);
     if(isDeleted){
       // Silinmiş hesapta takip et / mesaj butonları gizle
-      const followBtn = document.getElementById('followOtherBtn');
+      const followBtn = document.getElementById('otherFollowBtn');
       if(followBtn) followBtn.style.display = 'none';
       const msgBtn = document.querySelector('#screenOtherProfile button[onclick*="messageOtherUser"]');
       if(msgBtn) msgBtn.style.display = 'none';
@@ -5290,55 +5290,11 @@ function sendMedia(ev){
 let pendingPhotoDataUrl = null;
 let pendingPhotoEphemeralSecs = 0; // 0 = kalıcı, >0 = süreli
 
-function openPhotoPreview(dataUrl){
-  pendingPhotoDataUrl = dataUrl;
-  pendingPhotoEphemeralSecs = 0;
-  let overlay = document.getElementById('photoPreviewOverlay');
-  if(!overlay){
-    overlay = document.createElement('div');
-    overlay.id = 'photoPreviewOverlay';
-    overlay.style.cssText = 'position:fixed;inset:0;background:#000;z-index:600;display:flex;flex-direction:column;';
-    document.body.appendChild(overlay);
-  }
-  overlay.style.display = 'flex';
-  overlay.innerHTML = `
-    <!-- Üst bar: kapat -->
-    <div style="padding:12px 16px;display:flex;justify-content:space-between;align-items:center;background:rgba(0,0,0,.5);">
-      <button onclick="closePhotoPreview()" style="background:rgba(255,255,255,.1);border:none;border-radius:50%;width:38px;height:38px;color:#fff;font-size:20px;cursor:pointer;">✕</button>
-      <div style="color:#fff;font-size:14px;font-weight:600;">Fotoğraf Önizleme</div>
-      <div style="width:38px;"></div>
-    </div>
-    <!-- Resim alanı -->
-    <div style="flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:10px;">
-      <img src="${dataUrl}" style="max-width:100%;max-height:100%;object-fit:contain;border-radius:8px;">
-    </div>
-    <!-- Alt: açıklama + butonlar -->
-    <div style="padding:12px 16px 20px;background:rgba(0,0,0,.5);">
-      <!-- Süreli fotoğraf opsiyon barı -->
-      <div id="ephemeralOptions" style="display:flex;gap:6px;margin-bottom:10px;justify-content:center;">
-        <button onclick="setPhotoEphemeral(0)" id="ephOpt0" class="ephOptBtn active">Normal</button>
-        <button onclick="setPhotoEphemeral(3)" id="ephOpt3" class="ephOptBtn">3sn</button>
-        <button onclick="setPhotoEphemeral(5)" id="ephOpt5" class="ephOptBtn">5sn</button>
-        <button onclick="setPhotoEphemeral(10)" id="ephOpt10" class="ephOptBtn">10sn</button>
-        <button onclick="setPhotoEphemeral(-1)" id="ephOptOnce" class="ephOptBtn">1 Kez</button>
-      </div>
-      <!-- Açıklama + gönder -->
-      <div style="display:flex;gap:8px;align-items:center;">
-        <input type="text" id="photoPreviewCaption" placeholder="Açıklama ekleyin..." style="flex:1;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.2);border-radius:24px;padding:12px 18px;color:#fff;font-size:14px;outline:none;">
-        <button onclick="sendPhotoFromPreview()" style="background:var(--gradient-vivid);border:none;border-radius:50%;width:48px;height:48px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#fff;">
-          <svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22"><path d="M3 11l18-8-8 18-2-8-8-2z"/></svg>
-        </button>
-      </div>
-    </div>
-  `;
-}
+/* DUPLICATE removed: openPhotoPreview */
 
-function closePhotoPreview(){
-  const overlay = document.getElementById('photoPreviewOverlay');
-  if(overlay) overlay.style.display = 'none';
-  pendingPhotoDataUrl = null;
-  pendingPhotoEphemeralSecs = 0;
-}
+
+/* DUPLICATE removed: closePhotoPreview */
+
 
 function setPhotoEphemeral(secs){
   pendingPhotoEphemeralSecs = secs;
@@ -5348,36 +5304,8 @@ function setPhotoEphemeral(secs){
   if(el) el.classList.add('active');
 }
 
-function sendPhotoFromPreview(){
-  if(!pendingPhotoDataUrl || !activeChatId || !fbAuth.currentUser) return;
-  const captionEl = document.getElementById('photoPreviewCaption');
-  const caption = captionEl ? captionEl.value.trim() : '';
-  const ephSecs = pendingPhotoEphemeralSecs;
-  closePhotoPreview();
-  showToast('Gönderiliyor...');
+/* DUPLICATE removed: sendPhotoFromPreview */
 
-  compressForChat(pendingPhotoDataUrl).then(compressed => {
-    const ts = Date.now();
-    const msgRef = fbDb.ref('chats/' + activeChatId + '/messages').push();
-    const msgData = {
-      from: fbAuth.currentUser.uid,
-      mediaUrl: compressed,
-      mediaType: ephSecs !== 0 ? 'ephemeral' : 'image',
-      ts
-    };
-    if(ephSecs !== 0) msgData.ephemeralSecs = ephSecs; // -1 = 1 kez, >0 = saniye
-    if(caption) msgData.caption = caption;
-
-    ensureChatMeta(activeChatId, activeChatPeerUid).then(()=>{
-      return msgRef.set(msgData);
-    }).then(()=>{
-      const lastMsg = ephSecs !== 0 ? '🔥 Süreli fotoğraf' : '📷 Fotoğraf';
-      const update = { lastMsg, lastTs: ts, lastSenderUid: fbAuth.currentUser.uid };
-      update['unreadFor/' + activeChatPeerUid] = true;
-      fbDb.ref('chatMeta/' + activeChatId).update(update);
-    }).catch(()=> showToast('Gönderilemedi.'));
-  });
-}
 
 function exitChatThread(){
   document.getElementById('dmWrap').classList.remove('view-chat');
@@ -5614,24 +5542,8 @@ function closeNewPostComposer(){
   document.getElementById('newPostOverlay').classList.add('hidden');
   document.body.classList.remove('modal-open');
 }
-function onNewPostFileChosen(ev){
-  const file = ev.target.files[0]; if(!file) return;
-  const maxBytes = 25 * 1024 * 1024;
-  if(file.size > maxBytes){ showToast('Dosya en fazla 25 MB olabilir.'); ev.target.value=''; return; }
-  newPostFile = file;
-  newPostMediaType = file.type.startsWith('video') ? 'video' : 'image';
-  const reader = new FileReader();
-  reader.onload = (e)=>{
-    newPostDataUrl = e.target.result;
-    const dz = document.getElementById('newPostDropzone');
-    dz.classList.add('has-img');
-    dz.innerHTML = newPostMediaType === 'video'
-      ? `<video src="${newPostDataUrl}" style="width:100%;max-height:220px;border-radius:13px;" controls></video>`
-      : `<img src="${newPostDataUrl}">`;
-    document.getElementById('newPostPublishBtn').disabled = false;
-  };
-  reader.readAsDataURL(file);
-}
+/* DUPLICATE removed: onNewPostFileChosen */
+
 function publishNewPost(){
   if(!requireFirebase() || !fbAuth.currentUser){ showToast('Giriş yapmalısın.'); return; }
   if(!newPostFile && !newPostDataUrl){ showToast('Önce bir fotoğraf/video seç.'); return; }
@@ -7191,8 +7103,9 @@ function publishStory(){
 function loadStoryStrip(){
   if(!fbReady || !fbAuth || !fbAuth.currentUser) return;
   const myUid = fbAuth.currentUser.uid;
-  const myEmail = (fbAuth.currentUser.email || '').toLowerCase();
-  const myUsernameLower = (savedUsername || '').toLowerCase().replace(/^@/,'');
+  const myEmail = (fbAuth.currentUser.email || '').toLowerCase().trim();
+  const myUsernameLower = (savedUsername || '').toLowerCase().replace(/^@/,'').trim();
+  const myDisplayLower = (savedDisplayName || '').toLowerCase().trim();
   const now = Date.now();
   const container = document.getElementById('storyStripItems');
   if(!container) return;
@@ -7202,7 +7115,6 @@ function loadStoryStrip(){
   const momentItems = document.getElementById('momentStripItems');
   if(momentItems) momentItems.innerHTML = '';
 
-  // Takip edilenler listesini çek
   fbDb.ref('follows/' + myUid).once('value').then(followSnap => {
     const followingMap = followSnap.val() || {};
     const followingUids = new Set(Object.keys(followingMap));
@@ -7225,7 +7137,7 @@ function loadStoryStrip(){
         else { myStoryRing.classList.remove('has-story'); if(myStoryLabel) myStoryLabel.textContent='Hikaye Ekle'; }
       }
 
-      // SADECE takip ettiklerimi göster (kendi uid hariç)
+      // SADECE takip ettiklerimi göster, kendi uid hariç
       const otherUids = Object.keys(byUser).filter(uid => 
         uid !== myUid && followingUids.has(uid)
       );
@@ -7235,13 +7147,18 @@ function loadStoryStrip(){
       Promise.all(otherUids.map(uid =>
         fbDb.ref('users/'+uid).once('value').then(us=>({uid, user:us.val()||{}}))
       )).then(userList=>{
-        // Filtrele: silinmiş hesaplar + aslında benim duplicate hesaplarım
+        // Filtrele: silinmiş + bana ait duplicate hesaplar
         const visibleUsers = userList.filter(({user}) => {
           if(user.deleted) return false;
-          const uEmail = (user.email||'').toLowerCase();
-          const uName = (user.username||'').toLowerCase().replace(/^@/,'');
+          const uEmail = (user.email||'').toLowerCase().trim();
+          const uName = (user.username||'').toLowerCase().replace(/^@/,'').trim();
+          const uDisp = (user.displayName||'').toLowerCase().trim();
+          // Aynı email/username/displayName = duplicate hesap
           if(myEmail && uEmail && uEmail === myEmail) return false;
           if(myUsernameLower && uName && uName === myUsernameLower) return false;
+          if(myDisplayLower && uDisp && uDisp === myDisplayLower && myDisplayLower.length > 2) return false;
+          // Çok benzer isim varyasyonu (örn: talha vs @talha)
+          if(myUsernameLower && uName && (uName.includes(myUsernameLower) || myUsernameLower.includes(uName)) && uName.length > 2) return false;
           return true;
         });
         if(!visibleUsers.length){ container.innerHTML=''; return; }
@@ -7266,20 +7183,51 @@ function handleMyStoryClick(){
   const now = Date.now();
   fbDb.ref('stories').orderByChild('uid').equalTo(myUid).once('value').then(snap=>{
     const data = snap.val() || {};
-    // ID'leri koru - silme için kritik!
     const active = Object.keys(data).map(id => ({...data[id], id}))
       .filter(s => s.expiresAt > now)
       .sort((a,b)=>a.ts-b.ts);
     if(active.length){
-      currentStoryList = active;
-      currentStoryUser = myUid;
-      currentStoryIdx = 0;
-      document.getElementById('island').classList.add('chat-fullscreen-hide');
-      showStoryAtIndex(0);
+      // Hikayem var — seçenek sun: Görüntüle veya Yeni Ekle
+      showMyStoryOptions(active);
     } else {
       openStoryComposer();
     }
   });
+}
+
+function showMyStoryOptions(activeStories){
+  // Mini bottom sheet — Görüntüle / Yeni Ekle
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:600;display:flex;align-items:flex-end;justify-content:center;';
+  overlay.onclick = (e) => { if(e.target === overlay) overlay.remove(); };
+  overlay.innerHTML = `
+    <div style="width:100%;max-width:480px;background:var(--surface);border-radius:24px 24px 0 0;padding:24px 20px 32px;animation:slideUp .2s;">
+      <div style="text-align:center;margin-bottom:18px;">
+        <h3 style="margin:0 0 6px;font-size:17px;color:var(--text);">Hikayem</h3>
+        <p style="margin:0;font-size:12.5px;color:var(--muted);">Ne yapmak istiyorsun?</p>
+      </div>
+      <button onclick="this.parentElement.parentElement.remove();_viewMyExistingStories()" style="width:100%;padding:14px;background:var(--gradient-vivid);border:none;border-radius:14px;color:#fff;font-size:14.5px;font-weight:700;cursor:pointer;margin-bottom:10px;">
+        👁️ Hikayemi Görüntüle (${activeStories.length})
+      </button>
+      <button onclick="this.parentElement.parentElement.remove();openStoryComposer()" style="width:100%;padding:14px;background:var(--surface-2);border:1px solid var(--accent);border-radius:14px;color:var(--accent);font-size:14.5px;font-weight:700;cursor:pointer;margin-bottom:10px;">
+        ➕ Yeni Hikaye Ekle
+      </button>
+      <button onclick="this.parentElement.parentElement.remove()" style="width:100%;padding:12px;background:transparent;border:none;color:var(--muted);font-size:13px;cursor:pointer;">İptal</button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  // Aktif hikayeleri sakla
+  window._myActiveStories = activeStories;
+}
+
+function _viewMyExistingStories(){
+  const active = window._myActiveStories || [];
+  if(!active.length) return;
+  currentStoryList = active;
+  currentStoryUser = fbAuth.currentUser.uid;
+  currentStoryIdx = 0;
+  document.getElementById('island').classList.add('chat-fullscreen-hide');
+  showStoryAtIndex(0);
 }
 
 
@@ -7343,13 +7291,20 @@ function showStoryAtIndex(idx){
     bottomBar.style.display = 'flex';
     bottomBar.style.flexDirection = 'column';
     if(isMyStory){
-      // Kendi hikayem: kaç beğeni var göster
-      fbDb.ref('storyLikes/' + s.id).once('value').then(likesSnap=>{
-        const count = likesSnap.exists() ? Object.keys(likesSnap.val()).length : 0;
+      // Kendi hikayem: kaç beğeni var göster - tıklayınca liste açılır
+      Promise.all([
+        fbDb.ref('storyLikes/' + s.id).once('value'),
+        fbDb.ref('storyReactions/' + s.id).once('value')
+      ]).then(([likesSnap, reactSnap])=>{
+        const likes = likesSnap.val() || {};
+        const reacts = reactSnap.val() || {};
+        const likeCount = Object.keys(likes).length;
+        const reactCount = Object.keys(reacts).length;
+        const totalCount = likeCount + reactCount;
         bottomBar.innerHTML = `
-          <div style="text-align:center;color:#fff;font-size:14px;font-weight:600;padding:14px;">
-            ❤️ ${count} beğeni
-          </div>
+          <button onclick="event.stopPropagation();showStoryViewersList('${s.id}')" style="background:rgba(255,255,255,.1);border:none;border-radius:24px;padding:12px 24px;color:#fff;font-size:14px;font-weight:600;cursor:pointer;backdrop-filter:blur(10px);display:flex;align-items:center;gap:8px;margin:0 auto;">
+            ❤️ ${likeCount} beğeni · ✨ ${reactCount} tepki
+          </button>
         `;
       });
     } else {
@@ -7412,24 +7367,8 @@ function showStoryAtIndex(idx){
   }, 100);
 }
 
-function deleteCurrentStory(ev){
-  ev && ev.stopPropagation && ev.stopPropagation();
-  if(!currentStoryId || !fbReady || !fbAuth.currentUser) return;
-  if(!confirm('Bu hikayeyi silmek istediğine emin misin?')) return;
-  if(storyTimer){ clearInterval(storyTimer); storyTimer = null; }
-  fbDb.ref('stories/' + currentStoryId).remove().then(()=>{
-    // Listeden kaldır
-    currentStoryList = currentStoryList.filter(s => s.id !== currentStoryId);
-    showToast('Hikaye silindi.');
-    if(currentStoryList.length === 0){
-      closeStoryViewer();
-    } else {
-      const nextIdx = Math.min(currentStoryIdx, currentStoryList.length - 1);
-      showStoryAtIndex(nextIdx);
-    }
-    loadStoryStrip(); // Şeridi güncelle
-  }).catch(()=> showToast('Silinemedi, tekrar dene.'));
-}
+/* DUPLICATE removed: deleteCurrentStory */
+
 function advanceStory(ev){
   if(ev && (ev.target.closest('.storyViewerHeader') || ev.target.tagName === 'BUTTON')) return;
   if(storyTimer) clearInterval(storyTimer);
@@ -7999,74 +7938,12 @@ function initExplore(){
   initExtendedHashtags();
   loadExploreGrid();
 }
-function loadExploreGrid(){
-  const grid = document.getElementById('exploreGrid');
-  if(!grid || !fbReady) return;
-  fbDb.ref('posts').orderByChild('ts').limitToLast(30).once('value').then(snap=>{
-    const data = snap.val() || {};
-    const items = Object.keys(data).map(id=>({...data[id],id}))
-      .filter(p=>p.media&&p.media[0]).sort(()=>Math.random()-.5); // karıştır
-    grid.innerHTML = items.map(p=>{
-      const isVid = p.mediaType==='video';
-      return `<div class="exploreGridItem" onclick="openExplorePost('${p.id}')">
-        ${isVid
-          ? `<video src="${p.media[0]}" muted preload="none" style="width:100%;height:100%;object-fit:cover;"></video><span style="position:absolute;top:6px;right:6px;color:#fff;font-size:10px;background:rgba(0,0,0,.5);padding:2px 5px;border-radius:4px;">▶</span>`
-          : `<img src="${p.media[0]}" loading="lazy">`
-        }
-      </div>`;
-    }).join('');
-  });
-}
-function searchByHashtag(tag){
-  document.getElementById('exploreSearchInput').value = tag;
-  runExploreSearch();
-  document.querySelectorAll('.hashtagChip').forEach(c=>{
-    c.classList.toggle('active', c.textContent===tag);
-  });
-}
-function runExploreSearch(){
-  const q = (document.getElementById('exploreSearchInput').value||'').trim().toLowerCase();
-  const grid = document.getElementById('exploreGrid');
-  const results = document.getElementById('exploreResults');
-  if(!q){
-    grid.style.display=''; results.style.display='none';
-    document.querySelectorAll('.hashtagChip').forEach(c=>c.classList.remove('active'));
-    return;
-  }
-  grid.style.display='none'; results.style.display='block';
-  results.innerHTML = '<div class="followListEmpty">Aranıyor...</div>';
+/* DUPLICATE removed: loadExploreGrid */
 
-  const isHashtag = q.startsWith('#');
-  if(isHashtag){
-    // Hashtag araması — caption'da # ile
-    fbDb.ref('posts').once('value').then(snap=>{
-      const data = snap.val() || {};
-      const matched = Object.keys(data).filter(id=>{
-        const cap = (data[id].caption||'').toLowerCase();
-        return cap.includes(q);
-      }).map(id=>({...data[id],id}));
-      renderExploreResults(matched);
-    });
-  } else {
-    // Kullanıcı araması
-    fbDb.ref('users').once('value').then(snap=>{
-      const data = snap.val() || {};
-      const matched = Object.keys(data).filter(uid=>{
-        const u = data[uid];
-        return (u.username||'').toLowerCase().includes(q) || (u.displayName||'').toLowerCase().includes(q);
-      }).map(uid=>({...data[uid], uid}));
-      if(!matched.length){ results.innerHTML='<div class="followListEmpty">Kullanıcı bulunamadı</div>'; return; }
-      results.innerHTML = matched.map(u=>`
-        <div class="followListRow" onclick="viewOtherProfile('${u.uid}')">
-          <img src="${u.photo||'https://i.pravatar.cc/60?img=68'}" onerror="this.src='https://i.pravatar.cc/60?img=68'">
-          <div class="info">
-            <div class="uname">${escapeHtml(u.username||'@kullanici')}</div>
-            <div class="ubio">${escapeHtml(u.displayName||u.bio||'')}</div>
-          </div>
-        </div>`).join('');
-    });
-  }
-}
+/* DUPLICATE removed: searchByHashtag */
+
+/* DUPLICATE removed: runExploreSearch */
+
 function renderExploreResults(posts){
   const results = document.getElementById('exploreResults');
   if(!posts.length){ results.innerHTML='<div class="followListEmpty">Gönderi bulunamadı</div>'; return; }
@@ -8481,13 +8358,8 @@ function toggleLikeById(postId, ownerUid, btn){
    ============================================================ */
 let exploreCurrentTab = 'all';
 
-function setExploreTab(tab, btn){
-  exploreCurrentTab = tab;
-  document.querySelectorAll('.exploreTab').forEach(b => b.classList.remove('active'));
-  if(btn) btn.classList.add('active');
-  const q = (document.getElementById('exploreSearchInput').value||'').trim();
-  if(q) runExploreSearch(); else loadExploreGrid();
-}
+/* DUPLICATE removed: setExploreTab */
+
 
 function clearExploreSearch(){
   document.getElementById('exploreSearchInput').value = '';
@@ -8640,32 +8512,8 @@ function pauseStoryTimer(){
   if(storyTimer){ clearInterval(storyTimer); storyTimer = null; }
 }
 
-function likeStory(){
-  if(!fbReady || !fbAuth.currentUser || !currentStoryFirebaseKey) return;
-  const myUid = fbAuth.currentUser.uid;
-  const ref = fbDb.ref('storyLikes/' + currentStoryFirebaseKey + '/' + myUid);
-  const btn = document.getElementById('storyLikeBtn');
-  ref.once('value').then(s => {
-    if(s.exists()){
-      ref.remove();
-      btn.classList.remove('liked');
-      showToast('Beğeni kaldırıldı');
-    } else {
-      ref.set(true);
-      btn.classList.add('liked');
-      showToast('❤️ Hikaye beğenildi!');
-      // Hikaye sahibine bildirim gönder
-      const ownerUid = currentStoryList[currentStoryIdx] && currentStoryList[currentStoryIdx].uid;
-      if(ownerUid && ownerUid !== myUid){
-        fbDb.ref('notifications/' + ownerUid).push({
-          text: '<b>' + (savedUsername||'@kullanici') + '</b> hikayeni beğendi ❤️',
-          photo: savedProfilePhoto || '',
-          targetUid: myUid, ts: Date.now(), type: 'storyLike'
-        });
-      }
-    }
-  });
-}
+/* DUPLICATE removed: likeStory */
+
 
 function reactToStory(emoji){
   if(!fbReady || !fbAuth.currentUser || !currentStoryFirebaseKey) return;
@@ -9485,6 +9333,74 @@ async function cleanupOrphanedData(){
 
 // Admin için window'a aç
 window.cleanupOrphanedData = cleanupOrphanedData;
+
+/* ============================================================
+   STORY HEADER → PROFİL GEÇİŞİ + GÖRÜNTÜLEYENLER LİSTESİ
+   ============================================================ */
+function goToStoryOwnerProfile(){
+  if(!currentStoryList || !currentStoryList[currentStoryIdx]) return;
+  const ownerUid = currentStoryList[currentStoryIdx].uid;
+  if(!ownerUid) return;
+  closeStoryViewer();
+  if(fbAuth.currentUser && ownerUid === fbAuth.currentUser.uid){
+    goNav('profile', document.getElementById('navBio'));
+  } else {
+    viewOtherProfile(ownerUid);
+  }
+}
+
+function showStoryViewersList(storyId){
+  if(!fbReady || !storyId) return;
+  // Beğenenler + tepki verenleri birlikte getir
+  Promise.all([
+    fbDb.ref('storyLikes/' + storyId).once('value'),
+    fbDb.ref('storyReactions/' + storyId).once('value')
+  ]).then(([likesSnap, reactSnap])=>{
+    const likes = likesSnap.val() || {};
+    const reacts = reactSnap.val() || {};
+    const allUids = new Set([...Object.keys(likes), ...Object.keys(reacts)]);
+    
+    if(!allUids.size){
+      showToast('Henüz kimse beğenmemiş veya tepki vermemiş');
+      return;
+    }
+    
+    // Kullanıcı bilgilerini topla
+    Promise.all(Array.from(allUids).map(uid =>
+      fbDb.ref('users/' + uid).once('value').then(s => ({uid, user: s.val() || {}}))
+    )).then(userList => {
+      const overlay = document.createElement('div');
+      overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:700;display:flex;align-items:flex-end;justify-content:center;';
+      overlay.onclick = (e) => { if(e.target === overlay) overlay.remove(); };
+      
+      const rows = userList.filter(({user}) => !user.deleted).map(({uid, user}) => {
+        const liked = !!likes[uid];
+        const reaction = reacts[uid] ? reacts[uid].emoji : '';
+        const photo = user.photo || 'https://i.pravatar.cc/60?img=68';
+        const username = user.username || '@kullanici';
+        return `<div onclick="event.stopPropagation();viewOtherProfile('${uid}');document.querySelectorAll('[data-viewers-overlay]').forEach(el=>el.remove());" style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--line);cursor:pointer;">
+          <img src="${photo}" style="width:42px;height:42px;border-radius:50%;object-fit:cover;" onerror="this.src='https://i.pravatar.cc/60?img=68'">
+          <div style="flex:1;">
+            <div style="font-weight:600;font-size:14px;color:var(--text);">${escapeHtml(username)}</div>
+            <div style="font-size:11.5px;color:var(--muted);">${liked ? '❤️ Beğendi' : ''}${liked && reaction ? ' · ' : ''}${reaction ? reaction + ' Tepki verdi' : ''}</div>
+          </div>
+        </div>`;
+      }).join('');
+      
+      overlay.setAttribute('data-viewers-overlay', '1');
+      overlay.innerHTML = `
+        <div style="width:100%;max-width:480px;background:var(--surface);border-radius:24px 24px 0 0;max-height:70vh;display:flex;flex-direction:column;">
+          <div style="padding:16px 20px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;">
+            <h3 style="margin:0;font-size:16px;color:var(--text);">Etkileşimler</h3>
+            <button onclick="document.querySelectorAll('[data-viewers-overlay]').forEach(el=>el.remove())" style="background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;">✕</button>
+          </div>
+          <div style="overflow-y:auto;flex:1;">${rows || '<div style="text-align:center;color:var(--muted);padding:30px;">Henüz etkileşim yok</div>'}</div>
+        </div>
+      `;
+      document.body.appendChild(overlay);
+    });
+  });
+}
 
 function bootApp(){
   initTheme();
