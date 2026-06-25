@@ -611,8 +611,8 @@ body.light-mode #screenRegister::after{opacity:.4;}
 #screenRegisterInner{position:relative;z-index:1;}
 
 /* Auth kartı — tam glassmorphism + parlayan kenar */
+#screenRegister .card{overflow:visible;}
 #screenRegister .card{
-  overflow:visible;
   background:var(--glass-bg);
   border:1px solid var(--glass-border);
   backdrop-filter:blur(28px) saturate(190%);-webkit-backdrop-filter:blur(28px) saturate(190%);
@@ -1692,9 +1692,8 @@ tbody tr:hover{background:var(--surface-2);}
 
     <!-- ================= EKRAN 1: NeXT GİRİŞ / KAYIT ================= -->
     <div class="screen" id="screenRegister">
-      <div id="screenRegisterInner" style="height:100%;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding:32px 16px 80px;">
-      <div style="min-height:100%;display:flex;align-items:flex-start;justify-content:center;">
-      <div class="card">
+      <div id="screenRegisterInner" style="position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding:32px 16px calc(120px + env(safe-area-inset-bottom));">
+      <div class="card" style="margin:0 auto;">
         <div class="auth-top-bar">
           <button class="theme-corner-btn" onclick="applyTheme('light')" title="Aydınlık Mod">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>
@@ -1865,7 +1864,6 @@ tbody tr:hover{background:var(--surface-2);}
 
       </div>
       </div>
-      </div>
     </div>
 
     <!-- ================= EKRAN 2: ANA AKIŞ ================= -->
@@ -2030,7 +2028,7 @@ tbody tr:hover{background:var(--surface-2);}
             <button onclick="quickEmojiMsg('🔥')">🔥</button>
             <button onclick="quickEmojiMsg('🙌')">🙌</button>
           </div>
-          <div class="composer">
+          <div class="composer" id="chatComposer">
             <button class="icon-btn" onclick="document.getElementById('dmFile').click()" title="Fotoğraf / Galeri">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
             </button>
@@ -2940,6 +2938,9 @@ function goReg(n){
   document.getElementById('reg'+n).classList.add('active');
   document.querySelectorAll('.rail .seg').forEach((s,i)=>s.classList.toggle('on', i < n));
   document.getElementById('stepLabel').textContent = 'ADIM '+n+' / 4';
+  // Adım değişince kayıt kartını başa sar — yeni adımın butonları görünür kalsın
+  const inner = document.getElementById('screenRegisterInner');
+  if(inner) inner.scrollTop = 0;
 }
 
 function switchAuthTab(which){
@@ -3863,6 +3864,72 @@ function addMemberToAdminTable(){ /* no-op: gerçek liste Firebase'den geliyor *
 let viewingOtherUid = null;
 let otherProfileReturnTo = 'feed'; // closeOtherProfile geri dönüş hedefi
 
+/* ============================================================
+   ENGELLEME (BLOCK) — ÇİFT YÖNLÜ HAFIZA
+   blocks/{a}/{b} = true  →  a, b'yi engelledi.
+   İki kişi de birbirini görmemeli: ben engellersem o beni göremez,
+   o beni engellerse ben onu göremem. Bu yüzden HEM benim engellediklerimi
+   HEM de beni engelleyenleri hafızada tutuyoruz.
+   ============================================================ */
+let myBlockedSet = new Set();   // benim engellediklerim
+let blockedMeSet = new Set();   // beni engelleyenler
+
+/* İki kişi arasında herhangi bir yönde engel var mı? */
+function isBlockedPair(uid){
+  if(!uid) return false;
+  return myBlockedSet.has(uid) || blockedMeSet.has(uid);
+}
+
+/* Login sonrası iki yönlü engel listelerini canlı dinle. */
+function initBlockListeners(myUid){
+  if(!myUid || !fbDb) return;
+  // 1) Benim engellediklerim
+  fbDb.ref('blocks/' + myUid).on('value', snap=>{
+    myBlockedSet = new Set(Object.keys(snap.val() || {}));
+    onBlockSetsChanged();
+  });
+  // 2) Beni engelleyenler — blocks ağacını tarayıp uid'imi içerenleri bul
+  fbDb.ref('blocks').on('value', snap=>{
+    const all = snap.val() || {};
+    const next = new Set();
+    Object.keys(all).forEach(otherUid=>{
+      if(otherUid !== myUid && all[otherUid] && all[otherUid][myUid]){
+        next.add(otherUid);
+      }
+    });
+    blockedMeSet = next;
+    onBlockSetsChanged();
+  });
+}
+
+/* Engel listesi değişince görünür içerikleri tazele */
+function onBlockSetsChanged(){
+  // Sohbet listesini tazele (engellenenler düşsün)
+  try{
+    if(window._lastChatSnap && typeof renderChatRows === 'function'){
+      renderChatRows(window._lastChatSnap);
+    }
+  }catch(e){}
+  try{ rerenderFeedVisibility(); }catch(e){}
+  // Açık olan engelli profili kapat
+  if(viewingOtherUid && isBlockedPair(viewingOtherUid)){
+    const screen = document.getElementById('screenOtherProfile');
+    if(screen && screen.classList.contains('active')){
+      showToast('Bu kullanıcıyla artık etkileşemezsin.');
+      if(typeof closeOtherProfile === 'function') closeOtherProfile();
+    }
+  }
+}
+
+/* Akışta/keşfette engelli kullanıcıların öğelerini gizle.
+   İlgili öğelere data-author-uid eklendiği için tek geçişte süpürüyoruz. */
+function rerenderFeedVisibility(){
+  document.querySelectorAll('[data-author-uid]').forEach(el=>{
+    const uid = el.getAttribute('data-author-uid');
+    el.style.display = isBlockedPair(uid) ? 'none' : '';
+  });
+}
+
 function viewOtherProfile(uid){
   viewingOtherUid = uid;
   openOtherProfile();
@@ -3873,6 +3940,11 @@ function viewOtherProfile(uid){
 function openOtherProfile(){
   if(!requireFirebase()) return;
   if(!viewingOtherUid) return;
+  // Engelli kullanıcının profili açılmaz
+  if(isBlockedPair(viewingOtherUid)){
+    showToast('Bu kullanıcıyla aranızda engel var, profili görüntülenemez.');
+    return;
+  }
   // Geri dönüş hedefini şu an aktif olan ekrandan al
   const activeScreen = document.querySelector('#main .screen.active');
   if(activeScreen){
@@ -4571,6 +4643,8 @@ function enterAppFromAuth(){
   saveSession();
   // Presence (çevrimiçi durumu)
   if(fbAuth && fbAuth.currentUser) initPresence(fbAuth.currentUser.uid);
+  // Engelleme listelerini başlat (çift yönlü)
+  if(fbAuth && fbAuth.currentUser) initBlockListeners(fbAuth.currentUser.uid);
   // Bildirim listener'ı başlat - kırmızı badge için
   if(fbAuth && fbAuth.currentUser) initNotifListener();
   // Hikaye butonuna profil fotoğrafını koy
@@ -5075,46 +5149,56 @@ function initChatListListener(){
   if(chatListMetaRef) chatListMetaRef.off();
   chatListMetaRef = fbDb.ref('chatMeta').orderByChild('users/' + myUid).equalTo(true);
   chatListMetaRef.on('value', (snap)=>{
-    const data = snap.val() || {};
-    const chatIds = Object.keys(data);
-    if(!chatIds.length){
-      body.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:12.5px;padding:24px 16px;">Henüz hiç sohbetin yok. Sağ üstteki ✛ ile yeni mesaj başlat.</div>';
+    window._lastChatSnap = snap.val() || {};
+    renderChatRows(window._lastChatSnap);
+  });
+}
+
+function renderChatRows(data){
+  if(!fbAuth.currentUser) return;
+  const myUid = fbAuth.currentUser.uid;
+  const body = document.getElementById('chatListBody');
+  if(!body) return;
+  data = data || {};
+  const chatIds = Object.keys(data);
+  if(!chatIds.length){
+    body.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:12.5px;padding:24px 16px;">Henüz hiç sohbetin yok. Sağ üstteki ✛ ile yeni mesaj başlat.</div>';
+    return;
+  }
+  // En son mesaja göre sırala (yeni en üstte)
+  chatIds.sort((a,b) => (data[b].lastTs||0) - (data[a].lastTs||0));
+  Promise.all(chatIds.map(cid => {
+    const peerUid = Object.keys(data[cid].users || {}).find(u => u !== myUid);
+    if(!peerUid) return Promise.resolve(null);
+    return fbDb.ref('users/' + peerUid).once('value').then(s => ({cid, peerUid, peer: s.val() || {}, meta: data[cid]}));
+  })).then((rows)=>{
+    rows = rows.filter(Boolean);
+    // Engelli kullanıcılarla olan sohbetleri listeden tamamen çıkar
+    rows = rows.filter(r => !isBlockedPair(r.peerUid));
+    if(!rows.length){
+      body.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:12.5px;padding:24px 16px;">Henüz hiç sohbetin yok.</div>';
       return;
     }
-    // En son mesaja göre sırala (yeni en üstte)
-    chatIds.sort((a,b) => (data[b].lastTs||0) - (data[a].lastTs||0));
-    Promise.all(chatIds.map(cid => {
-      const peerUid = Object.keys(data[cid].users || {}).find(u => u !== myUid);
-      if(!peerUid) return Promise.resolve(null);
-      return fbDb.ref('users/' + peerUid).once('value').then(s => ({cid, peerUid, peer: s.val() || {}, meta: data[cid]}));
-    })).then((rows)=>{
-      rows = rows.filter(Boolean);
-      if(!rows.length){
-        body.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:12.5px;padding:24px 16px;">Henüz hiç sohbetin yok.</div>';
-        return;
-      }
-      body.innerHTML = rows.map(r => {
-        const u = r.peer || {};
-        const isDeleted = u.deleted === true;
-        const fallbackName = u.email ? '@' + u.email.split('@')[0] : '@kullanici';
-        const displayName = isDeleted ? (u.displayName || 'Silinmiş hesap') : (u.username || fallbackName);
-        const photo = u.photo || 'https://i.pravatar.cc/60?img=68';
-        const myUid = fbAuth.currentUser.uid;
-        const isUnread = !!(r.meta.unreadFor && r.meta.unreadFor[myUid]);
-        return `
-        <div class="chat-item ${activeChatId===r.cid?'active':''} ${isUnread?'unread':''}" 
-             data-chat-id="${r.cid}" data-peer-uid="${r.peerUid}" 
-             onclick="if(this.style.transform){this.style.transform='';const b=this.querySelector('.swipe-delete-btn');if(b)b.remove();return;}openChatThread('${r.cid}','${r.peerUid}')">
-          <img src="${photo}" onerror="this.src='https://i.pravatar.cc/60?img=68'" style="${isDeleted?'filter:grayscale(1) opacity(0.7);':''}">
-          <div class="meta">
-            <div class="name">${escapeHtml(displayName)}${isUnread?'<span class="unread-dot"></span>':''}</div>
-            <div class="preview">${escapeHtml((r.meta.lastMsg || 'Sohbete başla').toString().slice(0,40))}</div>
-          </div>
-          <span class="chat-time">${formatChatTime(r.meta.lastTs)}</span>
-        </div>`;
-      }).join('');
-      setTimeout(attachSwipeToDelete, 100);
-    });
+    body.innerHTML = rows.map(r => {
+      const u = r.peer || {};
+      const isDeleted = u.deleted === true;
+      const fallbackName = u.email ? '@' + u.email.split('@')[0] : '@kullanici';
+      const displayName = isDeleted ? (u.displayName || 'Silinmiş hesap') : (u.username || fallbackName);
+      const photo = u.photo || 'https://i.pravatar.cc/60?img=68';
+      const isUnread = !!(r.meta.unreadFor && r.meta.unreadFor[myUid]);
+      return `
+      <div class="chat-item ${activeChatId===r.cid?'active':''} ${isUnread?'unread':''}" 
+           data-chat-id="${r.cid}" data-peer-uid="${r.peerUid}" 
+           onclick="if(this.style.transform){this.style.transform='';const b=this.querySelector('.swipe-delete-btn');if(b)b.remove();return;}openChatThread('${r.cid}','${r.peerUid}')">
+        <img src="${photo}" onerror="this.src='https://i.pravatar.cc/60?img=68'" style="${isDeleted?'filter:grayscale(1) opacity(0.7);':''}">
+        <div class="meta">
+          <div class="name">${escapeHtml(displayName)}${isUnread?'<span class="unread-dot"></span>':''}</div>
+          <div class="preview">${escapeHtml((r.meta.lastMsg || 'Sohbete başla').toString().slice(0,40))}</div>
+        </div>
+        <span class="chat-time">${formatChatTime(r.meta.lastTs)}</span>
+      </div>`;
+    }).join('');
+    setTimeout(attachSwipeToDelete, 100);
   });
 }
 
@@ -5127,10 +5211,39 @@ function formatChatTime(ts){
   return Math.floor(diffMin/1440) + 'g';
 }
 
+/* Sohbet yazma alanını aç/kapat (engelli kullanıcıda kapatılır) */
+function setChatComposerEnabled(enabled){
+  const c = document.getElementById('chatComposer');
+  if(!c) return;
+  c.style.opacity = enabled ? '' : '0.45';
+  c.style.pointerEvents = enabled ? '' : 'none';
+  const inp = document.getElementById('msgInput');
+  if(inp){
+    inp.disabled = !enabled;
+    inp.placeholder = enabled ? 'Mesaj...' : 'Engel mevcut — mesaj gönderilemez';
+  }
+}
+
 function openChatThread(chatId, peerUid){
   if(!requireFirebase() || !fbAuth.currentUser) return;
   activeChatId = chatId;
   activeChatPeerUid = peerUid;
+
+  // Engelli kullanıcıyla sohbet açılmaz — mesajları gizle, yazmayı kapat
+  if(isBlockedPair(peerUid)){
+    document.getElementById('dmWrap').classList.add('view-chat');
+    document.getElementById('island').classList.add('chat-fullscreen-hide');
+    document.getElementById('chatName').textContent = 'Engelli kullanıcı';
+    document.getElementById('chatHeadImg').src = 'https://i.pravatar.cc/60?img=68';
+    document.getElementById('chatHeadImg').style.filter = 'grayscale(1) opacity(0.6)';
+    document.getElementById('chatStatus').textContent = '🚫 Engel mevcut';
+    const box = document.getElementById('messagesBox');
+    box.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:13px;padding:32px 18px;line-height:1.6;">Bu kullanıcıyla aranızda engel olduğu için mesajlar görüntülenemez ve mesaj gönderilemez.</div>';
+    setChatComposerEnabled(false);
+    if(activeChatMessagesRef){ activeChatMessagesRef.off(); activeChatMessagesRef = null; }
+    return;
+  }
+  setChatComposerEnabled(true);
 
   document.querySelectorAll('#screenMessages .chat-item').forEach(i=>i.classList.remove('active'));
   fbDb.ref('chatMeta/' + chatId + '/unreadFor/' + fbAuth.currentUser.uid).set(false).catch(()=>{});
@@ -5217,6 +5330,10 @@ function sendMsg(){
   if(!requireFirebase()){ showToast('Bağlantı yok.'); return; }
   if(!fbAuth.currentUser){ showToast('Giriş yapmalısın.'); return; }
   if(!activeChatId){ showToast('Bir sohbet seç.'); return; }
+  if(activeChatPeerUid && isBlockedPair(activeChatPeerUid)){
+    showToast('Bu kullanıcıyla mesajlaşamazsın (engel mevcut).');
+    return;
+  }
   input.value = '';
 
   const msgData = {
@@ -5254,6 +5371,10 @@ function sendMsg(){
 function sendMedia(ev){
   const file = ev.target.files[0]; if(!file) return;
   if(!requireFirebase() || !fbAuth.currentUser || !activeChatId){ showToast('Bir sohbet seç.'); ev.target.value=''; return; }
+  if(activeChatPeerUid && isBlockedPair(activeChatPeerUid)){
+    showToast('Bu kullanıcıyla mesajlaşamazsın (engel mevcut).');
+    ev.target.value=''; return;
+  }
   const isVideo = file.type.startsWith('video');
   ev.target.value = '';
 
@@ -5446,10 +5567,12 @@ function initFeedListener(){
       const deletedUids = new Set(deletedResults.filter(r => r.deleted).map(r => r.uid));
       const followingUids = new Set(Object.keys(followingMap));
 
-      // Filtrele: silinmemiş VE (kendi postu VEYA takip ettiğim biri)
+      // Filtrele: silinmemiş VE (kendi postu VEYA takip ettiğim biri) VE engelli değil
       const visibleIds = ids.filter(id => {
         const post = data[id];
         if(!post.uid || deletedUids.has(post.uid)) return false;
+        // Engelli kullanıcının (her iki yön) gönderileri hiç görünmesin
+        if(isBlockedPair(post.uid)) return false;
         // Kendi postlarım her zaman görünür
         if(post.uid === myUid) return true;
         // Takip ettiğim biri ise göster
@@ -6384,6 +6507,7 @@ function runUserSearch(q){
     const matches = list.filter(u => {
       if(u.uid === myUid) return false; // kendimi listede gösterme
       if(u.blocked) return false;
+      if(isBlockedPair(u.uid)) return false; // engelli kullanıcılar
       const uname = (u.username || '').toLowerCase();
       const bio = (u.bio || '').toLowerCase();
       return uname.includes(q) || bio.includes(q);
@@ -6986,13 +7110,24 @@ function renderStoryTextOverlays(){
   container.style.pointerEvents = 'none';
   container.innerHTML = storyTextOverlays.map(t => `
     <div class="storyTextItem" data-overlay-id="${t.id}" 
-         style="position:absolute;left:${t.x}%;top:${t.y}%;transform:translate(-50%,-50%);color:${t.color};font-size:${t.fontSize}px;font-weight:700;text-shadow:0 2px 8px rgba(0,0,0,.7);cursor:move;pointer-events:auto;user-select:none;-webkit-user-select:none;padding:6px 12px;max-width:80%;word-break:break-word;text-align:center;background:rgba(0,0,0,.25);border-radius:8px;backdrop-filter:blur(2px);">
+         style="position:absolute;left:${t.x}%;top:${t.y}%;transform:translate(-50%,-50%);color:${t.color};font-size:${t.fontSize}px;font-weight:700;text-shadow:0 2px 8px rgba(0,0,0,.7);cursor:move;pointer-events:auto;user-select:none;-webkit-user-select:none;padding:6px 12px;max-width:80%;word-break:break-word;text-align:center;background:rgba(0,0,0,.25);border-radius:8px;backdrop-filter:blur(2px);touch-action:none;">
       ${escapeHtml(t.text)}
-      <button onclick="removeStoryTextOverlay(${t.id})" style="position:absolute;top:-10px;right:-10px;background:#ef4444;border:none;border-radius:50%;width:22px;height:22px;color:#fff;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
+      <button onclick="removeStoryTextOverlay(${t.id})" style="position:absolute;top:-10px;right:-10px;background:#ef4444;border:none;border-radius:50%;width:22px;height:22px;color:#fff;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:2;">✕</button>
+      <button onclick="event.stopPropagation();resizeStoryText(${t.id},-4)" ontouchstart="event.stopPropagation();" style="position:absolute;bottom:-12px;left:-12px;background:rgba(0,0,0,.6);border:1px solid rgba(255,255,255,.4);border-radius:50%;width:26px;height:26px;color:#fff;font-size:16px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:2;">−</button>
+      <button onclick="event.stopPropagation();resizeStoryText(${t.id},4)" ontouchstart="event.stopPropagation();" style="position:absolute;bottom:-12px;right:-12px;background:rgba(0,0,0,.6);border:1px solid rgba(255,255,255,.4);border-radius:50%;width:26px;height:26px;color:#fff;font-size:16px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:2;">+</button>
     </div>
   `).join('');
-  // Sürükleme bağla
+  // Sürükleme + parmakla büyütme/küçültme bağla
   container.querySelectorAll('.storyTextItem').forEach(el => bindStoryTextDrag(el));
+}
+
+/* Yazıyı büyüt/küçült ve seçilen boyutu KALICI tut (12–96px) */
+function resizeStoryText(id, delta){
+  const overlay = storyTextOverlays.find(t => t.id === id);
+  if(!overlay) return;
+  overlay.fontSize = Math.max(12, Math.min(96, (overlay.fontSize || 28) + delta));
+  const el = document.querySelector('.storyTextItem[data-overlay-id="'+id+'"]');
+  if(el) el.style.fontSize = overlay.fontSize + 'px';
 }
 
 function removeStoryTextOverlay(id){
@@ -7583,6 +7718,7 @@ function runGlobalSearch(){
     fbDb.ref('users').limitToFirst(200).once('value').then(snap=>{
       const data = snap.val() || {};
       const uids = Object.keys(data).filter(uid => {
+        if(isBlockedPair(uid)) return false;
         const u = data[uid];
         const uname = (u.username||'').replace(/^@/,'').toLowerCase();
         const dname = (u.displayName||'').toLowerCase();
@@ -7968,6 +8104,7 @@ function initExplore(){
 
 function renderExploreResults(posts){
   const results = document.getElementById('exploreResults');
+  posts = (posts||[]).filter(p => !isBlockedPair(p.uid));
   if(!posts.length){ results.innerHTML='<div class="followListEmpty">Gönderi bulunamadı</div>'; return; }
   results.innerHTML = `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:2px;">
     ${posts.map(p=>`<div class="exploreGridItem" onclick="openExplorePost('${p.id}')">
@@ -8407,6 +8544,7 @@ function loadExploreGrid(){
     const data = snap.val() || {};
     let items = Object.keys(data).map(id=>({...data[id],id}))
       .filter(p => p.media && p.media[0])
+      .filter(p => !isBlockedPair(p.uid))
       .filter(p => exploreCurrentTab === 'photo' ? p.mediaType !== 'video' : true)
       .sort(() => Math.random() - .5);
 
@@ -8468,6 +8606,7 @@ function runExploreSearch(){
   fbDb.ref('posts').once('value').then(snap => {
     const data = snap.val() || {};
     let matched = Object.keys(data).map(id=>({...data[id],id})).filter(p => {
+      if(isBlockedPair(p.uid)) return false;
       const cap = (p.caption||'').toLowerCase();
       const loc = (p.location||'').toLowerCase();
       const user = (p.username||'').toLowerCase();
