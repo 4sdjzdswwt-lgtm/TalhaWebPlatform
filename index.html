@@ -1692,7 +1692,7 @@ tbody tr:hover{background:var(--surface-2);}
 
     <!-- ================= EKRAN 1: NeXT GİRİŞ / KAYIT ================= -->
     <div class="screen" id="screenRegister">
-      <div id="screenRegisterInner" style="height:100%;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding:32px 16px 80px;">
+      <div id="screenRegisterInner" style="flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding:32px 16px 100px;">
       <div style="min-height:100%;display:flex;align-items:flex-start;justify-content:center;">
       <div class="card">
         <div class="auth-top-bar">
@@ -1809,7 +1809,8 @@ tbody tr:hover{background:var(--surface-2);}
                 <div class="username-hint" id="usernameHint" style="display:none;"></div>
                 <div class="err" id="err-username">Kullanıcı adı en az 3 karakter olmalı.</div></div>
 
-              <div class="row" style="position:sticky;bottom:0;background:var(--surface);padding:14px 0 8px;margin-top:14px;z-index:5;"><button class="btn btn-ghost" onclick="goReg(1)">Geri</button><button class="btn btn-primary" id="createAccountBtn" onclick="createAccountAndSendVerification()">Hesabı Oluştur</button></div>
+              <div class="row" style="margin-top:18px;"><button class="btn btn-ghost" onclick="goReg(1)">Geri</button><button class="btn btn-primary" id="createAccountBtn" onclick="createAccountAndSendVerification()">Hesabı Oluştur</button></div>
+              <div style="height:60px;"></div>
             </div>
 
             <div class="regstep" id="reg3">
