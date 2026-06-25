@@ -2,30 +2,6 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
-<script>
-/* GÖRÜNÜR HATA YAKALAYICI — siyah/boş ekran yerine hatayı ekranda göster.
-   Sorunu bulduktan sonra bu blok kaldırılabilir. */
-(function(){
-  function showFatal(msg){
-    try{
-      var d=document.getElementById('__fatal');
-      if(!d){
-        d=document.createElement('div');
-        d.id='__fatal';
-        d.style.cssText='position:fixed;inset:0;z-index:999999;background:#111;color:#fff;font:13px/1.5 monospace;padding:20px;overflow:auto;white-space:pre-wrap;';
-        (document.body||document.documentElement).appendChild(d);
-      }
-      d.textContent += msg + '\n\n';
-    }catch(e){}
-  }
-  window.addEventListener('error', function(ev){
-    showFatal('HATA: ' + (ev.message||'') + '\n@ ' + (ev.filename||'') + ':' + (ev.lineno||'') + ':' + (ev.colno||''));
-  });
-  window.addEventListener('unhandledrejection', function(ev){
-    showFatal('PROMISE HATASI: ' + (ev.reason && (ev.reason.message||ev.reason) || 'bilinmiyor'));
-  });
-})();
-</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>NeXT — Anları yalnız değil, birlikte yakala</title>
 
@@ -635,8 +611,8 @@ body.light-mode #screenRegister::after{opacity:.4;}
 #screenRegisterInner{position:relative;z-index:1;}
 
 /* Auth kartı — tam glassmorphism + parlayan kenar */
-#screenRegister .card{overflow:visible;}
 #screenRegister .card{
+  overflow:visible;
   background:var(--glass-bg);
   border:1px solid var(--glass-border);
   backdrop-filter:blur(28px) saturate(190%);-webkit-backdrop-filter:blur(28px) saturate(190%);
@@ -1716,8 +1692,9 @@ tbody tr:hover{background:var(--surface-2);}
 
     <!-- ================= EKRAN 1: NeXT GİRİŞ / KAYIT ================= -->
     <div class="screen" id="screenRegister">
-      <div id="screenRegisterInner" style="position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding:32px 16px calc(120px + env(safe-area-inset-bottom));">
-      <div class="card" style="margin:0 auto;">
+      <div id="screenRegisterInner" style="height:100%;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding:32px 16px 80px;">
+      <div style="min-height:100%;display:flex;align-items:flex-start;justify-content:center;">
+      <div class="card">
         <div class="auth-top-bar">
           <button class="theme-corner-btn" onclick="applyTheme('light')" title="Aydınlık Mod">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>
@@ -1832,7 +1809,7 @@ tbody tr:hover{background:var(--surface-2);}
                 <div class="username-hint" id="usernameHint" style="display:none;"></div>
                 <div class="err" id="err-username">Kullanıcı adı en az 3 karakter olmalı.</div></div>
 
-              <div class="row"><button class="btn btn-ghost" onclick="goReg(1)">Geri</button><button class="btn btn-primary" id="createAccountBtn" onclick="createAccountAndSendVerification()">Hesabı Oluştur</button></div>
+              <div class="row" style="position:sticky;bottom:0;background:var(--surface);padding:14px 0 8px;margin-top:14px;z-index:5;"><button class="btn btn-ghost" onclick="goReg(1)">Geri</button><button class="btn btn-primary" id="createAccountBtn" onclick="createAccountAndSendVerification()">Hesabı Oluştur</button></div>
             </div>
 
             <div class="regstep" id="reg3">
@@ -1886,6 +1863,7 @@ tbody tr:hover{background:var(--surface-2);}
           </div>
         </div>
 
+      </div>
       </div>
       </div>
     </div>
@@ -2052,7 +2030,7 @@ tbody tr:hover{background:var(--surface-2);}
             <button onclick="quickEmojiMsg('🔥')">🔥</button>
             <button onclick="quickEmojiMsg('🙌')">🙌</button>
           </div>
-          <div class="composer" id="chatComposer">
+          <div class="composer">
             <button class="icon-btn" onclick="document.getElementById('dmFile').click()" title="Fotoğraf / Galeri">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
             </button>
@@ -2962,9 +2940,6 @@ function goReg(n){
   document.getElementById('reg'+n).classList.add('active');
   document.querySelectorAll('.rail .seg').forEach((s,i)=>s.classList.toggle('on', i < n));
   document.getElementById('stepLabel').textContent = 'ADIM '+n+' / 4';
-  // Adım değişince kayıt kartını başa sar — yeni adımın butonları görünür kalsın
-  const inner = document.getElementById('screenRegisterInner');
-  if(inner) inner.scrollTop = 0;
 }
 
 function switchAuthTab(which){
@@ -3888,90 +3863,12 @@ function addMemberToAdminTable(){ /* no-op: gerçek liste Firebase'den geliyor *
 let viewingOtherUid = null;
 let otherProfileReturnTo = 'feed'; // closeOtherProfile geri dönüş hedefi
 
-/* ============================================================
-   ENGELLEME (BLOCK) — ÇİFT YÖNLÜ HAFIZA
-   blocks/{a}/{b} = true  →  a, b'yi engelledi.
-   İki kişi de birbirini görmemeli: ben engellersem o beni göremez,
-   o beni engellerse ben onu göremem. Bu yüzden HEM benim engellediklerimi
-   HEM de beni engelleyenleri hafızada tutuyoruz.
-   ============================================================ */
-let myBlockedSet = new Set();   // benim engellediklerim
-let blockedMeSet = new Set();   // beni engelleyenler
-
-/* İki kişi arasında herhangi bir yönde engel var mı? */
-function isBlockedPair(uid){
-  if(!uid) return false;
-  return myBlockedSet.has(uid) || blockedMeSet.has(uid);
-}
-
-/* Login sonrası iki yönlü engel listelerini canlı dinle.
-   ÖNEMLİ: Bu fonksiyon hiçbir koşulda uygulama açılışını kilitlememeli.
-   Firebase kuralları tüm 'blocks' ağacını okumaya izin vermezse sessizce
-   geç, akışı asla durdurma. */
-function initBlockListeners(myUid){
-  if(!myUid || !fbDb) return;
-  try{
-    // 1) Benim engellediklerim (kendi düğümüm — her zaman okunabilir)
-    fbDb.ref('blocks/' + myUid).on('value', snap=>{
-      try{
-        myBlockedSet = new Set(Object.keys(snap.val() || {}));
-        onBlockSetsChanged();
-      }catch(e){ console.warn('blocks(mine) işlenemedi:', e); }
-    }, err=>{ console.warn('blocks(mine) okunamadı:', err && err.message); });
-  }catch(e){ console.warn('initBlockListeners(mine) hata:', e); }
-
-  try{
-    // 2) Beni engelleyenler — tüm blocks ağacını taramak gerekir.
-    //    Güvenlik kuralları izin vermezse (permission denied) sessizce atla.
-    fbDb.ref('blocks').on('value', snap=>{
-      try{
-        const all = snap.val() || {};
-        const next = new Set();
-        Object.keys(all).forEach(otherUid=>{
-          if(otherUid !== myUid && all[otherUid] && all[otherUid][myUid]){
-            next.add(otherUid);
-          }
-        });
-        blockedMeSet = next;
-        onBlockSetsChanged();
-      }catch(e){ console.warn('blocks(all) işlenemedi:', e); }
-    }, err=>{
-      // En sık görülen durum: kurallar global 'blocks' okumasına izin vermiyor.
-      // Bu normaldir; ben engellediklerimi yine de uygularım, akış kilitlenmez.
-      console.warn('blocks(all) okunamadı (kurallar engelliyor olabilir):', err && err.message);
-    });
-  }catch(e){ console.warn('initBlockListeners(all) hata:', e); }
-}
-
-/* Engel listesi değişince görünür içerikleri tazele */
-function onBlockSetsChanged(){
-  // Sohbet listesini tazele (engellenenler düşsün)
-  try{
-    if(window._lastChatSnap && typeof renderChatRows === 'function'){
-      renderChatRows(window._lastChatSnap);
-    }
-  }catch(e){}
-  try{ rerenderFeedVisibility(); }catch(e){}
-  // Açık olan engelli profili kapat
-  if(viewingOtherUid && isBlockedPair(viewingOtherUid)){
-    const screen = document.getElementById('screenOtherProfile');
-    if(screen && screen.classList.contains('active')){
-      showToast('Bu kullanıcıyla artık etkileşemezsin.');
-      if(typeof closeOtherProfile === 'function') closeOtherProfile();
-    }
-  }
-}
-
-/* Akışta/keşfette engelli kullanıcıların öğelerini gizle.
-   İlgili öğelere data-author-uid eklendiği için tek geçişte süpürüyoruz. */
-function rerenderFeedVisibility(){
-  document.querySelectorAll('[data-author-uid]').forEach(el=>{
-    const uid = el.getAttribute('data-author-uid');
-    el.style.display = isBlockedPair(uid) ? 'none' : '';
-  });
-}
-
 function viewOtherProfile(uid){
+  // Engel kontrolü — engelliyse profili açma
+  if(isMutuallyBlocked(uid)){
+    showToast('⚠️ Bu kullanıcı engelli');
+    return;
+  }
   viewingOtherUid = uid;
   openOtherProfile();
 }
@@ -3981,11 +3878,6 @@ function viewOtherProfile(uid){
 function openOtherProfile(){
   if(!requireFirebase()) return;
   if(!viewingOtherUid) return;
-  // Engelli kullanıcının profili açılmaz
-  if(isBlockedPair(viewingOtherUid)){
-    showToast('Bu kullanıcıyla aranızda engel var, profili görüntülenemez.');
-    return;
-  }
   // Geri dönüş hedefini şu an aktif olan ekrandan al
   const activeScreen = document.querySelector('#main .screen.active');
   if(activeScreen){
@@ -4684,10 +4576,10 @@ function enterAppFromAuth(){
   saveSession();
   // Presence (çevrimiçi durumu)
   if(fbAuth && fbAuth.currentUser) initPresence(fbAuth.currentUser.uid);
-  // Engelleme listelerini başlat (çift yönlü) — asla akışı durdurmasın
-  try{ if(fbAuth && fbAuth.currentUser) initBlockListeners(fbAuth.currentUser.uid); }catch(e){ console.warn('initBlockListeners atlandı:', e); }
   // Bildirim listener'ı başlat - kırmızı badge için
   if(fbAuth && fbAuth.currentUser) initNotifListener();
+  // Engellenenler listesini ön yükle
+  if(fbAuth && fbAuth.currentUser) loadMyBlockList();
   // Hikaye butonuna profil fotoğrafını koy
   setTimeout(updateStoryAvatarBtn, 300);
   // Adayı göster — applyAccountToUI'den SONRA çağırıyoruz,
@@ -5190,56 +5082,48 @@ function initChatListListener(){
   if(chatListMetaRef) chatListMetaRef.off();
   chatListMetaRef = fbDb.ref('chatMeta').orderByChild('users/' + myUid).equalTo(true);
   chatListMetaRef.on('value', (snap)=>{
-    window._lastChatSnap = snap.val() || {};
-    renderChatRows(window._lastChatSnap);
-  });
-}
-
-function renderChatRows(data){
-  if(!fbAuth.currentUser) return;
-  const myUid = fbAuth.currentUser.uid;
-  const body = document.getElementById('chatListBody');
-  if(!body) return;
-  data = data || {};
-  const chatIds = Object.keys(data);
-  if(!chatIds.length){
-    body.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:12.5px;padding:24px 16px;">Henüz hiç sohbetin yok. Sağ üstteki ✛ ile yeni mesaj başlat.</div>';
-    return;
-  }
-  // En son mesaja göre sırala (yeni en üstte)
-  chatIds.sort((a,b) => (data[b].lastTs||0) - (data[a].lastTs||0));
-  Promise.all(chatIds.map(cid => {
-    const peerUid = Object.keys(data[cid].users || {}).find(u => u !== myUid);
-    if(!peerUid) return Promise.resolve(null);
-    return fbDb.ref('users/' + peerUid).once('value').then(s => ({cid, peerUid, peer: s.val() || {}, meta: data[cid]}));
-  })).then((rows)=>{
-    rows = rows.filter(Boolean);
-    // Engelli kullanıcılarla olan sohbetleri listeden tamamen çıkar
-    rows = rows.filter(r => !isBlockedPair(r.peerUid));
-    if(!rows.length){
-      body.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:12.5px;padding:24px 16px;">Henüz hiç sohbetin yok.</div>';
+    const data = snap.val() || {};
+    const chatIds = Object.keys(data);
+    if(!chatIds.length){
+      body.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:12.5px;padding:24px 16px;">Henüz hiç sohbetin yok. Sağ üstteki ✛ ile yeni mesaj başlat.</div>';
       return;
     }
-    body.innerHTML = rows.map(r => {
-      const u = r.peer || {};
-      const isDeleted = u.deleted === true;
-      const fallbackName = u.email ? '@' + u.email.split('@')[0] : '@kullanici';
-      const displayName = isDeleted ? (u.displayName || 'Silinmiş hesap') : (u.username || fallbackName);
-      const photo = u.photo || 'https://i.pravatar.cc/60?img=68';
-      const isUnread = !!(r.meta.unreadFor && r.meta.unreadFor[myUid]);
-      return `
-      <div class="chat-item ${activeChatId===r.cid?'active':''} ${isUnread?'unread':''}" 
-           data-chat-id="${r.cid}" data-peer-uid="${r.peerUid}" 
-           onclick="if(this.style.transform){this.style.transform='';const b=this.querySelector('.swipe-delete-btn');if(b)b.remove();return;}openChatThread('${r.cid}','${r.peerUid}')">
-        <img src="${photo}" onerror="this.src='https://i.pravatar.cc/60?img=68'" style="${isDeleted?'filter:grayscale(1) opacity(0.7);':''}">
-        <div class="meta">
-          <div class="name">${escapeHtml(displayName)}${isUnread?'<span class="unread-dot"></span>':''}</div>
-          <div class="preview">${escapeHtml((r.meta.lastMsg || 'Sohbete başla').toString().slice(0,40))}</div>
-        </div>
-        <span class="chat-time">${formatChatTime(r.meta.lastTs)}</span>
-      </div>`;
-    }).join('');
-    setTimeout(attachSwipeToDelete, 100);
+    // En son mesaja göre sırala (yeni en üstte)
+    chatIds.sort((a,b) => (data[b].lastTs||0) - (data[a].lastTs||0));
+    Promise.all(chatIds.map(cid => {
+      const peerUid = Object.keys(data[cid].users || {}).find(u => u !== myUid);
+      if(!peerUid) return Promise.resolve(null);
+      return fbDb.ref('users/' + peerUid).once('value').then(s => ({cid, peerUid, peer: s.val() || {}, meta: data[cid]}));
+    })).then((rows)=>{
+      rows = rows.filter(Boolean);
+      // Engellenenleri ve beni engelleyenleri filtrele
+      rows = rows.filter(r => !isMutuallyBlocked(r.peerUid));
+      if(!rows.length){
+        body.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:12.5px;padding:24px 16px;">Henüz hiç sohbetin yok.</div>';
+        return;
+      }
+      body.innerHTML = rows.map(r => {
+        const u = r.peer || {};
+        const isDeleted = u.deleted === true;
+        const fallbackName = u.email ? '@' + u.email.split('@')[0] : '@kullanici';
+        const displayName = isDeleted ? (u.displayName || 'Silinmiş hesap') : (u.username || fallbackName);
+        const photo = u.photo || 'https://i.pravatar.cc/60?img=68';
+        const myUid = fbAuth.currentUser.uid;
+        const isUnread = !!(r.meta.unreadFor && r.meta.unreadFor[myUid]);
+        return `
+        <div class="chat-item ${activeChatId===r.cid?'active':''} ${isUnread?'unread':''}" 
+             data-chat-id="${r.cid}" data-peer-uid="${r.peerUid}" 
+             onclick="if(this.style.transform){this.style.transform='';const b=this.querySelector('.swipe-delete-btn');if(b)b.remove();return;}openChatThread('${r.cid}','${r.peerUid}')">
+          <img src="${photo}" onerror="this.src='https://i.pravatar.cc/60?img=68'" style="${isDeleted?'filter:grayscale(1) opacity(0.7);':''}">
+          <div class="meta">
+            <div class="name">${escapeHtml(displayName)}${isUnread?'<span class="unread-dot"></span>':''}</div>
+            <div class="preview">${escapeHtml((r.meta.lastMsg || 'Sohbete başla').toString().slice(0,40))}</div>
+          </div>
+          <span class="chat-time">${formatChatTime(r.meta.lastTs)}</span>
+        </div>`;
+      }).join('');
+      setTimeout(attachSwipeToDelete, 100);
+    });
   });
 }
 
@@ -5252,39 +5136,10 @@ function formatChatTime(ts){
   return Math.floor(diffMin/1440) + 'g';
 }
 
-/* Sohbet yazma alanını aç/kapat (engelli kullanıcıda kapatılır) */
-function setChatComposerEnabled(enabled){
-  const c = document.getElementById('chatComposer');
-  if(!c) return;
-  c.style.opacity = enabled ? '' : '0.45';
-  c.style.pointerEvents = enabled ? '' : 'none';
-  const inp = document.getElementById('msgInput');
-  if(inp){
-    inp.disabled = !enabled;
-    inp.placeholder = enabled ? 'Mesaj...' : 'Engel mevcut — mesaj gönderilemez';
-  }
-}
-
 function openChatThread(chatId, peerUid){
   if(!requireFirebase() || !fbAuth.currentUser) return;
   activeChatId = chatId;
   activeChatPeerUid = peerUid;
-
-  // Engelli kullanıcıyla sohbet açılmaz — mesajları gizle, yazmayı kapat
-  if(isBlockedPair(peerUid)){
-    document.getElementById('dmWrap').classList.add('view-chat');
-    document.getElementById('island').classList.add('chat-fullscreen-hide');
-    document.getElementById('chatName').textContent = 'Engelli kullanıcı';
-    document.getElementById('chatHeadImg').src = 'https://i.pravatar.cc/60?img=68';
-    document.getElementById('chatHeadImg').style.filter = 'grayscale(1) opacity(0.6)';
-    document.getElementById('chatStatus').textContent = '🚫 Engel mevcut';
-    const box = document.getElementById('messagesBox');
-    box.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:13px;padding:32px 18px;line-height:1.6;">Bu kullanıcıyla aranızda engel olduğu için mesajlar görüntülenemez ve mesaj gönderilemez.</div>';
-    setChatComposerEnabled(false);
-    if(activeChatMessagesRef){ activeChatMessagesRef.off(); activeChatMessagesRef = null; }
-    return;
-  }
-  setChatComposerEnabled(true);
 
   document.querySelectorAll('#screenMessages .chat-item').forEach(i=>i.classList.remove('active'));
   fbDb.ref('chatMeta/' + chatId + '/unreadFor/' + fbAuth.currentUser.uid).set(false).catch(()=>{});
@@ -5371,8 +5226,9 @@ function sendMsg(){
   if(!requireFirebase()){ showToast('Bağlantı yok.'); return; }
   if(!fbAuth.currentUser){ showToast('Giriş yapmalısın.'); return; }
   if(!activeChatId){ showToast('Bir sohbet seç.'); return; }
-  if(activeChatPeerUid && isBlockedPair(activeChatPeerUid)){
-    showToast('Bu kullanıcıyla mesajlaşamazsın (engel mevcut).');
+  // Engel kontrolü — engelli kullanıcıya mesaj göndermeyi engelle
+  if(activeChatPeerUid && isMutuallyBlocked(activeChatPeerUid)){
+    showToast('⚠️ Bu kullanıcıyla mesajlaşamazsın (engelli)');
     return;
   }
   input.value = '';
@@ -5412,10 +5268,6 @@ function sendMsg(){
 function sendMedia(ev){
   const file = ev.target.files[0]; if(!file) return;
   if(!requireFirebase() || !fbAuth.currentUser || !activeChatId){ showToast('Bir sohbet seç.'); ev.target.value=''; return; }
-  if(activeChatPeerUid && isBlockedPair(activeChatPeerUid)){
-    showToast('Bu kullanıcıyla mesajlaşamazsın (engel mevcut).');
-    ev.target.value=''; return;
-  }
   const isVideo = file.type.startsWith('video');
   ev.target.value = '';
 
@@ -5608,15 +5460,12 @@ function initFeedListener(){
       const deletedUids = new Set(deletedResults.filter(r => r.deleted).map(r => r.uid));
       const followingUids = new Set(Object.keys(followingMap));
 
-      // Filtrele: silinmemiş VE (kendi postu VEYA takip ettiğim biri) VE engelli değil
+      // Filtrele: silinmemiş VE engelli değil VE (kendi postu VEYA takip ettiğim biri)
       const visibleIds = ids.filter(id => {
         const post = data[id];
         if(!post.uid || deletedUids.has(post.uid)) return false;
-        // Engelli kullanıcının (her iki yön) gönderileri hiç görünmesin
-        if(isBlockedPair(post.uid)) return false;
-        // Kendi postlarım her zaman görünür
+        if(isMutuallyBlocked(post.uid)) return false; // ENGEL FİLTRESİ
         if(post.uid === myUid) return true;
-        // Takip ettiğim biri ise göster
         return followingUids.has(post.uid);
       });
 
@@ -6548,7 +6397,6 @@ function runUserSearch(q){
     const matches = list.filter(u => {
       if(u.uid === myUid) return false; // kendimi listede gösterme
       if(u.blocked) return false;
-      if(isBlockedPair(u.uid)) return false; // engelli kullanıcılar
       const uname = (u.username || '').toLowerCase();
       const bio = (u.bio || '').toLowerCase();
       return uname.includes(q) || bio.includes(q);
@@ -6851,23 +6699,54 @@ function blockUser(){
   ref.once('value').then(snap=>{
     if(snap.exists()){
       // Engeli kaldır
-      ref.remove().then(()=>{
+      Promise.all([
+        ref.remove(),
+        fbDb.ref('blockedBy/' + viewingOtherUid + '/' + myUid).remove()
+      ]).then(()=>{
         closeProfileMenu();
         showToast('Engel kaldırıldı.');
       });
     } else {
-      if(!confirm('Bu kullanıcıyı engellemek istediğine emin misin?')) return;
-      ref.set(true).then(()=>{
-        fbDb.ref('follows/' + myUid + '/' + viewingOtherUid).remove();
-        fbDb.ref('followers/' + viewingOtherUid + '/' + myUid).remove();
-        fbDb.ref('follows/' + viewingOtherUid + '/' + myUid).remove();
-        fbDb.ref('followers/' + myUid + '/' + viewingOtherUid).remove();
+      if(!confirm('Bu kullanıcıyı engellemek istediğine emin misin?\n\nEngellendiğinde:\n• Sana mesaj atamaz\n• Hikaye/gönderilerini göremez\n• Profilini göremez')) return;
+      Promise.all([
+        ref.set(true),
+        // Karşı tarafa da bildir — o da seni göremesin
+        fbDb.ref('blockedBy/' + viewingOtherUid + '/' + myUid).set(true),
+        // Takip ilişkilerini kopar
+        fbDb.ref('follows/' + myUid + '/' + viewingOtherUid).remove(),
+        fbDb.ref('followers/' + viewingOtherUid + '/' + myUid).remove(),
+        fbDb.ref('follows/' + viewingOtherUid + '/' + myUid).remove(),
+        fbDb.ref('followers/' + myUid + '/' + viewingOtherUid).remove(),
+        // Mevcut sohbeti sil
+        fbDb.ref('chats/' + [myUid, viewingOtherUid].sort().join('_')).remove(),
+        fbDb.ref('chatMeta/' + [myUid, viewingOtherUid].sort().join('_')).remove()
+      ]).then(()=>{
         closeProfileMenu();
-        showToast('Kullanıcı engellendi.');
+        showToast('✓ Kullanıcı engellendi.');
         refreshFollowButtonState(viewingOtherUid);
+        // Engel listesini hafızaya al
+        loadMyBlockList();
       });
     }
   });
+}
+
+/* Engellenenler / Engelleyenler listesini yükle - her başka sayfayı render etmeden önce */
+let _myBlocks = new Set();
+let _blockedByMe = new Set();
+function loadMyBlockList(){
+  if(!fbReady || !fbAuth.currentUser) return Promise.resolve();
+  const myUid = fbAuth.currentUser.uid;
+  return Promise.all([
+    fbDb.ref('blocks/' + myUid).once('value'),
+    fbDb.ref('blockedBy/' + myUid).once('value')
+  ]).then(([a, b])=>{
+    _myBlocks = new Set(Object.keys(a.val() || {}));     // benim engellediklerim
+    _blockedByMe = new Set(Object.keys(b.val() || {}));  // beni engelleyenler
+  });
+}
+function isMutuallyBlocked(uid){
+  return _myBlocks.has(uid) || _blockedByMe.has(uid);
 }
 function reportUser(){
   if(!viewingOtherUid || !fbAuth.currentUser) return;
@@ -7140,8 +7019,7 @@ function addStoryTextOverlay(){
   const colors = ['#ffffff','#ef4444','#f59e0b','#10b981','#3b82f6','#a855f7','#ec4899','#000000'];
   const color = colors[Math.floor(Math.random()*colors.length)];
   const id = ++storyTextIdCounter;
-  // Ortaya yerleştir
-  storyTextOverlays.push({id, text:text.trim(), x:50, y:50, color, fontSize:28});
+  storyTextOverlays.push({id, text:text.trim(), x:50, y:50, color, fontSize:32});
   renderStoryTextOverlays();
 }
 
@@ -7151,24 +7029,23 @@ function renderStoryTextOverlays(){
   container.style.pointerEvents = 'none';
   container.innerHTML = storyTextOverlays.map(t => `
     <div class="storyTextItem" data-overlay-id="${t.id}" 
-         style="position:absolute;left:${t.x}%;top:${t.y}%;transform:translate(-50%,-50%);color:${t.color};font-size:${t.fontSize}px;font-weight:700;text-shadow:0 2px 8px rgba(0,0,0,.7);cursor:move;pointer-events:auto;user-select:none;-webkit-user-select:none;padding:6px 12px;max-width:80%;word-break:break-word;text-align:center;background:rgba(0,0,0,.25);border-radius:8px;backdrop-filter:blur(2px);touch-action:none;">
+         style="position:absolute;left:${t.x}%;top:${t.y}%;transform:translate(-50%,-50%);color:${t.color};font-size:${t.fontSize}px;font-weight:700;text-shadow:0 2px 8px rgba(0,0,0,.7);cursor:move;pointer-events:auto;user-select:none;-webkit-user-select:none;padding:6px 12px;max-width:90%;word-break:break-word;text-align:center;background:rgba(0,0,0,.25);border-radius:8px;backdrop-filter:blur(2px);touch-action:none;">
       ${escapeHtml(t.text)}
-      <button onclick="removeStoryTextOverlay(${t.id})" style="position:absolute;top:-10px;right:-10px;background:#ef4444;border:none;border-radius:50%;width:22px;height:22px;color:#fff;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:2;">✕</button>
-      <button onclick="event.stopPropagation();resizeStoryText(${t.id},-4)" ontouchstart="event.stopPropagation();" style="position:absolute;bottom:-12px;left:-12px;background:rgba(0,0,0,.6);border:1px solid rgba(255,255,255,.4);border-radius:50%;width:26px;height:26px;color:#fff;font-size:16px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:2;">−</button>
-      <button onclick="event.stopPropagation();resizeStoryText(${t.id},4)" ontouchstart="event.stopPropagation();" style="position:absolute;bottom:-12px;right:-12px;background:rgba(0,0,0,.6);border:1px solid rgba(255,255,255,.4);border-radius:50%;width:26px;height:26px;color:#fff;font-size:16px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:2;">+</button>
+      <div style="position:absolute;top:-12px;right:-12px;display:flex;gap:4px;">
+        <button onclick="event.stopPropagation();changeStoryTextSize(${t.id}, 1.2)" style="background:#10b981;border:none;border-radius:50%;width:24px;height:24px;color:#fff;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;" title="Büyüt">+</button>
+        <button onclick="event.stopPropagation();changeStoryTextSize(${t.id}, 0.83)" style="background:#3b82f6;border:none;border-radius:50%;width:24px;height:24px;color:#fff;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;" title="Küçült">−</button>
+        <button onclick="event.stopPropagation();removeStoryTextOverlay(${t.id})" style="background:#ef4444;border:none;border-radius:50%;width:24px;height:24px;color:#fff;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;" title="Sil">✕</button>
+      </div>
     </div>
   `).join('');
-  // Sürükleme + parmakla büyütme/küçültme bağla
   container.querySelectorAll('.storyTextItem').forEach(el => bindStoryTextDrag(el));
 }
 
-/* Yazıyı büyüt/küçült ve seçilen boyutu KALICI tut (12–96px) */
-function resizeStoryText(id, delta){
+function changeStoryTextSize(id, factor){
   const overlay = storyTextOverlays.find(t => t.id === id);
   if(!overlay) return;
-  overlay.fontSize = Math.max(12, Math.min(96, (overlay.fontSize || 28) + delta));
-  const el = document.querySelector('.storyTextItem[data-overlay-id="'+id+'"]');
-  if(el) el.style.fontSize = overlay.fontSize + 'px';
+  overlay.fontSize = Math.max(14, Math.min(80, overlay.fontSize * factor));
+  renderStoryTextOverlays();
 }
 
 function removeStoryTextOverlay(id){
@@ -7317,9 +7194,9 @@ function loadStoryStrip(){
         else { myStoryRing.classList.remove('has-story'); if(myStoryLabel) myStoryLabel.textContent='Hikaye Ekle'; }
       }
 
-      // SADECE takip ettiklerimi göster, kendi uid hariç
+      // SADECE takip ettiklerimi göster, kendi uid hariç, engelli olmayanlar
       const otherUids = Object.keys(byUser).filter(uid => 
-        uid !== myUid && followingUids.has(uid)
+        uid !== myUid && followingUids.has(uid) && !isMutuallyBlocked(uid)
       );
       
       if(!otherUids.length){ container.innerHTML=''; return; }
@@ -7759,7 +7636,6 @@ function runGlobalSearch(){
     fbDb.ref('users').limitToFirst(200).once('value').then(snap=>{
       const data = snap.val() || {};
       const uids = Object.keys(data).filter(uid => {
-        if(isBlockedPair(uid)) return false;
         const u = data[uid];
         const uname = (u.username||'').replace(/^@/,'').toLowerCase();
         const dname = (u.displayName||'').toLowerCase();
@@ -8145,7 +8021,6 @@ function initExplore(){
 
 function renderExploreResults(posts){
   const results = document.getElementById('exploreResults');
-  posts = (posts||[]).filter(p => !isBlockedPair(p.uid));
   if(!posts.length){ results.innerHTML='<div class="followListEmpty">Gönderi bulunamadı</div>'; return; }
   results.innerHTML = `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:2px;">
     ${posts.map(p=>`<div class="exploreGridItem" onclick="openExplorePost('${p.id}')">
@@ -8585,7 +8460,6 @@ function loadExploreGrid(){
     const data = snap.val() || {};
     let items = Object.keys(data).map(id=>({...data[id],id}))
       .filter(p => p.media && p.media[0])
-      .filter(p => !isBlockedPair(p.uid))
       .filter(p => exploreCurrentTab === 'photo' ? p.mediaType !== 'video' : true)
       .sort(() => Math.random() - .5);
 
@@ -8647,7 +8521,6 @@ function runExploreSearch(){
   fbDb.ref('posts').once('value').then(snap => {
     const data = snap.val() || {};
     let matched = Object.keys(data).map(id=>({...data[id],id})).filter(p => {
-      if(isBlockedPair(p.uid)) return false;
       const cap = (p.caption||'').toLowerCase();
       const loc = (p.location||'').toLowerCase();
       const user = (p.username||'').toLowerCase();
@@ -8794,58 +8667,58 @@ function messageOtherUserDirectly(peerUid, text){
    ============================================================ */
 const POPULAR_GIFS = {
   'kahkaha': [
-    'https://media.tenor.com/jXTGcOPjvgYAAAAi/laughing.gif',
-    'https://media.tenor.com/Q7iIK5qBhxsAAAAi/lol-laughing.gif',
-    'https://media.tenor.com/QnoQiTGwZxcAAAAi/laugh.gif'
+    'https://media.giphy.com/media/10JhviFuU2gWD6/giphy.gif',
+    'https://media.giphy.com/media/3o7TKsQ8gqVrxZZkbS/giphy.gif',
+    'https://media.giphy.com/media/lJNoBCvQYp7nq/giphy.gif'
   ],
   'aşk': [
-    'https://media.tenor.com/Tm9LH-_aLUkAAAAi/love-heart.gif',
-    'https://media.tenor.com/ZTQDk_C7r6gAAAAi/heart-love.gif',
-    'https://media.tenor.com/h--rZxiruXcAAAAi/love-you.gif'
+    'https://media.giphy.com/media/26tn33aiTi1jkl6H6/giphy.gif',
+    'https://media.giphy.com/media/l0MYt5jPR6QX5pnqM/giphy.gif',
+    'https://media.giphy.com/media/3og0IPxMM0erATueVW/giphy.gif'
   ],
   'mutlu': [
-    'https://media.tenor.com/JxIyOnQuG18AAAAi/happy.gif',
-    'https://media.tenor.com/AnIs7nUMpYsAAAAi/yay.gif',
-    'https://media.tenor.com/0qC3xJq9-pkAAAAi/excited.gif'
+    'https://media.giphy.com/media/chzz1FQgqhytWRWbp3/giphy.gif',
+    'https://media.giphy.com/media/26gscIuW2t8U43OWI/giphy.gif',
+    'https://media.giphy.com/media/3o7btQ0NH6Kl8CxCfK/giphy.gif'
   ],
   'üzgün': [
-    'https://media.tenor.com/EkGgB-3pZX0AAAAi/sad-crying.gif',
-    'https://media.tenor.com/jHzAhqYbgScAAAAi/sad.gif'
+    'https://media.giphy.com/media/L95W4wv8nnb9K/giphy.gif',
+    'https://media.giphy.com/media/9Y5BbDSkSTiY8/giphy.gif'
   ],
   'şaşkın': [
-    'https://media.tenor.com/9wWzN5oOY1cAAAAi/shocked.gif',
-    'https://media.tenor.com/p_E8MQEUm98AAAAi/wow-amazed.gif'
+    'https://media.giphy.com/media/3o7aCSPqXE5C6T8tBC/giphy.gif',
+    'https://media.giphy.com/media/26ufdipQqU2lhNA4g/giphy.gif'
   ],
   'tamam': [
-    'https://media.tenor.com/sAFy7HKvqYIAAAAi/thumbs-up-ok.gif',
-    'https://media.tenor.com/CkY_oNNJSF8AAAAi/ok-okay.gif'
+    'https://media.giphy.com/media/111ebonMs90YLu/giphy.gif',
+    'https://media.giphy.com/media/3oz8xQDC0gh5BqcZdK/giphy.gif'
   ],
   'selam': [
-    'https://media.tenor.com/B2gkX2onUEMAAAAi/hi-hello.gif',
-    'https://media.tenor.com/3eqx-vIY9j8AAAAi/hello-wave.gif'
+    'https://media.giphy.com/media/l46Cy1rHbQ7qg9Lzi/giphy.gif',
+    'https://media.giphy.com/media/3oz8xLd9DJq2l2VFtu/giphy.gif'
   ],
   'teşekkür': [
-    'https://media.tenor.com/sP3UoQ7HqTsAAAAi/thank-you.gif',
-    'https://media.tenor.com/eqYWaG9oQNgAAAAi/thanks.gif'
+    'https://media.giphy.com/media/l3q2K5jinAlChoCLS/giphy.gif',
+    'https://media.giphy.com/media/3o7TKr3nzbh5WgCFxe/giphy.gif'
   ],
   'dans': [
-    'https://media.tenor.com/4_aBGSWPjwUAAAAi/happy-dance.gif',
-    'https://media.tenor.com/Pe2OPaSnyMQAAAAi/party-dance.gif'
+    'https://media.giphy.com/media/l0HlNQ03J5JxX6lva/giphy.gif',
+    'https://media.giphy.com/media/3o7TKMt1VVNkHV2PaE/giphy.gif'
   ],
   'alkış': [
-    'https://media.tenor.com/Z5IIN8RZS2EAAAAi/clap-applause.gif',
-    'https://media.tenor.com/lFsiNlrzVtcAAAAi/clapping.gif'
+    'https://media.giphy.com/media/26FPJGjhefSJuaRhu/giphy.gif',
+    'https://media.giphy.com/media/3oz8xRn3UnVZJP4SDC/giphy.gif'
   ],
   'ateş': [
-    'https://media.tenor.com/ekUz0_TKjLEAAAAi/fire.gif',
-    'https://media.tenor.com/Zo9_Itug9q0AAAAi/lit-fire.gif'
+    'https://media.giphy.com/media/J2awouDsf23R2/giphy.gif',
+    'https://media.giphy.com/media/xUOxf48tHRBQERLnHy/giphy.gif'
   ],
   'gözyaşı': [
-    'https://media.tenor.com/Wr6QBGDmZbcAAAAi/cry.gif'
+    'https://media.giphy.com/media/L95W4wv8nnb9K/giphy.gif'
   ],
   'tepki': [
-    'https://media.tenor.com/wWfNZ-y_2ywAAAAi/facepalm.gif',
-    'https://media.tenor.com/d0AyN-zRwhYAAAAi/eye-roll.gif'
+    'https://media.giphy.com/media/12XMGIWtrHBl5e/giphy.gif',
+    'https://media.giphy.com/media/3o7btT1T9qpQZWhNlK/giphy.gif'
   ]
 };
 function getAllGifs(){
@@ -9685,54 +9558,23 @@ window.hideStoryUser = hideStoryUser;
 window.unhideAllStoryUsers = unhideAllStoryUsers;
 
 function bootApp(){
-  try{ initTheme(); }catch(err){ console.warn('initTheme hatası:', err); }
+  initTheme();
   try{
     // Önce: sosyal giriş redirect'inden döndüysek sonuçları topla
     checkSocialSignInRedirect();
     initAuthState();
   }catch(err){
     console.error('initAuthState hatası:', err);
-    try{
-      document.getElementById('screenFeed').classList.add('active');
-      document.getElementById('island').classList.remove('hidden');
-    }catch(e){}
+    document.getElementById('screenFeed').classList.add('active');
+    document.getElementById('island').classList.remove('hidden');
   }
-  // Splash'i HER KOŞULDA kaldır — başlangıçta ne olursa olsun ekran açık kalsın
-  const removeSplash = ()=>{
-    const splash = document.getElementById('appSplash');
-    if(!splash) return;
+  const splash = document.getElementById('appSplash');
+  setTimeout(()=>{
     splash.classList.add('hide');
-    setTimeout(()=>{ if(splash && splash.parentNode) splash.remove(); }, 550);
-  };
-  setTimeout(removeSplash, 900);
-  // Emniyet kemeri: 4 saniye sonra splash hâlâ duruyorsa zorla kaldır
-  setTimeout(removeSplash, 4000);
-
-  // SİYAH EKRAN KORUMASI: boot sonrası hiçbir ekran aktif değilse login'i zorla göster.
-  // Birkaç kez kontrol et — Firebase auth durumu biraz geç gelebilir.
-  const ensureScreenVisible = ()=>{
-    try{
-      const anyActive = document.querySelector('#main .screen.active');
-      if(!anyActive){
-        document.querySelectorAll('#main .screen').forEach(s=>s.classList.remove('active'));
-        const reg = document.getElementById('screenRegister');
-        if(reg) reg.classList.add('active');
-        if(typeof switchAuthTab === 'function') switchAuthTab('login');
-        const isl = document.getElementById('island');
-        if(isl) isl.classList.add('hidden');
-      }
-    }catch(e){ console.warn('ensureScreenVisible:', e); }
-  };
-  setTimeout(ensureScreenVisible, 1200);
-  setTimeout(ensureScreenVisible, 3000);
-  setTimeout(ensureScreenVisible, 5000);
+    setTimeout(()=>splash.remove(), 550);
+  }, 900);
 }
-// DOM hazır olduğunda başlat (script body sonunda ama yine de garanti altına alıyoruz)
-if(document.readyState === 'loading'){
-  document.addEventListener('DOMContentLoaded', bootApp);
-} else {
-  bootApp();
-}
+bootApp();
 </script>
 </body>
 </html>
