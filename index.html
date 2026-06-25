@@ -1010,20 +1010,21 @@ body.light-mode #screenRegister .spam-warning{background:linear-gradient(135deg,
 
 /* Telegram tarzı süreli fotoğraf mesajı */
 .ephemeral-msg-card{
-  position:relative;width:200px;height:200px;border-radius:18px;overflow:hidden;
+  position:relative;width:170px;max-width:62vw;aspect-ratio:1/1;border-radius:18px;overflow:hidden;
   background:linear-gradient(135deg,#1e1e3f,#2a1a4a);
   display:flex;align-items:center;justify-content:center;cursor:pointer;
   border:2px solid rgba(245,158,11,.4);
 }
 .ephemeral-msg-icon{
-  font-size:48px;color:#f59e0b;
+  font-size:42px;color:#f59e0b;
   filter:drop-shadow(0 0 12px rgba(245,158,11,.5));
 }
 .ephemeral-msg-label{
-  position:absolute;bottom:14px;left:0;right:0;text-align:center;
-  color:#fff;font-size:12px;font-weight:600;
+  position:absolute;bottom:0;left:0;right:0;text-align:center;
+  color:#fff;font-size:11px;font-weight:600;
   background:linear-gradient(transparent,rgba(0,0,0,.6));
-  padding:20px 8px 8px;
+  padding:18px 6px 8px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
 .ephemeral-msg-card.expired{
   border-color:rgba(255,255,255,.15);
@@ -1070,8 +1071,9 @@ body.light-mode #screenRegister .spam-warning{background:linear-gradient(135deg,
 .msgSwipeWrap.theirs{align-items:flex-start;}
 .msgSwipeInner{display:inline-flex;flex-direction:column;max-width:78%;will-change:transform;}
 .msgSwipeWrap.mine .msgSwipeInner{align-items:flex-end;}
-/* Foto/GIF/video kartı içeren inner daralmasın — kart kendi sabit boyutunu korur */
-.msgSwipeInner:has(.chat-photo-card){max-width:none;}
+/* Foto/GIF/video/süreli kartı içeren inner daralmasın — kart kendi sabit boyutunu korur */
+.msgSwipeInner:has(.chat-photo-card),
+.msgSwipeInner:has(.ephemeral-msg-card){max-width:none;}
 .msgReplyIcon{
   position:absolute;right:10px;top:50%;transform:translateY(-50%);
   font-size:20px;color:var(--accent);opacity:0;pointer-events:none;
@@ -8486,26 +8488,26 @@ NAV_MAP['reels'] = 'screenMomentFeed';
    ============================================================ */
 function renderEphemeralMsg(msgId, m, isMine, timeStr, chatId){
   const views = m.viewCount || 0;
-  const align = isMine ? 'align-self:flex-end;' : '';
+  const align = isMine ? 'align-self:flex-end;align-items:flex-end;' : 'align-self:flex-start;align-items:flex-start;';
   const secs = m.ephemeralSecs;
-  const label = secs === -1 ? '1 Kez' : (secs > 0 ? secs + ' Saniye' : 'Süreli');
-  
+  const label = secs === -1 ? '1 Kez' : (secs > 0 ? secs + ' sn' : 'Süreli');
+
   if(views >= 1 || m.expired){
-    return `<div class="msg-media" style="${align}">
+    return `<div style="display:flex;flex-direction:column;${align}">
       <div class="ephemeral-msg-card expired">
-        <span class="ephemeral-msg-icon" style="font-size:42px;">👁️</span>
+        <span class="ephemeral-msg-icon">👁️</span>
         <div class="ephemeral-msg-label" style="color:#888;">Görüntülendi</div>
       </div>
-      <div style="font-size:10px;color:var(--muted);margin-top:3px;text-align:${isMine?'right':'left'};">${timeStr}</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:3px;">${timeStr}</div>
     </div>`;
   }
-  
-  return `<div class="msg-media" style="${align}">
+
+  return `<div style="display:flex;flex-direction:column;${align}">
     <div class="ephemeral-msg-card" onclick="openEphemeralPhoto('${msgId}','${chatId}')">
       <span class="ephemeral-msg-icon">🔥</span>
-      <div class="ephemeral-msg-label">📷 Fotoğrafı Aç · ${label}</div>
+      <div class="ephemeral-msg-label">📷 Aç · ${label}</div>
     </div>
-    <div style="font-size:10px;color:var(--muted);margin-top:3px;text-align:${isMine?'right':'left'};">${timeStr}</div>
+    <div style="font-size:10px;color:var(--muted);margin-top:3px;">${timeStr}</div>
   </div>`;
 }
 
