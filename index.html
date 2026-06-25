@@ -1032,9 +1032,10 @@ body.light-mode #screenRegister .spam-warning{background:linear-gradient(135deg,
   background:transparent;margin:4px 0;
 }
 .chat-photo-card img,.chat-photo-card video{
-  width:100%;height:auto;max-height:340px;
-  object-fit:cover;display:block;
+  width:100%;max-width:260px;height:auto;max-height:340px;min-height:120px;
+  object-fit:contain;display:block;
   border-radius:24px;cursor:pointer;
+  background:var(--surface-2);
 }
 .chat-photo-time{
   font-size:10px;color:var(--muted);
@@ -7162,16 +7163,34 @@ function loadStoryStrip(){
           return true;
         });
         if(!visibleUsers.length){ container.innerHTML=''; return; }
-        container.innerHTML = visibleUsers.map(({uid,user})=>{
+        // LocalStorage'da kullanıcının gizlediği UID'leri al
+        let hiddenUids = [];
+        try { hiddenUids = JSON.parse(localStorage.getItem('hiddenStoryUsers') || '[]'); } catch(e){}
+        const hiddenSet = new Set(hiddenUids);
+        const finalUsers = visibleUsers.filter(({uid}) => !hiddenSet.has(uid));
+        if(!finalUsers.length){ container.innerHTML=''; return; }
+        container.innerHTML = finalUsers.map(({uid,user})=>{
           const stories = byUser[uid].sort((a,b)=>a.ts-b.ts);
           const first = stories[0];
           const photo = user.photo || first.userPhoto || 'https://i.pravatar.cc/60?img=68';
           const uname = (user.username||first.username||'@kullanici').replace(/^@/,'').slice(0,10);
-          return `<div class="momentStripItem" onclick="viewUserStories('${uid}')">
+          return `<div class="momentStripItem" oncontextmenu="event.preventDefault();hideStoryUser('${uid}','${escapeHtml(uname)}');return false;" onclick="viewUserStories('${uid}')">
             <div class="storyAvatarRing"><img src="${photo}" onerror="this.src='https://i.pravatar.cc/60?img=68'"></div>
             <span class="momentStripLabel">${uname}</span>
           </div>`;
         }).join('');
+        // Uzun basma bağla (mobil için)
+        container.querySelectorAll('.momentStripItem').forEach((el, idx) => {
+          let pressTimer = null;
+          el.addEventListener('touchstart', () => {
+            pressTimer = setTimeout(()=>{
+              const u = finalUsers[idx];
+              if(u) hideStoryUser(u.uid, u.user.username || '@kullanici');
+            }, 600);
+          });
+          el.addEventListener('touchend', () => { if(pressTimer) clearTimeout(pressTimer); });
+          el.addEventListener('touchmove', () => { if(pressTimer) clearTimeout(pressTimer); });
+        });
       });
     });
   }).catch(()=>{});
@@ -9096,110 +9115,165 @@ let _pendingPhotoIsVideo = false;
 let _pendingPhotoEphemeral = false;
 
 function openPhotoPreview(ev){
-  const file = ev.target.files[0];
+  // Hem event hem string (dataUrl) ile çağrılabilir — backwards compat
+  let file = null;
+  let isVideo = false;
+  
+  if(typeof ev === 'string'){
+    // Direkt dataUrl ile çağrılıyor (eski sendMedia akışı için)
+    _pendingPhotoFile = null;
+    _pendingPhotoDataUrl = ev;
+    _pendingPhotoIsVideo = false;
+    showPhotoPreviewOverlay();
+    return;
+  }
+  
+  // Normal event akışı (dmFile onchange'den)
+  if(!ev || !ev.target || !ev.target.files) return;
+  file = ev.target.files[0];
   if(!file) return;
   if(!activeChatId){ showToast('Bir sohbet seç.'); ev.target.value=''; return; }
   ev.target.value = '';
-
+  
+  isVideo = file.type.startsWith('video');
   _pendingPhotoFile = file;
-  _pendingPhotoIsVideo = file.type.startsWith('video');
-  _pendingPhotoEphemeral = false;
-
+  _pendingPhotoIsVideo = isVideo;
+  
   const reader = new FileReader();
   reader.onload = e => {
     _pendingPhotoDataUrl = e.target.result;
-    const img = document.getElementById('photoPreviewImg');
-    const vid = document.getElementById('photoPreviewVid');
-    if(_pendingPhotoIsVideo){
-      img.style.display='none';
-      vid.style.display=''; vid.src = e.target.result;
-    } else {
-      vid.style.display='none'; vid.src='';
-      img.style.display=''; img.src = e.target.result;
-    }
-    // Süreli toggle'ı resetle (video için kapalı)
-    const epBtn = document.getElementById('photoEphemeralBtn');
-    const epLabel = document.getElementById('photoEphemeralLabel');
-    if(epBtn) epBtn.classList.remove('active');
-    if(epLabel) epLabel.textContent = 'Normal';
-    // Video için süreli butonu gizle
-    if(epBtn) epBtn.style.display = _pendingPhotoIsVideo ? 'none' : 'flex';
-    
-    document.getElementById('photoPreviewCaption').value = '';
-    document.getElementById('photoPreviewOverlay').classList.remove('hidden');
-    setTimeout(()=>document.getElementById('photoPreviewCaption').focus(), 300);
+    showPhotoPreviewOverlay();
   };
   reader.readAsDataURL(file);
 }
 
+// Aktif overlay'i her seferinde yeniden oluştur (her seferinde temiz)
+function showPhotoPreviewOverlay(){
+  if(!_pendingPhotoDataUrl) return;
+  _pendingPhotoEphemeral = 0; // 0=Normal, -1=1 Kez, >0=Saniye
+  
+  // Önceki overlay'i kaldır
+  const old = document.getElementById('photoPreviewDynamicOverlay');
+  if(old) old.remove();
+  
+  const overlay = document.createElement('div');
+  overlay.id = 'photoPreviewDynamicOverlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:#000;z-index:600;display:flex;flex-direction:column;';
+  
+  const mediaHTML = _pendingPhotoIsVideo
+    ? `<video src="${_pendingPhotoDataUrl}" controls playsinline autoplay style="max-width:100%;max-height:100%;object-fit:contain;border-radius:8px;"></video>`
+    : `<img src="${_pendingPhotoDataUrl}" style="max-width:100%;max-height:100%;object-fit:contain;border-radius:8px;">`;
+  
+  // Süreli butonları — sadece resim için göster
+  const ephemeralButtons = _pendingPhotoIsVideo ? '' : `
+    <div id="ephemeralOptionsBar" style="display:flex;gap:6px;margin-bottom:10px;justify-content:center;flex-wrap:wrap;">
+      <button onclick="setPhotoEphemeral(0)" id="ephOpt0" class="ephOptBtn active">Normal</button>
+      <button onclick="setPhotoEphemeral(3)" id="ephOpt3" class="ephOptBtn">🔥 3sn</button>
+      <button onclick="setPhotoEphemeral(5)" id="ephOpt5" class="ephOptBtn">🔥 5sn</button>
+      <button onclick="setPhotoEphemeral(10)" id="ephOpt10" class="ephOptBtn">🔥 10sn</button>
+      <button onclick="setPhotoEphemeral(-1)" id="ephOptOnce" class="ephOptBtn">🔥 1 Kez</button>
+    </div>
+  `;
+  
+  overlay.innerHTML = `
+    <div style="padding:14px 16px;display:flex;justify-content:space-between;align-items:center;background:rgba(0,0,0,.5);">
+      <button onclick="closePhotoPreview()" style="background:rgba(255,255,255,.1);border:none;border-radius:50%;width:40px;height:40px;color:#fff;font-size:22px;cursor:pointer;">✕</button>
+      <span style="color:#fff;font-weight:600;font-size:15px;">Fotoğraf Gönder</span>
+      <div style="width:40px;"></div>
+    </div>
+    <div style="flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:10px;">
+      ${mediaHTML}
+    </div>
+    <div style="padding:12px 16px 24px;background:rgba(0,0,0,.5);">
+      ${ephemeralButtons}
+      <div style="display:flex;gap:8px;align-items:center;">
+        <input type="text" id="photoPreviewCaptionDynamic" placeholder="Açıklama ekle..." maxlength="200" style="flex:1;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.2);border-radius:24px;padding:12px 18px;color:#fff;font-size:14px;outline:none;" onkeydown="if(event.key==='Enter')sendPhotoFromPreview()">
+        <button onclick="sendPhotoFromPreview()" style="background:var(--gradient-vivid);border:none;border-radius:50%;width:48px;height:48px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#fff;flex-shrink:0;">
+          <svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22"><path d="M3 11l18-8-8 18-2-8-8-2z"/></svg>
+        </button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  setTimeout(() => {
+    const inp = document.getElementById('photoPreviewCaptionDynamic');
+    if(inp) inp.focus();
+  }, 200);
+}
+
 function closePhotoPreview(){
-  document.getElementById('photoPreviewOverlay').classList.add('hidden');
+  const old = document.getElementById('photoPreviewDynamicOverlay');
+  if(old) old.remove();
+  // Eski static overlay'i de kapat (varsa)
+  const staticOverlay = document.getElementById('photoPreviewOverlay');
+  if(staticOverlay) staticOverlay.classList.add('hidden');
   _pendingPhotoFile = null;
   _pendingPhotoDataUrl = null;
   _pendingPhotoIsVideo = false;
-  _pendingPhotoEphemeral = false;
-  const vid = document.getElementById('photoPreviewVid');
-  if(vid){ vid.pause(); vid.src = ''; }
+  _pendingPhotoEphemeral = 0;
+}
+
+function setPhotoEphemeral(secs){
+  _pendingPhotoEphemeral = secs;
+  document.querySelectorAll('.ephOptBtn').forEach(b => b.classList.remove('active'));
+  const id = secs === 0 ? 'ephOpt0' : (secs === -1 ? 'ephOptOnce' : 'ephOpt' + secs);
+  const el = document.getElementById(id);
+  if(el) el.classList.add('active');
 }
 
 function togglePhotoEphemeral(){
-  _pendingPhotoEphemeral = !_pendingPhotoEphemeral;
-  const btn = document.getElementById('photoEphemeralBtn');
-  const label = document.getElementById('photoEphemeralLabel');
-  if(_pendingPhotoEphemeral){
-    btn.classList.add('active');
-    if(label) label.textContent = '1 Kez';
-    showToast('🔥 Süreli fotoğraf: 1 kez görüntülenebilir');
-  } else {
-    btn.classList.remove('active');
-    if(label) label.textContent = 'Normal';
-  }
+  // Eski callsite uyumluluğu — 1 Kez moduna geç
+  setPhotoEphemeral(_pendingPhotoEphemeral === -1 ? 0 : -1);
 }
 
 function sendPhotoFromPreview(){
   if(!_pendingPhotoDataUrl || !activeChatId || !fbAuth.currentUser){
     showToast('Sohbet açık değil'); return;
   }
-  const caption = (document.getElementById('photoPreviewCaption').value||'').trim();
-  const isEphemeral = _pendingPhotoEphemeral;
+  // Dinamik input önce, yoksa static input
+  const capEl = document.getElementById('photoPreviewCaptionDynamic') || document.getElementById('photoPreviewCaption');
+  const caption = capEl ? (capEl.value||'').trim() : '';
+  const ephSecs = _pendingPhotoEphemeral || 0; // 0/-1/>0
   const isVideo = _pendingPhotoIsVideo;
   const peerUid = activeChatPeerUid;
   const chatId = activeChatId;
+  const dataUrl = _pendingPhotoDataUrl;
+  const fileRef = _pendingPhotoFile;
   
-  // Önce overlay'i kapat (kullanıcı bekletilmesin)
+  // Overlay'i hemen kapat
   closePhotoPreview();
-  showToast(isEphemeral ? '🔥 Süreli fotoğraf gönderiliyor...' : 'Gönderiliyor...');
-
-  const send = (url) => {
+  showToast(ephSecs !== 0 ? '🔥 Süreli fotoğraf gönderiliyor...' : 'Gönderiliyor...');
+  
+  const sendMsg = (mediaUrl) => {
     const ts = Date.now();
     const msgData = {
       from: fbAuth.currentUser.uid,
-      mediaUrl: url,
-      mediaType: isEphemeral ? 'ephemeral' : (isVideo ? 'video' : 'image'),
+      mediaUrl,
+      mediaType: ephSecs !== 0 ? 'ephemeral' : (isVideo ? 'video' : 'image'),
       ts
     };
-    if(isEphemeral){ msgData.ephemeralSecs = 5; msgData.viewCount = 0; }
+    if(ephSecs !== 0) msgData.ephemeralSecs = ephSecs;
     if(caption) msgData.caption = caption;
-
+    
     const msgRef = fbDb.ref('chats/' + chatId + '/messages').push();
-    ensureChatMeta(chatId, peerUid).then(()=>{
-      return msgRef.set(msgData);
-    }).then(()=>{
-      const lastMsgText = isEphemeral ? '🔥 Süreli fotoğraf' : (isVideo ? '🎥 Video' : '📷 Fotoğraf');
-      const update = { lastMsg: caption || lastMsgText, lastTs: ts, lastSenderUid: fbAuth.currentUser.uid };
+    ensureChatMeta(chatId, peerUid).then(()=> msgRef.set(msgData)).then(()=>{
+      const lastMsg = ephSecs !== 0 ? '🔥 Süreli fotoğraf' : (isVideo ? '🎥 Video' : '📷 Fotoğraf');
+      const update = { lastMsg: caption || lastMsg, lastTs: ts, lastSenderUid: fbAuth.currentUser.uid };
       update['unreadFor/' + peerUid] = true;
       fbDb.ref('chatMeta/' + chatId).update(update);
-    }).catch(()=> showToast('Gönderilemedi'));
+    }).catch(err => {
+      console.error('Mesaj gönderme hatası:', err);
+      showToast('Gönderilemedi: ' + (err.message||''));
+    });
   };
-
+  
   if(isVideo){
     if(!fbStorage){ showToast('Video için Firebase Storage gerekli.'); return; }
     const path = 'chatMedia/'+chatId+'/'+Date.now()+'.mp4';
-    fbStorage.ref().child(path).put(_pendingPhotoFile)
-      .then(s=>s.ref.getDownloadURL()).then(send)
-      .catch(()=>showToast('Video gönderilemedi.'));
+    fbStorage.ref().child(path).put(fileRef).then(s=>s.ref.getDownloadURL()).then(sendMsg)
+      .catch(()=> showToast('Video gönderilemedi.'));
   } else {
-    compressForChat(_pendingPhotoDataUrl).then(send);
+    compressForChat(dataUrl).then(sendMsg);
   }
 }
 
@@ -9401,6 +9475,31 @@ function showStoryViewersList(storyId){
     });
   });
 }
+
+/* ============================================================
+   HİKAYE ŞERİDİNDEN KULLANICI GİZLEME
+   Uzun bas / sağ tık → "Bu hesabı gizle" — LocalStorage'da tutulur
+   ============================================================ */
+function hideStoryUser(uid, displayName){
+  if(!uid) return;
+  const name = displayName || 'bu kullanıcı';
+  if(!confirm(`"${name}" hesabını hikaye şeridinden gizlemek istediğine emin misin?\n\nBu kişi senin için artık görünmeyecek (sadece hikayede). Geri almak için Profil → Ayarlar.`)) return;
+  let hidden = [];
+  try { hidden = JSON.parse(localStorage.getItem('hiddenStoryUsers') || '[]'); } catch(e){}
+  if(!hidden.includes(uid)) hidden.push(uid);
+  localStorage.setItem('hiddenStoryUsers', JSON.stringify(hidden));
+  showToast('✓ Hesap hikayelerden gizlendi');
+  loadStoryStrip();
+}
+
+function unhideAllStoryUsers(){
+  localStorage.removeItem('hiddenStoryUsers');
+  showToast('✓ Tüm gizli hesaplar geri açıldı');
+  loadStoryStrip();
+}
+
+window.hideStoryUser = hideStoryUser;
+window.unhideAllStoryUsers = unhideAllStoryUsers;
 
 function bootApp(){
   initTheme();
