@@ -1712,7 +1712,7 @@ tbody tr:hover{background:var(--surface-2);}
 
     <!-- ================= EKRAN 1: NeXT GİRİŞ / KAYIT ================= -->
     <div class="screen" id="screenRegister">
-      <div id="screenRegisterInner" style="flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding:32px 16px 160px;">
+      <div id="screenRegisterInner" style="flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding:32px 16px 220px;">
       <div style="min-height:100%;display:flex;align-items:flex-start;justify-content:center;">
       <div class="card">
         <div class="auth-top-bar">
@@ -1830,7 +1830,7 @@ tbody tr:hover{background:var(--surface-2);}
                 <div class="err" id="err-username">Kullanıcı adı en az 3 karakter olmalı.</div></div>
 
               <!-- Butonlar sayfanın altında sabit -->
-              <div style="height:80px;"></div>
+              <div style="height:140px;"></div>
             </div>
 
             <div class="regstep" id="reg3">
@@ -9606,6 +9606,15 @@ function bootApp(){
     setTimeout(()=>splash.remove(), 550);
   }, 900);
 }
+/* Kayıt ekranındaki inputlara focus olunca görünür alana kaydır */
+document.querySelectorAll('#screenRegister input').forEach(inp => {
+  inp.addEventListener('focus', () => {
+    setTimeout(() => {
+      inp.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 300);
+  });
+});
+
 bootApp();
 </script>
 
