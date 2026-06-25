@@ -611,7 +611,6 @@ body.light-mode #screenRegister::after{opacity:.4;}
 #screenRegisterInner{position:relative;z-index:1;}
 
 /* Auth kartı — tam glassmorphism + parlayan kenar */
-#screenRegister .card{overflow:visible;}
 #screenRegister .card{
   background:var(--glass-bg);
   border:1px solid var(--glass-border);
@@ -1692,8 +1691,9 @@ tbody tr:hover{background:var(--surface-2);}
 
     <!-- ================= EKRAN 1: NeXT GİRİŞ / KAYIT ================= -->
     <div class="screen" id="screenRegister">
-      <div id="screenRegisterInner" style="position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;display:flex;align-items:flex-start;justify-content:center;padding:32px 16px calc(100px + env(safe-area-inset-bottom));">
-      <div class="card" style="margin:auto 0;">
+      <div id="screenRegisterInner" style="height:100%;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding:32px 16px 60px;">
+      <div style="min-height:100%;display:flex;align-items:center;justify-content:center;">
+      <div class="card">
         <div class="auth-top-bar">
           <button class="theme-corner-btn" onclick="applyTheme('light')" title="Aydınlık Mod">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>
@@ -1862,6 +1862,7 @@ tbody tr:hover{background:var(--surface-2);}
           </div>
         </div>
 
+      </div>
       </div>
       </div>
     </div>
