@@ -1809,8 +1809,8 @@ tbody tr:hover{background:var(--surface-2);}
                 <div class="username-hint" id="usernameHint" style="display:none;"></div>
                 <div class="err" id="err-username">Kullanıcı adı en az 3 karakter olmalı.</div></div>
 
-              <div class="row" style="margin-top:18px;"><button class="btn btn-ghost" onclick="goReg(1)">Geri</button><button class="btn btn-primary" id="createAccountBtn" onclick="createAccountAndSendVerification()">Hesabı Oluştur</button></div>
-              <div style="height:60px;"></div>
+              <!-- Butonlar sayfanın altında sabit -->
+              <div style="height:80px;"></div>
             </div>
 
             <div class="regstep" id="reg3">
@@ -1866,6 +1866,13 @@ tbody tr:hover{background:var(--surface-2);}
 
       </div>
       </div>
+      </div>
+      <!-- SABİT ALT BUTON BAR — sadece reg2 aktifken görünür -->
+      <div id="regStickyButtons" style="display:none;position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,var(--surface) 30%);padding:20px 16px calc(16px + env(safe-area-inset-bottom));z-index:50;pointer-events:none;">
+        <div style="max-width:460px;margin:0 auto;display:flex;gap:10px;pointer-events:auto;">
+          <button class="btn btn-ghost" onclick="goReg(1)" style="flex:1;">Geri</button>
+          <button class="btn btn-primary" id="createAccountBtn" onclick="createAccountAndSendVerification()" style="flex:1.5;">Hesabı Oluştur</button>
+        </div>
       </div>
     </div>
 
@@ -2941,6 +2948,14 @@ function goReg(n){
   document.getElementById('reg'+n).classList.add('active');
   document.querySelectorAll('.rail .seg').forEach((s,i)=>s.classList.toggle('on', i < n));
   document.getElementById('stepLabel').textContent = 'ADIM '+n+' / 4';
+  // Sabit alt buton bar - sadece adım 2'de göster
+  const stickyBtns = document.getElementById('regStickyButtons');
+  if(stickyBtns){
+    stickyBtns.style.display = (n === 2) ? 'block' : 'none';
+  }
+  // İlk açılış: ekranı yukarı scroll
+  const inner = document.getElementById('screenRegisterInner');
+  if(inner) inner.scrollTop = 0;
 }
 
 function switchAuthTab(which){
