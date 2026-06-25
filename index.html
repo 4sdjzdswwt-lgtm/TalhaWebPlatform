@@ -2,6 +2,30 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
+<script>
+/* GÖRÜNÜR HATA YAKALAYICI — siyah/boş ekran yerine hatayı ekranda göster.
+   Sorunu bulduktan sonra bu blok kaldırılabilir. */
+(function(){
+  function showFatal(msg){
+    try{
+      var d=document.getElementById('__fatal');
+      if(!d){
+        d=document.createElement('div');
+        d.id='__fatal';
+        d.style.cssText='position:fixed;inset:0;z-index:999999;background:#111;color:#fff;font:13px/1.5 monospace;padding:20px;overflow:auto;white-space:pre-wrap;';
+        (document.body||document.documentElement).appendChild(d);
+      }
+      d.textContent += msg + '\n\n';
+    }catch(e){}
+  }
+  window.addEventListener('error', function(ev){
+    showFatal('HATA: ' + (ev.message||'') + '\n@ ' + (ev.filename||'') + ':' + (ev.lineno||'') + ':' + (ev.colno||''));
+  });
+  window.addEventListener('unhandledrejection', function(ev){
+    showFatal('PROMISE HATASI: ' + (ev.reason && (ev.reason.message||ev.reason) || 'bilinmiyor'));
+  });
+})();
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>NeXT — Anları yalnız değil, birlikte yakala</title>
 
@@ -9683,6 +9707,25 @@ function bootApp(){
   setTimeout(removeSplash, 900);
   // Emniyet kemeri: 4 saniye sonra splash hâlâ duruyorsa zorla kaldır
   setTimeout(removeSplash, 4000);
+
+  // SİYAH EKRAN KORUMASI: boot sonrası hiçbir ekran aktif değilse login'i zorla göster.
+  // Birkaç kez kontrol et — Firebase auth durumu biraz geç gelebilir.
+  const ensureScreenVisible = ()=>{
+    try{
+      const anyActive = document.querySelector('#main .screen.active');
+      if(!anyActive){
+        document.querySelectorAll('#main .screen').forEach(s=>s.classList.remove('active'));
+        const reg = document.getElementById('screenRegister');
+        if(reg) reg.classList.add('active');
+        if(typeof switchAuthTab === 'function') switchAuthTab('login');
+        const isl = document.getElementById('island');
+        if(isl) isl.classList.add('hidden');
+      }
+    }catch(e){ console.warn('ensureScreenVisible:', e); }
+  };
+  setTimeout(ensureScreenVisible, 1200);
+  setTimeout(ensureScreenVisible, 3000);
+  setTimeout(ensureScreenVisible, 5000);
 }
 // DOM hazır olduğunda başlat (script body sonunda ama yine de garanti altına alıyoruz)
 if(document.readyState === 'loading'){
