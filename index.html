@@ -1048,13 +1048,14 @@ body.light-mode #screenRegister .spam-warning{background:linear-gradient(135deg,
   box-shadow:0 2px 8px rgba(124,58,237,.4);
 }
 .chat-photo-card{
-  width:240px;max-width:70vw;border-radius:24px;overflow:hidden;
+  width:240px !important;max-width:70vw !important;border-radius:24px;overflow:hidden;
   position:relative;display:inline-block;
-  background:transparent;margin:4px 0;
+  background:transparent;margin:4px 0;flex-shrink:0;
 }
 .chat-photo-card img,.chat-photo-card video{
-  width:100%;aspect-ratio:1/1;height:auto;
-  object-fit:cover;display:block;
+  width:100% !important;aspect-ratio:1/1 !important;height:auto !important;
+  max-width:none !important;max-height:none !important;min-height:0 !important;
+  object-fit:cover !important;display:block;
   border-radius:24px;cursor:pointer;
   background:var(--surface-2);
 }
@@ -1062,6 +1063,55 @@ body.light-mode #screenRegister .spam-warning{background:linear-gradient(135deg,
   font-size:10px;color:var(--muted);
   text-align:right;padding:2px 6px 0;
 }
+
+/* ===== MESAJ JESTLERİ: sola kaydır → yanıtla, uzun bas → menü ===== */
+.msgSwipeWrap{position:relative;display:flex;flex-direction:column;width:100%;}
+.msgSwipeWrap.mine{align-items:flex-end;}
+.msgSwipeWrap.theirs{align-items:flex-start;}
+.msgSwipeInner{display:inline-flex;flex-direction:column;max-width:78%;will-change:transform;}
+.msgSwipeWrap.mine .msgSwipeInner{align-items:flex-end;}
+/* Foto/GIF/video kartı içeren inner daralmasın — kart kendi sabit boyutunu korur */
+.msgSwipeInner:has(.chat-photo-card){max-width:none;}
+.msgReplyIcon{
+  position:absolute;right:10px;top:50%;transform:translateY(-50%);
+  font-size:20px;color:var(--accent);opacity:0;pointer-events:none;
+  transition:opacity .15s;
+}
+/* Mesaj içindeki yanıt önizlemesi */
+.msgReplyPreview{
+  border-left:3px solid var(--accent);
+  background:rgba(124,58,237,.12);
+  border-radius:8px;padding:5px 9px;margin-bottom:5px;
+  max-width:220px;overflow:hidden;
+}
+.msg.me .msgReplyPreview{background:rgba(255,255,255,.18);border-left-color:rgba(255,255,255,.7);}
+.msgReplyWho{font-size:10.5px;font-weight:700;color:var(--accent);margin-bottom:1px;}
+.msg.me .msgReplyWho{color:rgba(255,255,255,.9);}
+.msgReplyText{font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.msg.me .msgReplyText{color:rgba(255,255,255,.8);}
+.chat-photo-card .msgReplyPreview{margin:6px 8px 0;max-width:none;}
+
+/* Mesaj seçenek menüsü (bottom sheet) */
+.msgActSheet{
+  width:100%;max-width:460px;background:var(--surface);
+  border:1px solid var(--line);border-top-left-radius:22px;border-top-right-radius:22px;
+  padding:10px 14px calc(20px + env(safe-area-inset-bottom,0px));
+  animation:msgSheetUp .22s cubic-bezier(.2,.8,.2,1);
+}
+@keyframes msgSheetUp{from{transform:translateY(100%);}to{transform:translateY(0);}}
+.msgActHandle{width:38px;height:4px;background:var(--line);border-radius:3px;margin:4px auto 12px;}
+.msgActPreview{
+  font-size:12.5px;color:var(--muted);background:var(--surface-2);
+  border-radius:10px;padding:9px 12px;margin-bottom:10px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.msgActBtn{
+  display:flex;align-items:center;gap:12px;width:100%;
+  background:transparent;border:none;cursor:pointer;
+  font-family:'Inter',sans-serif;font-size:15px;font-weight:600;
+  padding:14px 8px;border-radius:12px;text-align:left;
+}
+.msgActBtn:active{background:var(--surface-2);}
 /* Swipe-to-Delete — sil butonu */
 .swipe-delete-btn{
   position:absolute;right:0;top:0;height:100%;
@@ -5208,24 +5258,31 @@ function openChatThread(chatId, peerUid){
       const mine = m.from === myUid;
       const t = m.ts ? new Date(m.ts).toTimeString().slice(0,5) : '';
       const editTag = m.edited ? ' <span style="font-size:10px;color:var(--muted);font-style:italic;">düzenlendi</span>' : '';
+      // Yanıtlanan mesajın önizlemesi (varsa)
+      const replyHtml = buildReplyPreviewHtml(m.replyTo, data, myUid);
       // Süreli fotoğraf (ephemeral)
       if(m.mediaType === 'ephemeral'){
-        return renderEphemeralMsg(id, m, mine, t, activeChatId);
+        return wrapSwipeMsg(id, m.from, renderEphemeralMsg(id, m, mine, t, activeChatId), mine);
       }
       if(m.mediaUrl){
         const isGif = m.mediaType === 'gif';
         const align = mine ? 'align-self:flex-end;' : 'align-self:flex-start;';
+        let inner;
         if(m.mediaType==='video' && !isGif){
-          return '<div class="msg-media chat-photo-card" style="'+align+'"><video src="'+m.mediaUrl+'" controls playsinline></video><div class="chat-photo-time">'+t+'</div></div>';
+          inner = '<div class="msg-media chat-photo-card" style="'+align+'">'+replyHtml+'<video src="'+m.mediaUrl+'" controls playsinline></video><div class="chat-photo-time">'+t+'</div></div>';
+        } else {
+          const escapedUrl = (m.mediaUrl||'').replace(/'/g, '%27');
+          const imgEl = '<img src="'+m.mediaUrl+'" loading="lazy" onclick="openChatImageFullscreen(\''+escapedUrl+'\')" onerror="this.style.opacity=0.3;">';
+          inner = '<div class="msg-media chat-photo-card" style="'+align+'">'+replyHtml+imgEl+'<div class="chat-photo-time">'+t+(isGif?' · GIF':'')+'</div></div>';
         }
-        // Resim/GIF — büyük yuvarlak köşeli kart (örnekteki gibi)
-        const escapedUrl = (m.mediaUrl||'').replace(/'/g, '%27');
-        const imgEl = '<img src="'+m.mediaUrl+'" loading="lazy" onclick="openChatImageFullscreen(\''+escapedUrl+'\')" onerror="this.style.opacity=0.3;">';
-        return '<div class="msg-media chat-photo-card" style="'+align+'">'+imgEl+'<div class="chat-photo-time">'+t+(isGif?' · GIF':'')+'</div></div>';
+        return wrapSwipeMsg(id, m.from, inner, mine);
       }
-      return '<div class="msg '+(mine?'me':'them')+'">' + escapeHtml(m.text||'') + editTag + ' <span class="time">'+t+'</span></div>';
+      const inner = '<div class="msg '+(mine?'me':'them')+'">' + replyHtml + escapeHtml(m.text||'') + editTag + ' <span class="time">'+t+'</span></div>';
+      return wrapSwipeMsg(id, m.from, inner, mine);
     }).join('');
     box.scrollTop = box.scrollHeight;
+    // Swipe-to-reply + uzun basma menüsü jestlerini bağla
+    setTimeout(bindMessageGestures, 30);
   });
 
   // Presence + typing (gecikmeyle, DOM hazır olsun)
@@ -8138,6 +8195,30 @@ function onMsgInputType(){
    MESAJ YANITI (Reply) + MESAJ BEĞENİ (Heart)
    ============================================================ */
 let replyToMsg = null;
+
+/* Her mesajı, sola kaydırma ve uzun basma için saran kapsayıcı.
+   data-msg-id ve data-from, jestlerin hangi mesaja ait olduğunu bilmesini sağlar. */
+function wrapSwipeMsg(msgId, fromUid, innerHtml, mine){
+  return '<div class="msgSwipeWrap '+(mine?'mine':'theirs')+'" data-msg-id="'+msgId+'" data-from="'+(fromUid||'')+'">'
+    + '<div class="msgReplyIcon">↩</div>'
+    + '<div class="msgSwipeInner">'+innerHtml+'</div>'
+    + '</div>';
+}
+
+/* Yanıtlanan mesajın küçük önizlemesi — balonun/kartın içinde gösterilir */
+function buildReplyPreviewHtml(replyId, allData, myUid){
+  if(!replyId || !allData || !allData[replyId]) return '';
+  const r = allData[replyId];
+  let preview;
+  if(r.mediaType === 'ephemeral') preview = '🔥 Süreli fotoğraf';
+  else if(r.mediaType === 'gif') preview = '🎬 GIF';
+  else if(r.mediaType === 'video') preview = '🎥 Video';
+  else if(r.mediaUrl) preview = '📷 Fotoğraf';
+  else preview = (r.text || '').slice(0, 60);
+  const who = (r.from === myUid) ? 'Sen' : 'Yanıt';
+  return '<div class="msgReplyPreview"><div class="msgReplyWho">'+who+'</div><div class="msgReplyText">'+escapeHtml(preview)+'</div></div>';
+}
+
 function setReplyTo(msgId, text){
   replyToMsg = msgId;
   const bar = document.getElementById('replyBar');
@@ -8151,6 +8232,141 @@ function clearReply(){
   const bar = document.getElementById('replyBar');
   if(bar) bar.style.display='none';
 }
+
+/* Bir mesajın metnini/etiketini özetle — reply bar ve menüde gösterim için */
+function summarizeMsgFromEl(wrapEl){
+  if(!wrapEl) return '';
+  const inner = wrapEl.querySelector('.msgSwipeInner');
+  if(!inner) return '';
+  if(inner.querySelector('video')) return '🎥 Video';
+  if(inner.querySelector('img')) return '📷 Fotoğraf';
+  const balon = inner.querySelector('.msg');
+  if(balon){
+    // time ve reply preview hariç metni al
+    const clone = balon.cloneNode(true);
+    clone.querySelectorAll('.time, .msgReplyPreview').forEach(e=>e.remove());
+    return (clone.textContent || '').trim().slice(0,60);
+  }
+  if(inner.querySelector('.ephemeral-msg-card')) return '🔥 Süreli fotoğraf';
+  return 'Mesaj';
+}
+
+/* Sola kaydır → yanıtla; uzun bas → seçenek menüsü. Tek yerden bağlanır. */
+function bindMessageGestures(){
+  document.querySelectorAll('#messagesBox .msgSwipeWrap').forEach(wrap => {
+    if(wrap._gesturesBound) return;
+    wrap._gesturesBound = true;
+    const inner = wrap.querySelector('.msgSwipeInner');
+    const msgId = wrap.dataset.msgId;
+    const fromUid = wrap.dataset.from;
+
+    let startX=0, startY=0, dir=null, swiping=false, pressTimer=null, moved=false;
+    const THRESHOLD = 55;
+
+    const startPress = ()=>{
+      pressTimer = setTimeout(()=>{
+        if(!moved){
+          if(navigator.vibrate) navigator.vibrate(25);
+          openMsgActionMenu(msgId, fromUid, summarizeMsgFromEl(wrap));
+        }
+      }, 480);
+    };
+    const cancelPress = ()=>{ if(pressTimer){ clearTimeout(pressTimer); pressTimer=null; } };
+
+    wrap.addEventListener('touchstart', e=>{
+      startX = e.touches[0].clientX; startY = e.touches[0].clientY;
+      dir=null; swiping=true; moved=false;
+      inner.style.transition='none';
+      startPress();
+    }, {passive:true});
+
+    wrap.addEventListener('touchmove', e=>{
+      if(!swiping) return;
+      const dx = e.touches[0].clientX - startX;
+      const dy = e.touches[0].clientY - startY;
+      if(Math.abs(dx)>6 || Math.abs(dy)>6){ moved=true; cancelPress(); }
+      if(dir===null){
+        if(Math.abs(dy) > Math.abs(dx) && Math.abs(dy)>10){ dir='vertical'; return; }
+        if(Math.abs(dx) > 10) dir='horizontal';
+      }
+      if(dir!=='horizontal') return;
+      // Sadece sola kaydırmaya izin ver (max 80px)
+      const offset = Math.max(-80, Math.min(0, dx));
+      inner.style.transform = 'translateX('+offset+'px)';
+      const icon = wrap.querySelector('.msgReplyIcon');
+      if(icon) icon.style.opacity = Math.min(1, Math.abs(offset)/THRESHOLD);
+    }, {passive:true});
+
+    const endTouch = ()=>{
+      if(!swiping) return;
+      swiping=false; cancelPress();
+      inner.style.transition='transform .22s cubic-bezier(.2,.8,.2,1)';
+      const tf = inner.style.transform;
+      const m = tf.match(/-?\d+(\.\d+)?/);
+      const offset = m ? parseFloat(m[0]) : 0;
+      if(offset <= -THRESHOLD){
+        // Yanıtla tetiklendi
+        if(navigator.vibrate) navigator.vibrate(15);
+        setReplyTo(msgId, summarizeMsgFromEl(wrap));
+      }
+      inner.style.transform='';
+      const icon = wrap.querySelector('.msgReplyIcon');
+      if(icon) icon.style.opacity='0';
+    };
+    wrap.addEventListener('touchend', endTouch);
+    wrap.addEventListener('touchcancel', endTouch);
+
+    // Masaüstü: sağ tık → menü
+    wrap.addEventListener('contextmenu', e=>{
+      e.preventDefault();
+      openMsgActionMenu(msgId, fromUid, summarizeMsgFromEl(wrap));
+    });
+  });
+}
+
+/* Şık seçenek menüsü (prompt yerine) — Yanıtla / Düzelt / Sil / Kopyala */
+function openMsgActionMenu(msgId, fromUid, previewText){
+  const isMine = fbAuth.currentUser && fromUid === fbAuth.currentUser.uid;
+  const old = document.getElementById('msgActionSheet');
+  if(old) old.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'msgActionSheet';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:560;display:flex;align-items:flex-end;justify-content:center;';
+  overlay.onclick = (e)=>{ if(e.target===overlay) overlay.remove(); };
+
+  const item = (icon, label, color, handler) =>
+    '<button class="msgActBtn" style="color:'+(color||'var(--text)')+';" data-act="'+handler+'">'
+    + '<span style="font-size:18px;width:26px;text-align:center;">'+icon+'</span>'+label+'</button>';
+
+  let buttons = item('↩️','Yanıtla','', 'reply');
+  buttons += item('📋','Kopyala','', 'copy');
+  if(isMine){
+    buttons += item('✏️','Düzenle','', 'edit');
+    buttons += item('🗑️','Sil','#ef4444', 'delete');
+  }
+  buttons += item('✖️','İptal','var(--muted)', 'cancel');
+
+  overlay.innerHTML =
+    '<div class="msgActSheet">'
+    + '<div class="msgActHandle"></div>'
+    + '<div class="msgActPreview">'+escapeHtml(previewText||'Mesaj')+'</div>'
+    + buttons
+    + '</div>';
+  document.body.appendChild(overlay);
+
+  overlay.querySelectorAll('.msgActBtn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const act = btn.dataset.act;
+      overlay.remove();
+      if(act==='reply') setReplyTo(msgId, previewText);
+      else if(act==='copy') copyMessage(msgId);
+      else if(act==='edit') editMessage(msgId);
+      else if(act==='delete') deleteMessage(msgId);
+    });
+  });
+}
+
 
 /* Mesaj beğenme */
 function toggleMsgHeart(msgId){
