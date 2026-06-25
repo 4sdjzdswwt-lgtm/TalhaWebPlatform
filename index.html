@@ -330,6 +330,26 @@ input[type=file]{display:none;}
 @keyframes splashPulse{0%{opacity:0;transform:scale(.92);}40%{opacity:1;transform:scale(1);}100%{opacity:1;transform:scale(1);}}
 
 /* EKRAN GEÇİŞ ANİMASYONU (her sekme kendi sayfası gibi açılsın) */
+/* SABİT KAYIT ALT BUTON BAR - tüm cihazlarda çalışır */
+.regStickyBar{
+  position:fixed;
+  left:0;right:0;bottom:0;
+  background:linear-gradient(180deg, transparent 0%, rgba(0,0,0,.92) 40%, var(--bg) 100%);
+  padding:30px 16px calc(20px + env(safe-area-inset-bottom, 0px));
+  z-index:9999;
+  display:none;
+  pointer-events:none;
+}
+.regStickyBar.show{display:block;}
+.regStickyBar > .row{
+  max-width:460px;margin:0 auto;
+  display:flex;gap:10px;
+  pointer-events:auto;
+}
+body.light-mode .regStickyBar{
+  background:linear-gradient(180deg, transparent 0%, rgba(255,255,255,.92) 40%, var(--bg) 100%);
+}
+
 .screen{display:none;position:absolute;inset:0;flex-direction:column;opacity:0;}
 .screen.active{display:flex;animation:screenIn .28s ease both;}
 @keyframes screenIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
@@ -1692,7 +1712,7 @@ tbody tr:hover{background:var(--surface-2);}
 
     <!-- ================= EKRAN 1: NeXT GİRİŞ / KAYIT ================= -->
     <div class="screen" id="screenRegister">
-      <div id="screenRegisterInner" style="flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding:32px 16px 100px;">
+      <div id="screenRegisterInner" style="flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding:32px 16px 160px;">
       <div style="min-height:100%;display:flex;align-items:flex-start;justify-content:center;">
       <div class="card">
         <div class="auth-top-bar">
@@ -1866,13 +1886,6 @@ tbody tr:hover{background:var(--surface-2);}
 
       </div>
       </div>
-      </div>
-      <!-- SABİT ALT BUTON BAR — sadece reg2 aktifken görünür -->
-      <div id="regStickyButtons" style="display:none;position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,var(--surface) 30%);padding:20px 16px calc(16px + env(safe-area-inset-bottom));z-index:50;pointer-events:none;">
-        <div style="max-width:460px;margin:0 auto;display:flex;gap:10px;pointer-events:auto;">
-          <button class="btn btn-ghost" onclick="goReg(1)" style="flex:1;">Geri</button>
-          <button class="btn btn-primary" id="createAccountBtn" onclick="createAccountAndSendVerification()" style="flex:1.5;">Hesabı Oluştur</button>
-        </div>
       </div>
     </div>
 
@@ -2948,10 +2961,10 @@ function goReg(n){
   document.getElementById('reg'+n).classList.add('active');
   document.querySelectorAll('.rail .seg').forEach((s,i)=>s.classList.toggle('on', i < n));
   document.getElementById('stepLabel').textContent = 'ADIM '+n+' / 4';
-  // Sabit alt buton bar - sadece adım 2'de göster
+  // Sabit alt buton bar - SADECE adım 2'de göster
   const stickyBtns = document.getElementById('regStickyButtons');
   if(stickyBtns){
-    stickyBtns.style.display = (n === 2) ? 'block' : 'none';
+    stickyBtns.classList.toggle('show', n === 2);
   }
   // İlk açılış: ekranı yukarı scroll
   const inner = document.getElementById('screenRegisterInner');
@@ -4587,6 +4600,9 @@ function loadUserProfileAndEnter(user){
 
 function enterAppFromAuth(){
   document.querySelectorAll('#main .screen').forEach(s=>s.classList.remove('active'));
+  // Kayıt ekranı sticky bar'ını kapat
+  const stickyBtns = document.getElementById('regStickyButtons');
+  if(stickyBtns) stickyBtns.classList.remove('show');
   document.getElementById('screenFeed').classList.add('active');
   applyAccountToUI(); // önce UI güncelle (içinde island'ı manipüle eden satır yok)
   saveSession();
@@ -9592,5 +9608,14 @@ function bootApp(){
 }
 bootApp();
 </script>
+
+<!-- KAYIT EKRANI SABİT ALT BUTON BAR — body içinde fixed pozisyonda -->
+<div class="regStickyBar" id="regStickyButtons">
+  <div class="row">
+    <button class="btn btn-ghost" onclick="goReg(1)" style="flex:1;">Geri</button>
+    <button class="btn btn-primary" id="createAccountBtn" onclick="createAccountAndSendVerification()" style="flex:1.5;">Hesabı Oluştur</button>
+  </div>
+</div>
+
 </body>
 </html>
