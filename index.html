@@ -6236,19 +6236,34 @@ function showMomentParticipantWaitingForHost(){
 }
 
 /* ---------- 4) HOST: TÜM ÇEKİMLER TOPLANINCA COLLAGE ÖNİZLEMESİ ---------- */
+let momentCaptureListenerRef = null;
 function watchAllCapturesForCollage(){
+  if(!momentSessionId) return;
+  if(momentCaptureListenerRef){ momentCaptureListenerRef.off(); momentCaptureListenerRef = null; }
+
   fbDb.ref('momentSessions/' + momentSessionId).once('value').then((snap)=>{
     const session = snap.val();
     if(!session) return;
     const participantUids = Object.keys(session.participants || {}).filter(uid => session.participants[uid].status !== 'left');
-    const captureListener = fbDb.ref('momentSessions/' + momentSessionId + '/captures');
-    captureListener.on('value', (csnap)=>{
-      const captures = csnap.val() || {};
-      const allIn = participantUids.every(uid => captures[uid]);
+
+    const checkAndOpen = (captures)=>{
+      const allIn = participantUids.length > 0 && participantUids.every(uid => captures[uid] && captures[uid].url);
       if(allIn){
-        captureListener.off();
+        if(momentCaptureListenerRef){ momentCaptureListenerRef.off(); momentCaptureListenerRef = null; }
         openMomentPreview(session, captures);
+        return true;
       }
+      return false;
+    };
+
+    // Önce anlık kontrol (tek kişilikse veya herkes çekmişse hemen aç)
+    fbDb.ref('momentSessions/' + momentSessionId + '/captures').once('value').then((cs)=>{
+      if(checkAndOpen(cs.val() || {})) return;
+      // Değilse canlı dinle
+      momentCaptureListenerRef = fbDb.ref('momentSessions/' + momentSessionId + '/captures');
+      momentCaptureListenerRef.on('value', (csnap)=>{
+        checkAndOpen(csnap.val() || {});
+      });
     });
   });
 }
@@ -6284,7 +6299,11 @@ function drawMomentCollage(urls){
 
   const loadImg = (src)=> new Promise((resolve)=>{
     const img = new Image();
-    img.crossOrigin = 'anonymous';
+    // base64 (data:) URL'lerde crossOrigin canvas'ı kirletir → toBlob/toDataURL patlar.
+    // Sadece http(s) uzak URL'lerde crossOrigin uygula.
+    if(src && /^https?:/i.test(src)){
+      img.crossOrigin = 'anonymous';
+    }
     img.onload = ()=>resolve(img);
     img.onerror = ()=>resolve(null);
     img.src = src;
@@ -6399,20 +6418,46 @@ function publishMoment(){
     });
   };
 
+  // Canvas'ı güvenli şekilde base64'e çevir (tainted olursa hata fırlatır → yakala)
+  const safeCanvasDataUrl = ()=>{
+    try{
+      return canvas.toDataURL('image/jpeg', 0.85);
+    }catch(e){
+      console.error('Canvas export hatası (tainted olabilir):', e);
+      return null;
+    }
+  };
+
   if(fbStorage){
-    canvas.toBlob((blob)=>{
-      if(!blob){ 
-        compressImageToBase64(canvas.toDataURL('image/jpeg',0.85), 600, 0.75).then(finishPublish);
-        return; 
-      }
-      const path = 'momentCollages/' + momentSessionId + '.jpg';
-      fbStorage.ref().child(path).put(blob).then(snap=>snap.ref.getDownloadURL()).then(finishPublish).catch(()=>{
-        compressImageToBase64(canvas.toDataURL('image/jpeg',0.85), 600, 0.75).then(finishPublish);
-      });
-    }, 'image/jpeg', 0.85);
+    let blobOk = true;
+    try{
+      canvas.toBlob((blob)=>{
+        if(!blob){
+          const d = safeCanvasDataUrl();
+          if(d){ compressImageToBase64(d, 600, 0.75).then(finishPublish); }
+          else { btn.disabled=false; btn.textContent='Yayınla 🚀'; showToast('Anı oluşturulamadı, yeniden çekmeyi dene.'); }
+          return;
+        }
+        const path = 'momentCollages/' + momentSessionId + '.jpg';
+        fbStorage.ref().child(path).put(blob).then(snap=>snap.ref.getDownloadURL()).then(finishPublish).catch(()=>{
+          const d = safeCanvasDataUrl();
+          if(d){ compressImageToBase64(d, 600, 0.75).then(finishPublish); }
+          else { btn.disabled=false; btn.textContent='Yayınla 🚀'; showToast('Anı oluşturulamadı, yeniden çekmeyi dene.'); }
+        });
+      }, 'image/jpeg', 0.85);
+    }catch(e){
+      blobOk = false;
+    }
+    if(!blobOk){
+      const d = safeCanvasDataUrl();
+      if(d){ compressImageToBase64(d, 600, 0.75).then(finishPublish); }
+      else { btn.disabled=false; btn.textContent='Yayınla 🚀'; showToast('Anı oluşturulamadı, yeniden çekmeyi dene.'); }
+    }
   } else {
     // Storage yoksa canvas'ı sıkıştırarak base64 kaydet (600px, %75)
-    compressImageToBase64(canvas.toDataURL('image/jpeg',0.85), 600, 0.75).then(finishPublish);
+    const d = safeCanvasDataUrl();
+    if(d){ compressImageToBase64(d, 600, 0.75).then(finishPublish); }
+    else { btn.disabled=false; btn.textContent='Yayınla 🚀'; showToast('Anı oluşturulamadı, yeniden çekmeyi dene.'); }
   }
 }
 
