@@ -6174,6 +6174,8 @@ function closeAllMomentOverlays(){
   if(momentSessionRef){ momentSessionRef.off(); momentSessionRef = null; }
   if(momentCountdownTimer){ clearInterval(momentCountdownTimer); momentCountdownTimer = null; }
   if(typeof momentCaptureListenerRef !== 'undefined' && momentCaptureListenerRef){ momentCaptureListenerRef.off(); momentCaptureListenerRef = null; }
+  if(typeof momentCollageTimeout !== 'undefined' && momentCollageTimeout){ clearTimeout(momentCollageTimeout); momentCollageTimeout = null; }
+  if(typeof momentPreviewOpened !== 'undefined') momentPreviewOpened = false;
   stopMomentCamera();
   momentSessionId = null;
   momentIsHost = false;
@@ -6354,9 +6356,8 @@ function uploadMyMomentCapture(shots){
       shots: urls, url: urls[0], ts: Date.now()
     });
     fbDb.ref('momentSessions/' + momentSessionId + '/participants/' + myUid + '/status').set('captured');
-    if(momentIsHost){
-      watchAllCapturesForCollage();
-    }
+    // HERKES (host + katılımcı) tüm kareler toplanınca önizlemeyi açar
+    watchAllCapturesForCollage();
   };
 
   if(fbStorage){
@@ -6374,41 +6375,49 @@ function uploadMyMomentCapture(shots){
     finishLocal(shotList);
   }
 
-  // Katılımcı (host olmayan) için bekleme ekranı
-  if(!momentIsHost){
-    showMomentParticipantWaitingForHost();
-  }
+  // Çekimini bitiren herkese "diğerleri bekleniyor" ekranı (önizleme açılana kadar)
+  showMomentParticipantWaitingForHost();
 }
 
 function showMomentParticipantWaitingForHost(){
   document.getElementById('momentWaitOverlay').classList.remove('hidden');
   document.getElementById('momentWaitHeading').textContent = 'Anın birleştiriliyor...';
-  document.getElementById('momentWaitSub').textContent = 'Herkesin karesi toplandıktan sonra anı otomatik olarak akışına düşecek.';
+  document.getElementById('momentWaitSub').textContent = 'Herkesin karesi toplanınca kolaj önizlemesi açılacak.';
   document.getElementById('momentReadyBtn').style.display = 'none';
 }
 
-/* ---------- 4) HOST: TÜM ÇEKİMLER TOPLANINCA COLLAGE ÖNİZLEMESİ ---------- */
+/* ---------- 4) TÜM ÇEKİMLER TOPLANINCA COLLAGE ÖNİZLEMESİ (herkes açar) ---------- */
 let momentCaptureListenerRef = null;
+let momentPreviewOpened = false;
+let momentCollageTimeout = null;
 function watchAllCapturesForCollage(){
   if(!momentSessionId) return;
   if(momentCaptureListenerRef){ momentCaptureListenerRef.off(); momentCaptureListenerRef = null; }
+  momentPreviewOpened = false;
 
   fbDb.ref('momentSessions/' + momentSessionId).once('value').then((snap)=>{
     const session = snap.val();
     if(!session) return;
+    // Aktif katılımcılar (left olmayanlar)
     const participantUids = Object.keys(session.participants || {}).filter(uid => session.participants[uid].status !== 'left');
 
-    const checkAndOpen = (captures)=>{
-      const allIn = participantUids.length > 0 && participantUids.every(uid => captures[uid] && captures[uid].url);
-      if(allIn){
+    const captureCount = (captures)=> participantUids.filter(uid => captures[uid] && (captures[uid].url || (captures[uid].shots && captures[uid].shots.length))).length;
+
+    const checkAndOpen = (captures, force)=>{
+      if(momentPreviewOpened) return true;
+      const have = captureCount(captures);
+      const allIn = participantUids.length > 0 && have >= participantUids.length;
+      if(allIn || (force && have > 0)){
+        momentPreviewOpened = true;
         if(momentCaptureListenerRef){ momentCaptureListenerRef.off(); momentCaptureListenerRef = null; }
+        if(momentCollageTimeout){ clearTimeout(momentCollageTimeout); momentCollageTimeout = null; }
         openMomentPreview(session, captures);
         return true;
       }
       return false;
     };
 
-    // Önce anlık kontrol (tek kişilikse veya herkes çekmişse hemen aç)
+    // Önce anlık kontrol
     fbDb.ref('momentSessions/' + momentSessionId + '/captures').once('value').then((cs)=>{
       if(checkAndOpen(cs.val() || {})) return;
       // Değilse canlı dinle
@@ -6416,6 +6425,13 @@ function watchAllCapturesForCollage(){
       momentCaptureListenerRef.on('value', (csnap)=>{
         checkAndOpen(csnap.val() || {});
       });
+      // Güvenlik: 20 sn içinde herkes gelmezse, eldeki karelerle önizlemeyi yine de aç
+      if(momentCollageTimeout) clearTimeout(momentCollageTimeout);
+      momentCollageTimeout = setTimeout(()=>{
+        fbDb.ref('momentSessions/' + momentSessionId + '/captures').once('value').then((cs2)=>{
+          checkAndOpen(cs2.val() || {}, true);
+        });
+      }, 20000);
     });
   });
 }
@@ -6451,6 +6467,36 @@ function openMomentPreview(session, captures){
     photo: (session.participants[uid]||{}).photo || ''
   }));
   momentSessionPendingMode = session.mode;
+  momentSessionPendingChallenge = session.challenge || '';
+
+  // Sadece HOST yayınlayabilir. Katılımcı önizlemeyi görür ama "Host bekleniyor" der.
+  const publishBtn = document.getElementById('momentPublishBtn');
+  const retakeBtn = document.querySelector('.momentRetakeBtn');
+  const captionInput = document.getElementById('momentCaptionInput');
+  if(momentIsHost){
+    publishBtn.textContent = 'Yayınla 🚀';
+    publishBtn.onclick = publishMoment;
+    if(retakeBtn) retakeBtn.style.display = '';
+    if(captionInput) captionInput.disabled = false;
+  } else {
+    publishBtn.textContent = '⏳ Host yayınlıyor...';
+    publishBtn.disabled = true;
+    publishBtn.onclick = null;
+    if(retakeBtn) retakeBtn.style.display = 'none';
+    if(captionInput) captionInput.disabled = true;
+    // Katılımcı: host yayınlayınca (state=done) otomatik kapansın → feed'e gitsin
+    if(momentSessionRef) momentSessionRef.off();
+    momentSessionRef = fbDb.ref('momentSessions/' + momentSessionId);
+    momentSessionRef.on('value', (s)=>{
+      const sv = s.val();
+      if(!sv || sv.state === 'cancelled'){ closeAllMomentOverlays(); return; }
+      if(sv.state === 'done'){
+        closeAllMomentOverlays();
+        showToast('Ortak anınız yayınlandı 🎉');
+        goNav('feed', document.getElementById('navFeed'));
+      }
+    });
+  }
 }
 let momentSessionPendingParticipants = [];
 let momentSessionPendingMode = 'photo';
