@@ -381,23 +381,38 @@ body.light-mode .regStickyBar{
 .avatar-sm{width:32px;height:32px;border-radius:50%;object-fit:cover;border:1px solid var(--line);}
 
 .feed{padding:24px;max-width:680px;margin:0 auto;}
-.post{background:var(--surface);border:1px solid var(--line);border-radius:20px;margin-bottom:24px;overflow:hidden;}
+.post{
+  background:var(--surface);border:1px solid var(--line);border-radius:24px;
+  margin-bottom:20px;overflow:hidden;
+  box-shadow:0 4px 20px rgba(0,0,0,.18);
+}
+.post-media{border-radius:18px;margin:0 12px;}
+.post .ig-actions{padding-top:14px;}
 .post-head{display:flex;align-items:center;gap:11px;padding:16px 18px;}
 .post-head img{width:38px;height:38px;border-radius:50%;object-fit:cover;}
 .post-head .who{font-size:14.5px;font-weight:600;}
 .post-head .loc{font-size:11px;color:var(--muted);}
 .post-head .dots{margin-left:auto;color:var(--muted);cursor:pointer;font-size:18px;}
-.post-media{width:100%;aspect-ratio:4/3;background:var(--surface-2);overflow:hidden;position:relative;}
-.post-media img,.post-media video{width:100%;height:100%;object-fit:cover;display:block;}
+.post-media{width:100%;background:var(--surface-2);overflow:hidden;position:relative;display:flex;align-items:center;justify-content:center;}
+/* Foto KIRPILMASIN — resmin kendi oranında, tam görünsün */
+.post-media img,.post-media video{width:100%;height:auto;max-height:600px;object-fit:contain;display:block;}
 
-.ig-actions{display:flex;align-items:center;padding:14px 18px 4px;gap:18px;border-top:1px solid var(--line);margin-top:0;}
-.ig-actions .icon-act{cursor:pointer;color:var(--muted);display:flex;align-items:center;gap:6px;font-size:12.5px;transition:color .15s, transform .15s;}
-.ig-actions .icon-act:hover{color:var(--text);}
+/* AKSİYON BARI — sadece simgeler, yazı yok, modern yuvarlak butonlar */
+.ig-actions{display:flex;align-items:center;padding:12px 16px 4px;gap:8px;margin-top:0;}
+.ig-actions .icon-act{
+  cursor:pointer;color:var(--text);display:flex;align-items:center;justify-content:center;
+  width:42px;height:42px;border-radius:50%;
+  background:var(--surface-2);border:1px solid var(--line);
+  transition:transform .15s, background .15s, color .15s, border-color .15s;
+}
+.ig-actions .icon-act span{display:none;} /* yazıları gizle, sadece simge */
+.ig-actions .icon-act:hover{background:var(--surface);border-color:var(--glass-border);}
 .ig-actions .icon-act svg{width:21px;height:21px;}
-.ig-actions .icon-act.liked{color:var(--like-color);}
+.ig-actions .icon-act.liked{color:var(--like-color);border-color:rgba(237,73,86,.4);background:rgba(237,73,86,.1);}
 .ig-actions .icon-act.liked svg{fill:var(--like-color);}
+.ig-actions .icon-act.saved{color:var(--accent);border-color:var(--accent-dim);background:rgba(139,92,246,.1);}
 .ig-actions .icon-act.saved svg{fill:var(--accent);color:var(--accent);}
-.ig-actions .icon-act:active{transform:scale(1.15);}
+.ig-actions .icon-act:active{transform:scale(1.18);}
 .ig-actions .spacer{flex:1;}
 
 .like-count{padding:10px 18px 0;font-size:13.5px;font-weight:700;background:var(--gradient-vivid);-webkit-background-clip:text;background-clip:text;color:transparent;}
@@ -5728,7 +5743,7 @@ function renderPostCard(id, p, myUid){
     : '';
   const mediaHtml = mediaList.length <= 1
     ? `<div class="post-media">${isVideo ? `<video controls src="${mediaList[0]||''}"></video>` : `<img src="${mediaList[0]||''}">`}</div>`
-    : `<div class="post-media" style="display:grid;grid-template-columns:1fr 1fr;gap:2px;aspect-ratio:1/1;">${mediaList.slice(0,4).map(m=>`<img src="${m}" style="width:100%;height:100%;object-fit:cover;">`).join('')}</div>`;
+    : `<div class="post-media" style="display:grid;grid-template-columns:1fr 1fr;gap:3px;">${mediaList.slice(0,4).map(m=>`<img src="${m}" style="width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:8px;">`).join('')}</div>`;
 
   return `
     <div class="post ${p.isMoment?'momentPost':''}" data-post-id="${id}">
@@ -5740,14 +5755,14 @@ function renderPostCard(id, p, myUid){
       ${mediaHtml}
       ${momentStrip}
       <div class="ig-actions">
-        <div class="icon-act ${isLiked?'liked':''}" onclick="toggleLike(this)">
+        <div class="icon-act ${isLiked?'liked':''}" onclick="toggleLike(this)" title="Beğen">
           <svg viewBox="0 0 24 24" fill="${isLiked?'var(--danger)':'none'}" stroke="${isLiked?'var(--danger)':'currentColor'}" stroke-width="2"><path d="M20.8 4.6a5 5 0 00-7.1 0L12 6.3l-1.7-1.7a5 5 0 10-7.1 7.1L12 20.3l8.8-8.6a5 5 0 000-7.1z"/></svg>
-          Beğen
+          <span>Beğen</span>
         </div>
-        <div class="icon-act" onclick="openCommentSheet('${id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.4 8.4 0 01-1.1 4.2L21 21l-5.4-1a8.5 8.5 0 11-.6-.4z"/></svg>Yorum</div>
-        <div class="icon-act" onclick="openShareSheet(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>Paylaş</div>
+        <div class="icon-act" onclick="openCommentSheet('${id}')" title="Yorum"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.4 8.4 0 01-1.1 4.2L21 21l-5.4-1a8.5 8.5 0 11-.6-.4z"/></svg><span>Yorum</span></div>
+        <div class="icon-act" onclick="openShareSheet(this)" title="Paylaş"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg><span>Paylaş</span></div>
         <div class="spacer"></div>
-        <div class="icon-act" onclick="toggleSave(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h12v18l-6-4-6 4V3z"/></svg>Kaydet</div>
+        <div class="icon-act" onclick="toggleSave(this)" title="Kaydet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h12v18l-6-4-6 4V3z"/></svg><span>Kaydet</span></div>
       </div>
       <div class="like-count"><span class="likeNum">${likeCount}</span> beğenme</div>
       <div class="caption"><b>${p.username || '@kullanici'}</b> ${linkifyCaption(p.caption || '')}</div>
