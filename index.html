@@ -6303,11 +6303,18 @@ function captureMomentFrame(){
   if(video && video.videoWidth){
     const side = Math.min(video.videoWidth, video.videoHeight);
     const sx = (video.videoWidth - side)/2, sy = (video.videoHeight - side)/2;
-    // Selfie kamerasında ayna efekti doğal görünsün diye yatay çeviriyoruz
+    // NOT: drawImage ham (aynalanmamış) kamera verisini çizer; önizlemedeki ayna
+    // CSS scaleX(-1) ile sağlanıyor. Çekilen karenin önizlemeyle BİREBİR aynı
+    // (elin sağda) görünmesi için ham veriyi yatay çevirerek çiziyoruz.
     if(momentFacingMode === 'user'){
-      ctx.translate(W, 0); ctx.scale(-1, 1);
+      ctx.save();
+      ctx.translate(W, 0);
+      ctx.scale(-1, 1);
+      ctx.drawImage(video, sx, sy, side, side, 0, 0, W, H);
+      ctx.restore();
+    } else {
+      ctx.drawImage(video, sx, sy, side, side, 0, 0, W, H);
     }
-    ctx.drawImage(video, sx, sy, side, side, 0, 0, W, H);
   } else {
     // Kamera yoksa nötr bir gradient kare üret (akış kesintiye uğramasın)
     const grad = ctx.createLinearGradient(0,0,W,H);
@@ -6347,7 +6354,7 @@ function captureMomentFrame(){
       .then(compressedShots => {
         uploadMyMomentCapture(compressedShots);
       });
-  }, 650);
+  }, 300);
 }
 
 function uploadMyMomentCapture(shots){
@@ -6365,20 +6372,9 @@ function uploadMyMomentCapture(shots){
     watchAllCapturesForCollage();
   };
 
-  if(fbStorage){
-    // Her kareyi storage'a yükle
-    Promise.all(shotList.map((dataUrl, i)=>
-      fetch(dataUrl).then(r=>r.blob()).then(blob=>{
-        const path = 'momentCaptures/' + momentSessionId + '/' + myUid + '_' + i + '.jpg';
-        return fbStorage.ref().child(path).put(blob).then(snap=>snap.ref.getDownloadURL());
-      })
-    )).then(finishLocal).catch(()=>{
-      // Storage başarısız → base64'leri doğrudan kullan
-      finishLocal(shotList);
-    });
-  } else {
-    finishLocal(shotList);
-  }
+  // Kareler zaten küçük (480px, sıkıştırılmış) — Storage'a yükleme turu beklemeden
+  // doğrudan base64'ü DB'ye yaz. Bu, kolaj önizlemesinin ANINDA açılmasını sağlar.
+  finishLocal(shotList);
 
   // Çekimini bitiren herkese "diğerleri bekleniyor" ekranı (önizleme açılana kadar)
   showMomentParticipantWaitingForHost();
@@ -6430,13 +6426,13 @@ function watchAllCapturesForCollage(){
       momentCaptureListenerRef.on('value', (csnap)=>{
         checkAndOpen(csnap.val() || {});
       });
-      // Güvenlik: 20 sn içinde herkes gelmezse, eldeki karelerle önizlemeyi yine de aç
+      // Güvenlik: 4 sn içinde herkes gelmezse, eldeki karelerle önizlemeyi yine de aç
       if(momentCollageTimeout) clearTimeout(momentCollageTimeout);
       momentCollageTimeout = setTimeout(()=>{
         fbDb.ref('momentSessions/' + momentSessionId + '/captures').once('value').then((cs2)=>{
           checkAndOpen(cs2.val() || {}, true);
         });
-      }, 20000);
+      }, 4000);
     });
   });
 }
