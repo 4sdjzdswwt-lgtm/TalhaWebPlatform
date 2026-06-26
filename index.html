@@ -1539,6 +1539,7 @@ tbody tr:hover{background:var(--surface-2);}
   flex-shrink:0;
 }
 .momentCamWrap video{width:100%;height:100%;object-fit:cover;border-radius:25px;}
+.momentCamWrap video.mirrored{transform:scaleX(-1);}
 .momentCamPlaceholder{color:rgba(255,255,255,.5);font-size:13px;text-align:center;padding:24px;}
 .momentCountdown{
   position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
@@ -6256,6 +6257,10 @@ function startMomentCamera(){
   const placeholder = document.getElementById('momentCamPlaceholder');
   placeholder.classList.add('hidden');
   video.classList.remove('hidden');
+
+  // Ön kamerada canlı önizlemeyi aynala (telefonda nasıl görüyorsan öyle),
+  // arka kamerada normal göster.
+  video.classList.toggle('mirrored', momentFacingMode === 'user');
 
   if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
     placeholder.classList.remove('hidden');
