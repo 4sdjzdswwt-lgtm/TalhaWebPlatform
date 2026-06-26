@@ -6759,12 +6759,16 @@ function retakeMoment(){
 }
 
 function publishMoment(){
-  if(!momentSessionId || !fbAuth.currentUser) return;
+  if(!momentSessionId || !fbAuth.currentUser){ showToast('Oturum bulunamadı.'); return; }
   const btn = document.getElementById('momentPublishBtn');
   btn.disabled = true; btn.textContent = 'Yayınlanıyor...';
 
-  // Önce HTML asimetrik grid'i (renk seçimleriyle birlikte) canvas'a çiz, sonra yayınla
-  renderCollageToCanvas().then(()=> doPublishMoment(btn));
+  // Önce HTML asimetrik grid'i (renk seçimleriyle birlikte) canvas'a çiz, sonra yayınla.
+  // Render bir nedenle patlasa bile yayını yine de dene (canvas'ta en azından bir şey vardır).
+  Promise.resolve()
+    .then(()=> renderCollageToCanvas())
+    .catch((e)=>{ console.error('Kolaj render hatası (yayın yine de denenecek):', e); })
+    .then(()=> doPublishMoment(btn));
 }
 
 function doPublishMoment(btn){
@@ -6790,34 +6794,28 @@ function doPublishMoment(btn){
     const storyRef = fbDb.ref('stories').push();
     const expiresAt = Date.now() + 24*60*60*1000;
 
-    const sharedWrites = {};
-    momentSessionPendingParticipants.forEach(p => { sharedWrites[p.uid] = true; });
-
-    Promise.all([
-      postRef.set(postData),
+    // KRİTİK: önce postu yaz — bu başarılı olursa anı yayınlanmış sayılır.
+    postRef.set(postData).then(()=>{
+      // Post yazıldı → diğerleri opsiyonel, hata verseler bile yayını bozmaz
       storyRef.set({
-        postId: postId,
-        mediaUrl: collageUrl,
-        uid: myUid,
-        username: savedUsername || '@kullanici',
-        photo: savedProfilePhoto || '',
+        postId: postId, mediaUrl: collageUrl, uid: myUid,
+        username: savedUsername || '@kullanici', photo: savedProfilePhoto || '',
         createdAt: firebase.database.ServerValue.TIMESTAMP,
-        expiresAt: expiresAt,
-        isMoment: true
-      }),
-      fbDb.ref('users/' + myUid + '/postsCount').transaction(n => (n||0)+1),
-      fbDb.ref('momentSessions/' + momentSessionId).update({ state: 'done', publishedPostId: postId }),
-      // Tüm katılımcıların "Ortak Anılarım" kalıcı albümüne de eklenir
-      ...momentSessionPendingParticipants.map(p =>
-        fbDb.ref('users/' + p.uid + '/sharedMoments/' + postId).set(true)
-      )
-    ]).then(()=>{
+        expiresAt: expiresAt, isMoment: true
+      }).catch(()=>{});
+      fbDb.ref('users/' + myUid + '/postsCount').transaction(n => (n||0)+1).catch(()=>{});
+      fbDb.ref('momentSessions/' + momentSessionId).update({ state: 'done', publishedPostId: postId }).catch(()=>{});
+      momentSessionPendingParticipants.forEach(p =>
+        fbDb.ref('users/' + p.uid + '/sharedMoments/' + postId).set(true).catch(()=>{})
+      );
+
       btn.disabled = false; btn.textContent = 'Yayınla 🚀';
       closeAllMomentOverlays();
       showToast('Anın yayınlandı 🎉');
       goNav('feed', document.getElementById('navFeed'));
     }).catch((err)=>{
       btn.disabled = false; btn.textContent = 'Yayınla 🚀';
+      console.error('Anı yayın hatası:', err);
       showToast('Yayınlanamadı: ' + (err && err.message ? err.message : 'bilinmeyen hata'));
     });
   };
@@ -6832,36 +6830,17 @@ function doPublishMoment(btn){
     }
   };
 
-  if(fbStorage){
-    let blobOk = true;
-    try{
-      canvas.toBlob((blob)=>{
-        if(!blob){
-          const d = safeCanvasDataUrl();
-          if(d){ compressImageToBase64(d, 600, 0.75).then(finishPublish); }
-          else { btn.disabled=false; btn.textContent='Yayınla 🚀'; showToast('Anı oluşturulamadı, yeniden çekmeyi dene.'); }
-          return;
-        }
-        const path = 'momentCollages/' + momentSessionId + '.jpg';
-        fbStorage.ref().child(path).put(blob).then(snap=>snap.ref.getDownloadURL()).then(finishPublish).catch(()=>{
-          const d = safeCanvasDataUrl();
-          if(d){ compressImageToBase64(d, 600, 0.75).then(finishPublish); }
-          else { btn.disabled=false; btn.textContent='Yayınla 🚀'; showToast('Anı oluşturulamadı, yeniden çekmeyi dene.'); }
-        });
-      }, 'image/jpeg', 0.85);
-    }catch(e){
-      blobOk = false;
-    }
-    if(!blobOk){
-      const d = safeCanvasDataUrl();
-      if(d){ compressImageToBase64(d, 600, 0.75).then(finishPublish); }
-      else { btn.disabled=false; btn.textContent='Yayınla 🚀'; showToast('Anı oluşturulamadı, yeniden çekmeyi dene.'); }
-    }
+  // Storage yükleme bazen sessizce takılıyor — collage zaten küçük (800px),
+  // doğrudan base64 olarak sıkıştırıp yayınla. Hızlı ve güvenilir.
+  const d = safeCanvasDataUrl();
+  if(d){
+    compressImageToBase64(d, 700, 0.78).then(finishPublish).catch(()=>{
+      btn.disabled=false; btn.textContent='Yayınla 🚀';
+      showToast('Anı oluşturulamadı, yeniden çekmeyi dene.');
+    });
   } else {
-    // Storage yoksa canvas'ı sıkıştırarak base64 kaydet (600px, %75)
-    const d = safeCanvasDataUrl();
-    if(d){ compressImageToBase64(d, 600, 0.75).then(finishPublish); }
-    else { btn.disabled=false; btn.textContent='Yayınla 🚀'; showToast('Anı oluşturulamadı, yeniden çekmeyi dene.'); }
+    btn.disabled=false; btn.textContent='Yayınla 🚀';
+    showToast('Anı oluşturulamadı, yeniden çekmeyi dene.');
   }
 }
 
