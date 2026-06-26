@@ -1686,16 +1686,23 @@ tbody tr:hover{background:var(--surface-2);}
 }
 .momentGridCell{
   position:relative;border-radius:14px;overflow:hidden;
-  background-size:cover;background-position:center;
   display:flex;align-items:flex-end;justify-content:flex-start;
   min-height:0;min-width:0;
+  background-color:#1a1a2e;
   transition:background-color .25s ease;
+  touch-action:none;
 }
+/* Foto: oranı korunarak tam görünür (contain). Arta kalan boşlukta hücre rengi görünür.
+   transform ile kullanıcı yakınlaştırıp kaydırabilir. */
 .momentGridCell img{
-  position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;
+  position:absolute;top:50%;left:50%;
+  width:100%;height:100%;object-fit:contain;display:block;
+  transform:translate(-50%,-50%) scale(var(--zoom,1)) translate(var(--px,0px),var(--py,0px));
+  transform-origin:center;will-change:transform;
+  -webkit-user-drag:none;user-select:none;
 }
-/* Kullanıcı renk seçince foto gizlenir, düz renk görünür */
-.momentGridCell.colored img{display:none;}
+/* "Karyeye sığdır" modu — kullanıcı isterse foto kareyi tam doldurur (cover) */
+.momentGridCell.fill img{object-fit:cover;}
 .momentGridCell .cellLabel{
   position:relative;z-index:2;font-size:11px;font-weight:700;
   padding:5px 9px;margin:8px;border-radius:8px;
@@ -1706,7 +1713,7 @@ tbody tr:hover{background:var(--surface-2);}
 .momentGridCell.dark-text .cellLabel{color:#000;background:rgba(255,255,255,.55);}
 /* Renk seçici buton — sağ alt köşe */
 .cellColorBtn{
-  position:absolute;right:8px;bottom:8px;z-index:3;
+  position:absolute;right:8px;bottom:8px;z-index:4;
   width:30px;height:30px;border-radius:50%;
   border:2px solid rgba(255,255,255,.8);cursor:pointer;
   background:linear-gradient(135deg,#ec4899,#f59e0b,#22c55e,#3b82f6);
@@ -1715,6 +1722,23 @@ tbody tr:hover{background:var(--surface-2);}
 .cellColorBtn input[type=color]{
   position:absolute;inset:-4px;width:calc(100% + 8px);height:calc(100% + 8px);
   border:none;padding:0;margin:0;cursor:pointer;opacity:0;
+}
+/* Doldur/sığdır geçiş butonu — sol alt köşe */
+.cellFitBtn{
+  position:absolute;left:8px;bottom:8px;z-index:4;
+  width:30px;height:30px;border-radius:50%;
+  border:2px solid rgba(255,255,255,.8);cursor:pointer;
+  background:rgba(0,0,0,.45);backdrop-filter:blur(4px);
+  color:#fff;font-size:13px;display:flex;align-items:center;justify-content:center;padding:0;
+  box-shadow:0 2px 8px rgba(0,0,0,.4);
+}
+/* Zoom ipucu rozeti */
+.cellZoomHint{
+  position:absolute;top:8px;left:8px;z-index:3;
+  font-size:9.5px;font-weight:600;color:#fff;
+  background:rgba(0,0,0,.4);backdrop-filter:blur(4px);
+  padding:3px 7px;border-radius:10px;pointer-events:none;
+  opacity:.85;
 }
 
 /* Asimetrik layout'lar — foto sayısına göre */
@@ -1753,7 +1777,7 @@ tbody tr:hover{background:var(--surface-2);}
   border-radius:14px;padding:12px 14px;color:#fff;font-size:13.5px;outline:none;font-family:'Inter',sans-serif;
 }
 .momentCaptionInput::placeholder{color:rgba(255,255,255,.45);}
-.momentPreviewFoot{padding:14px 20px 26px;display:flex;gap:10px;max-width:380px;width:100%;margin:0 auto;}
+.momentPreviewFoot{padding:14px 20px calc(26px + env(safe-area-inset-bottom,0px));display:flex;gap:10px;max-width:380px;width:100%;margin:0 auto;flex-shrink:0;}
 .momentPreviewFoot button{flex:1;padding:14px;border-radius:14px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;border:none;}
 .momentRetakeBtn{background:rgba(255,255,255,.12);color:#fff;}
 .momentPublishBtn{background:var(--gradient-vivid);color:#fff;box-shadow:0 8px 22px rgba(124,58,237,.45);}
@@ -6186,6 +6210,10 @@ function closeAllMomentOverlays(){
   momentCurrentShotIndex = 0;
   momentCollageUrls = [];
   momentCollageBgColors = [];
+  if(typeof momentCellZoom !== 'undefined') momentCellZoom = [];
+  if(typeof momentCellPanX !== 'undefined') momentCellPanX = [];
+  if(typeof momentCellPanY !== 'undefined') momentCellPanY = [];
+  if(typeof momentCellFill !== 'undefined') momentCellFill = [];
   document.body.classList.remove('moment-active'); // alt navigasyon adasını geri göster
 }
 
@@ -6440,6 +6468,8 @@ function watchAllCapturesForCollage(){
 function openMomentPreview(session, captures){
   document.getElementById('momentWaitOverlay').classList.add('hidden');
   document.getElementById('momentPreviewOverlay').classList.remove('hidden');
+  // Önizleme tam ekran — alt navigasyon adasını gizle (paylaş butonu adanın altında kalmasın)
+  document.body.classList.add('moment-active');
   document.getElementById('momentCaptionInput').value = session.challenge ? session.challenge + ' — ' : '';
 
   const uids = Object.keys(captures);
@@ -6506,29 +6536,112 @@ let momentCollageUrls = [];
 let momentCollageBgColors = [];   // her kutu için kullanıcı seçtiği renk (null = foto)
 
 /* Asimetrik HTML grid kutularını oluştur — renk seçici + akıllı kontrast */
+let momentCellZoom = [];   // her hücre için zoom
+let momentCellPanX = [];   // her hücre için x kaydırma (px)
+let momentCellPanY = [];   // her hücre için y kaydırma (px)
+let momentCellFill = [];   // her hücre cover (true) mu contain (false) mu
+
 function buildMomentCollageGrid(urls){
   const grid = document.getElementById('momentGrid');
   if(!grid) return Promise.resolve();
   const n = Math.min(urls.length || 1, 6);
   grid.className = 'momentGrid cells-' + n;
-  grid.innerHTML = urls.slice(0,6).map((url, i)=>`
-    <div class="momentGridCell light-text" id="momentCell${i}" data-idx="${i}" style="background-image:url('${url}');">
-      <img src="${url}" alt="">
+  momentCellZoom = []; momentCellPanX = []; momentCellPanY = []; momentCellFill = [];
+  grid.innerHTML = urls.slice(0,6).map((url, i)=>{
+    momentCellZoom[i] = 1; momentCellPanX[i] = 0; momentCellPanY[i] = 0; momentCellFill[i] = false;
+    return `
+    <div class="momentGridCell light-text" id="momentCell${i}" data-idx="${i}" style="--zoom:1;--px:0px;--py:0px;">
+      <img src="${url}" alt="" id="momentCellImg${i}">
+      <span class="cellZoomHint">✥ Kaydır · İki parmak yakınlaştır</span>
+      <button class="cellFitBtn" title="Kareye sığdır / doldur" onclick="event.stopPropagation();toggleCellFill(${i})">⛶</button>
       <button class="cellColorBtn" title="Arka plan rengini değiştir" onclick="event.stopPropagation();">
         <input type="color" value="#7c3aed" oninput="onMomentCellColor(${i}, this.value)">
       </button>
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
+  // Zoom/pan jestlerini bağla
+  urls.slice(0,6).forEach((_, i)=> bindCellZoomPan(i));
   return Promise.resolve();
 }
 
-/* Bir kutunun rengini değiştir — akıllı kontrast ile yazı rengini ayarla */
+/* Bir hücrenin transform'unu güncelle */
+function applyCellTransform(idx){
+  const cell = document.getElementById('momentCell' + idx);
+  if(!cell) return;
+  cell.style.setProperty('--zoom', momentCellZoom[idx] || 1);
+  cell.style.setProperty('--px', (momentCellPanX[idx] || 0) + 'px');
+  cell.style.setProperty('--py', (momentCellPanY[idx] || 0) + 'px');
+}
+
+/* Kareye sığdır (contain) ↔ doldur (cover) geçişi */
+function toggleCellFill(idx){
+  const cell = document.getElementById('momentCell' + idx);
+  if(!cell) return;
+  momentCellFill[idx] = !momentCellFill[idx];
+  cell.classList.toggle('fill', momentCellFill[idx]);
+  // Geçişte zoom/pan sıfırla ki tutarlı dursun
+  momentCellZoom[idx] = 1; momentCellPanX[idx] = 0; momentCellPanY[idx] = 0;
+  applyCellTransform(idx);
+}
+
+/* Tek/iki parmak ile yakınlaştırma + kaydırma */
+function bindCellZoomPan(idx){
+  const cell = document.getElementById('momentCell' + idx);
+  if(!cell) return;
+  let dragging=false, startX=0, startY=0, baseX=0, baseY=0;
+  let pinchDist=0, pinchZoom=1;
+
+  const dist = (t)=> Math.hypot(t[0].clientX-t[1].clientX, t[0].clientY-t[1].clientY);
+
+  cell.addEventListener('touchstart', e=>{
+    if(e.target.closest('button')) return;
+    if(e.touches.length===1){
+      dragging=true; startX=e.touches[0].clientX; startY=e.touches[0].clientY;
+      baseX=momentCellPanX[idx]||0; baseY=momentCellPanY[idx]||0;
+    } else if(e.touches.length===2){
+      dragging=false; pinchDist=dist(e.touches); pinchZoom=momentCellZoom[idx]||1;
+    }
+  }, {passive:true});
+
+  cell.addEventListener('touchmove', e=>{
+    if(e.target.closest('button')) return;
+    if(e.touches.length===2 && pinchDist>0){
+      e.preventDefault();
+      const z = Math.max(1, Math.min(4, pinchZoom * (dist(e.touches)/pinchDist)));
+      momentCellZoom[idx]=z; applyCellTransform(idx);
+    } else if(e.touches.length===1 && dragging){
+      e.preventDefault();
+      momentCellPanX[idx]=baseX+(e.touches[0].clientX-startX);
+      momentCellPanY[idx]=baseY+(e.touches[0].clientY-startY);
+      applyCellTransform(idx);
+    }
+  }, {passive:false});
+
+  cell.addEventListener('touchend', ()=>{ dragging=false; pinchDist=0; });
+
+  // Masaüstü: fare tekeri zoom, sürükle pan
+  cell.addEventListener('wheel', e=>{
+    e.preventDefault();
+    const z = Math.max(1, Math.min(4, (momentCellZoom[idx]||1) + (e.deltaY<0?0.12:-0.12)));
+    momentCellZoom[idx]=z; applyCellTransform(idx);
+  }, {passive:false});
+  cell.addEventListener('mousedown', e=>{
+    if(e.target.closest('button')) return;
+    dragging=true; startX=e.clientX; startY=e.clientY;
+    baseX=momentCellPanX[idx]||0; baseY=momentCellPanY[idx]||0;
+    const mv=ev=>{ if(!dragging)return; momentCellPanX[idx]=baseX+(ev.clientX-startX); momentCellPanY[idx]=baseY+(ev.clientY-startY); applyCellTransform(idx); };
+    const up=()=>{ dragging=false; document.removeEventListener('mousemove',mv); document.removeEventListener('mouseup',up); };
+    document.addEventListener('mousemove',mv); document.addEventListener('mouseup',up);
+  });
+}
+
+/* Bir kutunun rengini değiştir — foto KORUNUR, renk sadece arka plan/çerçeve olur.
+   Akıllı kontrast ile yazı rengini ayarla. */
 function onMomentCellColor(idx, color){
   const cell = document.getElementById('momentCell' + idx);
   if(!cell) return;
   momentCollageBgColors[idx] = color;
-  cell.classList.add('colored');
-  cell.style.backgroundImage = 'none';
+  // Renk SADECE hücre arka planı — foto üstte kalır, gizlenmez.
   cell.style.backgroundColor = color;
   // Akıllı kontrast: parlaklığa göre yazı rengi
   const dark = isColorDark(color);
@@ -6583,7 +6696,6 @@ function renderCollageToCanvas(){
       if(!L[i]) return;
       const x = GAP + L[i][0]*S, y = GAP + L[i][1]*S;
       const w = L[i][2]*S - GAP, h = L[i][3]*S - GAP;
-      // Yuvarlak köşeli kutu (clip)
       const r = 14;
       ctx.save();
       ctx.beginPath();
@@ -6594,16 +6706,30 @@ function renderCollageToCanvas(){
       ctx.arcTo(x,y,x+w,y,r);
       ctx.closePath();
       ctx.clip();
-      // Kullanıcı renk seçtiyse düz renk, yoksa foto
-      if(momentCollageBgColors[i]){
-        ctx.fillStyle = momentCollageBgColors[i];
-        ctx.fillRect(x,y,w,h);
-      } else if(img){
-        const ratio = Math.max(w/img.width, h/img.height);
+
+      // 1) Arka plan rengi (kullanıcı seçtiyse) — fotoğrafın etrafındaki boşluk
+      ctx.fillStyle = momentCollageBgColors[i] || '#1a1a2e';
+      ctx.fillRect(x,y,w,h);
+
+      // 2) Fotoğraf — ekrandaki ayarlarla (contain/cover + zoom + pan)
+      if(img){
+        const fill = momentCellFill[i];
+        const zoom = momentCellZoom[i] || 1;
+        // contain → en küçük orana sığdır (kareyse kare, dikdörtgense oranı korur)
+        // cover → kareyi doldur
+        const baseRatio = fill ? Math.max(w/img.width, h/img.height) : Math.min(w/img.width, h/img.height);
+        const ratio = baseRatio * zoom;
         const dw = img.width*ratio, dh = img.height*ratio;
-        ctx.drawImage(img, x+(w-dw)/2, y+(h-dh)/2, dw, dh);
-      } else {
-        ctx.fillStyle = '#1a1a2e'; ctx.fillRect(x,y,w,h);
+        // Ekrandaki pan px değeri canvas ölçeğine çevrilir (ekran hücre genişliği ~ w, ama
+        // gerçek ekran px'i bilinmediğinden oransal yaklaşık kullanırız)
+        const cell = document.getElementById('momentCell'+i);
+        let panRatio = 1;
+        if(cell){ const rect = cell.getBoundingClientRect(); if(rect.width) panRatio = w / rect.width; }
+        const px = (momentCellPanX[i]||0) * panRatio;
+        const py = (momentCellPanY[i]||0) * panRatio;
+        const dx = x + (w-dw)/2 + px;
+        const dy = y + (h-dh)/2 + py;
+        ctx.drawImage(img, dx, dy, dw, dh);
       }
       ctx.restore();
     });
