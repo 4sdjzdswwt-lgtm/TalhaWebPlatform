@@ -1693,11 +1693,17 @@ tbody tr:hover{background:var(--surface-2);}
 .momentPreviewTop{padding:18px 20px;display:flex;align-items:center;justify-content:space-between;}
 .momentPreviewTop button{background:rgba(255,255,255,.12);border:none;color:#fff;width:34px;height:34px;border-radius:50%;cursor:pointer;}
 .momentPreviewBody{flex:1;overflow-y:auto;padding:0 20px 20px;display:flex;flex-direction:column;align-items:center;gap:16px;}
-.momentCollageWrap{width:100%;max-width:380px;border-radius:18px;overflow:hidden;box-shadow:0 14px 40px rgba(0,0,0,.5);background:#000;}
+.momentCollageWrap{width:100%;max-width:360px;border-radius:18px;overflow:hidden;box-shadow:0 14px 40px rgba(0,0,0,.5);background:#000;flex-shrink:0;}
 
 /* ===== ANI KOLAJ — ASİMETRİK GRID ===== */
 .momentGrid{
-  display:grid;gap:5px;width:100%;aspect-ratio:1/1;padding:5px;background:var(--moment-bg,#1a1a2e);border-radius:18px;
+  display:grid;gap:5px;width:100%;height:360px;max-height:360px;
+  padding:5px;background:var(--moment-bg,#1a1a2e);border-radius:18px;
+  box-sizing:border-box;
+}
+@media (max-width:380px){
+  .momentCollageWrap{max-width:330px;}
+  .momentGrid{height:330px;max-height:330px;}
 }
 .momentGridCell{
   position:relative;border-radius:10px;overflow:hidden;
@@ -1781,9 +1787,10 @@ tbody tr:hover{background:var(--surface-2);}
 .momentGrid.cells-5,.momentGrid.cells-6{grid-template-columns:1fr 1fr 1fr;grid-template-rows:1fr 1fr;}
 .momentGrid.cells-5 .momentGridCell:nth-child(1){grid-column:1 / 2;grid-row:1 / 3;}
 /* 7-8 kare: 4 sütun x 2 satır, ilk kare büyük odak */
+/* 7-8 kare: 4 sütun x 2 satır, dengeli — ilk kare 2x geniş odak */
 .momentGrid.cells-7,.momentGrid.cells-8{grid-template-columns:repeat(4,1fr);grid-template-rows:1fr 1fr;}
 .momentGrid.cells-7 .momentGridCell:nth-child(1),
-.momentGrid.cells-8 .momentGridCell:nth-child(1){grid-column:1 / 3;grid-row:1 / 3;}
+.momentGrid.cells-8 .momentGridCell:nth-child(1){grid-column:1 / 3;grid-row:1 / 2;}
 /* 9+ kare: 3x3 düzenli grid */
 .momentGrid.cells-9{grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);}
 
@@ -6786,17 +6793,15 @@ function renderCollageToCanvas(){
     L=urls.slice(0,n).map((_,i)=>[(i%cols)/cols,Math.floor(i/cols)/rows,1/cols,1/rows]);
     if(n===5){ L[0]=[0,0,1/3,1]; L[1]=[1/3,0,1/3,1/2]; L[2]=[2/3,0,1/3,1/2]; L[3]=[1/3,1/2,1/3,1/2]; L[4]=[2/3,1/2,1/3,1/2]; }
   } else if(n===7 || n===8){
-    // İlk kare büyük (2x2), kalanlar 4 sütunlu satırlarda
-    L=[[0,0,1/2,1/2 + (n===7?0:0)]];
-    L=[[0,0,1/2,1]]; // sol büyük odak (tam yükseklik, yarım genişlik)
-    const rest=[]; const cols=2; // sağ yarıda 2 sütun
-    const restCount=n-1; const rows=Math.ceil(restCount/cols);
-    for(let i=0;i<restCount;i++){
-      const cx=0.5 + (i%cols)*(0.5/cols);
-      const cy=(Math.floor(i/cols))*(1/rows);
-      rest.push([cx,cy,0.5/cols,1/rows]);
-    }
-    L=L.concat(rest);
+    // CSS ile aynı: 4 sütun x 2 satır, ilk kare 2x geniş (sol üst)
+    const cw=1/4, ch=1/2;
+    L=[[0,0,2*cw,ch]]; // ilk kare: 2 sütun geniş, üst satır
+    // kalan kareler: önce üst satırın sağ 2 hücresi, sonra alt satırın 4 hücresi
+    const slots=[
+      [2*cw,0,cw,ch],[3*cw,0,cw,ch], // üst sağ 2
+      [0,ch,cw,ch],[cw,ch,cw,ch],[2*cw,ch,cw,ch],[3*cw,ch,cw,ch] // alt 4
+    ];
+    for(let i=0;i<n-1 && i<slots.length;i++) L.push(slots[i]);
   } else {
     // 9: 3x3 düzenli
     const cols=3, rows=3;
@@ -7827,7 +7832,9 @@ function loadStoryStrip(){
       Object.keys(data).forEach(id=>{
         const s = data[id];
         if(!s.uid || s.expiresAt < now) return;
-        if(s.isMoment) return; // Anı paylaşımları hikaye değildir — şeritte gösterme
+        // Anı paylaşımları hikaye DEĞİLDİR — atla. Bozuk/geçersiz görselli kayıtları da atla.
+        if(s.isMoment) return;
+        if(!s.mediaUrl || typeof s.mediaUrl !== 'string' || s.mediaUrl.length < 10) return;
         if(!byUser[s.uid]) byUser[s.uid] = [];
         byUser[s.uid].push({...s, id});
       });
