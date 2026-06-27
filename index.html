@@ -1742,6 +1742,19 @@ tbody tr:hover{background:var(--surface-2);}
   color:#fff;font-size:12px;display:flex;align-items:center;justify-content:center;padding:0;
   box-shadow:0 2px 8px rgba(0,0,0,.4);
 }
+/* Yer değiştirme tutamacı — sağ alt köşe */
+.cellMoveBtn{
+  position:absolute;right:8px;bottom:8px;z-index:5;
+  width:28px;height:28px;border-radius:50%;
+  border:2px solid rgba(255,255,255,.8);cursor:grab;touch-action:none;
+  background:rgba(124,58,237,.7);backdrop-filter:blur(4px);
+  color:#fff;font-size:13px;display:flex;align-items:center;justify-content:center;padding:0;
+  box-shadow:0 2px 8px rgba(0,0,0,.4);
+}
+.cellMoveBtn:active{cursor:grabbing;transform:scale(1.15);}
+/* Sürüklenen kare ve hedef vurgusu */
+.momentGridCell.swapping{opacity:.55;outline:2px dashed rgba(255,255,255,.7);}
+.momentGridCell.swapTarget{outline:3px solid var(--accent);outline-offset:-3px;}
 /* Zoom ipucu rozeti */
 .cellZoomHint{
   position:absolute;top:8px;left:8px;z-index:3;
@@ -2872,7 +2885,7 @@ tbody tr:hover{background:var(--surface-2);}
         Çerçeve rengi
         <input type="color" id="momentBgColorInput" value="#1a1a2e" oninput="onMomentBgColor(this.value)">
       </label>
-      <span class="momentToolHint">Kareyi sürükle · iki parmakla yakınlaştır · ⛶ sığdır/doldur</span>
+      <span class="momentToolHint">Sürükle · iki parmakla yakınlaştır · ⛶ sığdır/doldur · ⇄ yerini değiştir</span>
     </div>
     <input type="text" class="momentCaptionInput" id="momentCaptionInput" placeholder="Bir açıklama ekle... (örn. Arkadaşlarla unutulmaz an! 🎉)">
   </div>
@@ -6609,12 +6622,55 @@ function buildMomentCollageGrid(urls, owners){
     <div class="momentGridCell" id="momentCell${i}" data-idx="${i}" style="--zoom:1;--px:0px;--py:0px;">
       <img src="${url}" alt="" id="momentCellImg${i}">
       ${tag}
+      <button class="cellMoveBtn" title="Yerini değiştir (tut ve sürükle)" onmousedown="startCellSwap(event,${i})" ontouchstart="startCellSwap(event,${i})">⇄</button>
       <button class="cellFitBtn" title="Sığdır / doldur" onclick="event.stopPropagation();toggleCellFit(${i})">⛶</button>
     </div>`;
   }).join('');
   // Zoom/pan jestlerini bağla
   urls.slice(0,9).forEach((_, i)=> bindCellZoomPan(i));
   return Promise.resolve();
+}
+
+/* ---- KARE YER DEĞİŞTİRME (sürükle-bırak) ---- */
+let momentSwapFrom = null;
+function startCellSwap(e, idx){
+  e.preventDefault(); e.stopPropagation();
+  momentSwapFrom = idx;
+  const fromCell = document.getElementById('momentCell'+idx);
+  if(fromCell) fromCell.classList.add('swapping');
+
+  const move = (ev)=>{
+    const pt = ev.touches ? ev.touches[0] : ev;
+    const el = document.elementFromPoint(pt.clientX, pt.clientY);
+    const overCell = el && el.closest ? el.closest('.momentGridCell') : null;
+    document.querySelectorAll('.momentGridCell.swapTarget').forEach(c=>c.classList.remove('swapTarget'));
+    if(overCell && overCell.dataset.idx != idx) overCell.classList.add('swapTarget');
+  };
+  const up = (ev)=>{
+    const pt = ev.changedTouches ? ev.changedTouches[0] : ev;
+    const el = document.elementFromPoint(pt.clientX, pt.clientY);
+    const overCell = el && el.closest ? el.closest('.momentGridCell') : null;
+    if(overCell && overCell.dataset.idx != null){
+      const toIdx = parseInt(overCell.dataset.idx);
+      if(!isNaN(toIdx) && toIdx !== idx) swapCollageCells(idx, toIdx);
+    }
+    document.querySelectorAll('.momentGridCell.swapTarget,.momentGridCell.swapping').forEach(c=>c.classList.remove('swapTarget','swapping'));
+    momentSwapFrom = null;
+    document.removeEventListener('mousemove',move); document.removeEventListener('mouseup',up);
+    document.removeEventListener('touchmove',move); document.removeEventListener('touchend',up);
+  };
+  document.addEventListener('mousemove',move); document.addEventListener('mouseup',up);
+  document.addEventListener('touchmove',move,{passive:false}); document.addEventListener('touchend',up);
+}
+
+/* İki karenin yerini (resim + sahip + ayarlar) değiştir, grid'i yeniden kur */
+function swapCollageCells(a, b){
+  [momentCollageUrls[a], momentCollageUrls[b]] = [momentCollageUrls[b], momentCollageUrls[a]];
+  if(momentCollageOwners.length){
+    [momentCollageOwners[a], momentCollageOwners[b]] = [momentCollageOwners[b], momentCollageOwners[a]];
+  }
+  buildMomentCollageGrid(momentCollageUrls, momentCollageOwners);
+  if(navigator.vibrate) navigator.vibrate(20);
 }
 
 /* Etiketlenen kullanıcının profiline git */
@@ -6847,18 +6903,11 @@ function doPublishMoment(btn){
       momentParticipants: momentSessionPendingParticipants,
       momentChallenge: momentSessionPendingChallenge || ''
     };
-    const storyRef = fbDb.ref('stories').push();
-    const expiresAt = Date.now() + 24*60*60*1000;
 
     // KRİTİK: önce postu yaz — bu başarılı olursa anı yayınlanmış sayılır.
+    // NOT: Anı paylaşımı hikaye OLUŞTURMAZ — sadece akışa düşer (kullanıcı isteği).
     postRef.set(postData).then(()=>{
       // Post yazıldı → diğerleri opsiyonel, hata verseler bile yayını bozmaz
-      storyRef.set({
-        postId: postId, mediaUrl: collageUrl, uid: myUid,
-        username: savedUsername || '@kullanici', photo: savedProfilePhoto || '',
-        createdAt: firebase.database.ServerValue.TIMESTAMP,
-        expiresAt: expiresAt, isMoment: true
-      }).catch(()=>{});
       fbDb.ref('users/' + myUid + '/postsCount').transaction(n => (n||0)+1).catch(()=>{});
       fbDb.ref('momentSessions/' + momentSessionId).update({ state: 'done', publishedPostId: postId }).catch(()=>{});
       momentSessionPendingParticipants.forEach(p =>
@@ -7778,6 +7827,7 @@ function loadStoryStrip(){
       Object.keys(data).forEach(id=>{
         const s = data[id];
         if(!s.uid || s.expiresAt < now) return;
+        if(s.isMoment) return; // Anı paylaşımları hikaye değildir — şeritte gösterme
         if(!byUser[s.uid]) byUser[s.uid] = [];
         byUser[s.uid].push({...s, id});
       });
@@ -7855,7 +7905,7 @@ function handleMyStoryClick(){
   fbDb.ref('stories').orderByChild('uid').equalTo(myUid).once('value').then(snap=>{
     const data = snap.val() || {};
     const active = Object.keys(data).map(id => ({...data[id], id}))
-      .filter(s => s.expiresAt > now)
+      .filter(s => s.expiresAt > now && !s.isMoment)
       .sort((a,b)=>a.ts-b.ts);
     if(active.length){
       // Hikayem var — seçenek sun: Görüntüle veya Yeni Ekle
@@ -7910,7 +7960,7 @@ function viewUserStories(uid){
     const data = snap.val() || {};
     // ID'leri de koru — silme butonu için gerekli!
     currentStoryList = Object.keys(data).map(id => ({...data[id], id}))
-      .filter(s=>s.expiresAt > now)
+      .filter(s=>s.expiresAt > now && !s.isMoment)
       .sort((a,b)=>a.ts-b.ts);
     if(!currentStoryList.length){ showToast('Bu kullanıcının aktif hikayesi yok.'); return; }
     currentStoryUser = uid;
