@@ -1758,6 +1758,26 @@ tbody tr:hover{background:var(--surface-2);}
   box-shadow:0 2px 8px rgba(0,0,0,.4);
 }
 .cellMoveBtn:active{cursor:grabbing;transform:scale(1.15);}
+/* Şekil değiştirme butonu — sağ üst köşe */
+.cellShapeBtn{
+  position:absolute;right:8px;top:8px;z-index:5;
+  width:28px;height:28px;border-radius:50%;
+  border:2px solid rgba(255,255,255,.8);cursor:pointer;
+  background:rgba(6,182,212,.7);backdrop-filter:blur(4px);
+  color:#fff;font-size:13px;display:flex;align-items:center;justify-content:center;padding:0;
+  box-shadow:0 2px 8px rgba(0,0,0,.4);
+}
+.cellShapeBtn:active{transform:scale(1.15);}
+
+/* ŞEKİLLER — clip-path ile */
+.momentGridCell.shape-rect{}                                    /* normal dikdörtgen/kare */
+.momentGridCell.shape-circle{border-radius:50% !important;}
+.momentGridCell.shape-triangle{clip-path:polygon(50% 0%, 0% 100%, 100% 100%);border-radius:0 !important;}
+.momentGridCell.shape-star{clip-path:polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%);border-radius:0 !important;}
+.momentGridCell.shape-pentagon{clip-path:polygon(50% 0%,100% 38%,82% 100%,18% 100%,0% 38%);border-radius:0 !important;}
+.momentGridCell.shape-hexagon{clip-path:polygon(25% 0%,75% 0%,100% 50%,75% 100%,25% 100%,0% 50%);border-radius:0 !important;}
+.momentGridCell.shape-heart{clip-path:path('M50,88 C50,88 10,55 10,30 C10,15 25,10 35,10 C43,10 48,16 50,22 C52,16 57,10 65,10 C75,10 90,15 90,30 C90,55 50,88 50,88 Z');border-radius:0 !important;}
+.momentGridCell.shape-diamond{clip-path:polygon(50% 0%,100% 50%,50% 100%,0% 50%);border-radius:0 !important;}
 /* Sürüklenen kare ve hedef vurgusu */
 .momentGridCell.swapping{opacity:.55;outline:2px dashed rgba(255,255,255,.7);}
 .momentGridCell.swapTarget{outline:3px solid var(--accent);outline-offset:-3px;}
@@ -6270,6 +6290,7 @@ function closeAllMomentOverlays(){
   if(typeof momentCellPanX !== 'undefined') momentCellPanX = [];
   if(typeof momentCellPanY !== 'undefined') momentCellPanY = [];
   if(typeof momentCellFit !== 'undefined') momentCellFit = [];
+  if(typeof momentCellShape !== 'undefined') momentCellShape = [];
   document.body.classList.remove('moment-active'); // alt navigasyon adasını geri göster
 }
 
@@ -6377,8 +6398,17 @@ function momentManualShutter(){
   captureMomentFrame();
 }
 
-function captureMomentFrame(){
+function captureMomentFrame(retryCount){
+  retryCount = retryCount || 0;
   const video = document.getElementById('momentCamVideo');
+
+  // Kamera henüz hazır değilse (videoWidth=0) boş kare üretme — kısa bekle, tekrar dene.
+  // En fazla ~1.5sn bekler (10 x 150ms), sonra mecbur gradient'e düşer.
+  if((!video || !video.videoWidth) && retryCount < 10){
+    setTimeout(()=> captureMomentFrame(retryCount + 1), 150);
+    return;
+  }
+
   const canvas = document.createElement('canvas');
   const W = 480, H = 480;
   canvas.width = W; canvas.height = H;
@@ -6540,8 +6570,8 @@ function openMomentPreview(session, captures){
       photo: (session.participants[uid]||{}).photo || ''
     };
     if(Array.isArray(c.shots) && c.shots.length){
-      c.shots.forEach(u => { urls.push(u); owners.push(pInfo); });
-    } else if(c.url){
+      c.shots.forEach(u => { if(u && typeof u==='string' && u.length>20){ urls.push(u); owners.push(pInfo); } });
+    } else if(c.url && typeof c.url==='string' && c.url.length>20){
       urls.push(c.url); owners.push(pInfo);
     }
   });
@@ -6608,8 +6638,12 @@ let momentCellZoom = [];   // her hücre için zoom
 let momentCellPanX = [];   // her hücre için x kaydırma (px)
 let momentCellPanY = [];   // her hücre için y kaydırma (px)
 let momentCellFit = [];    // her hücre contain (true) mu cover (false=varsayılan) mı
+let momentCellShape = [];  // her hücre şekli: rect, portrait, landscape, circle, triangle, star, pentagon, hexagon
 let momentCollageOwners = []; // her kareye {uid, username, photo}
 let momentCollageBg = '#1a1a2e'; // tek arka plan/çerçeve rengi
+
+const MOMENT_SHAPES = ['rect','circle','triangle','star','pentagon','hexagon','heart','diamond'];
+const MOMENT_SHAPE_ICONS = {rect:'▭',circle:'⬤',triangle:'▲',star:'★',pentagon:'⬠',hexagon:'⬡',heart:'♥',diamond:'◆'};
 
 function buildMomentCollageGrid(urls, owners){
   const grid = document.getElementById('momentGrid');
@@ -6619,16 +6653,20 @@ function buildMomentCollageGrid(urls, owners){
   grid.className = 'momentGrid cells-' + n;
   grid.style.setProperty('--moment-bg', momentCollageBg);
   momentCellZoom = []; momentCellPanX = []; momentCellPanY = []; momentCellFit = [];
+  if(!momentCellShape.length || momentCellShape.length !== urls.length) momentCellShape = urls.map(()=> 'rect');
   grid.innerHTML = urls.slice(0,9).map((url, i)=>{
     momentCellZoom[i] = 1; momentCellPanX[i] = 0; momentCellPanY[i] = 0; momentCellFit[i] = false;
     const ow = owners[i] || {};
     const tag = ow.username
       ? `<div class="cellTag" onclick="event.stopPropagation();goToTaggedProfile('${ow.uid||''}')">@${(ow.username||'').replace(/^@/,'')}</div>`
       : '';
+    const shape = momentCellShape[i] || 'rect';
+    const shapeIcon = MOMENT_SHAPE_ICONS[shape] || '▭';
     return `
-    <div class="momentGridCell" id="momentCell${i}" data-idx="${i}" style="--zoom:1;--px:0px;--py:0px;">
+    <div class="momentGridCell shape-${shape}" id="momentCell${i}" data-idx="${i}" style="--zoom:1;--px:0px;--py:0px;">
       <img src="${url}" alt="" id="momentCellImg${i}">
       ${tag}
+      <button class="cellShapeBtn" title="Şekli değiştir" onclick="event.stopPropagation();cycleCellShape(${i})">${shapeIcon}</button>
       <button class="cellMoveBtn" title="Yerini değiştir (tut ve sürükle)" onmousedown="startCellSwap(event,${i})" ontouchstart="startCellSwap(event,${i})">⇄</button>
       <button class="cellFitBtn" title="Sığdır / doldur" onclick="event.stopPropagation();toggleCellFit(${i})">⛶</button>
     </div>`;
@@ -6636,6 +6674,21 @@ function buildMomentCollageGrid(urls, owners){
   // Zoom/pan jestlerini bağla
   urls.slice(0,9).forEach((_, i)=> bindCellZoomPan(i));
   return Promise.resolve();
+}
+
+/* Hücre şeklini sırayla değiştir */
+function cycleCellShape(idx){
+  const cur = momentCellShape[idx] || 'rect';
+  const next = MOMENT_SHAPES[(MOMENT_SHAPES.indexOf(cur) + 1) % MOMENT_SHAPES.length];
+  momentCellShape[idx] = next;
+  const cell = document.getElementById('momentCell'+idx);
+  if(cell){
+    MOMENT_SHAPES.forEach(s=> cell.classList.remove('shape-'+s));
+    cell.classList.add('shape-'+next);
+    const btn = cell.querySelector('.cellShapeBtn');
+    if(btn) btn.textContent = MOMENT_SHAPE_ICONS[next] || '▭';
+  }
+  if(navigator.vibrate) navigator.vibrate(12);
 }
 
 /* ---- KARE YER DEĞİŞTİRME (sürükle-bırak) ---- */
@@ -6766,6 +6819,45 @@ function bindCellZoomPan(idx){
   });
 }
 
+/* Canvas'ta verilen şekle göre clip yolu çiz (CSS clip-path ile aynı şekiller) */
+function clipShapePath(ctx, shape, x, y, w, h){
+  const poly = (pts)=>{
+    ctx.beginPath();
+    pts.forEach((p,i)=>{ const px=x+p[0]*w, py=y+p[1]*h; i?ctx.lineTo(px,py):ctx.moveTo(px,py); });
+    ctx.closePath();
+  };
+  switch(shape){
+    case 'circle':{
+      ctx.beginPath();
+      ctx.ellipse(x+w/2, y+h/2, w/2, h/2, 0, 0, Math.PI*2);
+      ctx.closePath(); break;
+    }
+    case 'triangle': poly([[0.5,0],[0,1],[1,1]]); break;
+    case 'star': poly([[0.5,0],[0.61,0.35],[0.98,0.35],[0.68,0.57],[0.79,0.91],[0.5,0.70],[0.21,0.91],[0.32,0.57],[0.02,0.35],[0.39,0.35]]); break;
+    case 'pentagon': poly([[0.5,0],[1,0.38],[0.82,1],[0.18,1],[0,0.38]]); break;
+    case 'hexagon': poly([[0.25,0],[0.75,0],[1,0.5],[0.75,1],[0.25,1],[0,0.5]]); break;
+    case 'diamond': poly([[0.5,0],[1,0.5],[0.5,1],[0,0.5]]); break;
+    case 'heart':{
+      ctx.beginPath();
+      const cx=x+w/2;
+      ctx.moveTo(cx, y+h*0.85);
+      ctx.bezierCurveTo(x+w*0.05, y+h*0.55, x+w*0.10, y+h*0.10, cx, y+h*0.28);
+      ctx.bezierCurveTo(x+w*0.90, y+h*0.10, x+w*0.95, y+h*0.55, cx, y+h*0.85);
+      ctx.closePath(); break;
+    }
+    default:{ // rect — yuvarlak köşeli
+      const r=10;
+      ctx.beginPath();
+      ctx.moveTo(x+r,y);
+      ctx.arcTo(x+w,y,x+w,y+h,r);
+      ctx.arcTo(x+w,y+h,x,y+h,r);
+      ctx.arcTo(x,y+h,x,y,r);
+      ctx.arcTo(x,y,x+w,y,r);
+      ctx.closePath();
+    }
+  }
+}
+
 /* Yayınlarken HTML grid'i canvas'a aynı asimetrik düzende render et */
 function renderCollageToCanvas(){
   const canvas = document.getElementById('momentCollageCanvas');
@@ -6819,15 +6911,9 @@ function renderCollageToCanvas(){
       if(!L[i]) return;
       const x = GAP + L[i][0]*S, y = GAP + L[i][1]*S;
       const w = L[i][2]*S - GAP, h = L[i][3]*S - GAP;
-      const r = 10;
+      const shape = (momentCellShape[i] || 'rect');
       ctx.save();
-      ctx.beginPath();
-      ctx.moveTo(x+r,y);
-      ctx.arcTo(x+w,y,x+w,y+h,r);
-      ctx.arcTo(x+w,y+h,x,y+h,r);
-      ctx.arcTo(x,y+h,x,y,r);
-      ctx.arcTo(x,y,x+w,y,r);
-      ctx.closePath();
+      clipShapePath(ctx, shape, x, y, w, h);
       ctx.clip();
 
       // Fotoğraf — VARSAYILAN cover (doldur). Kullanıcı "sığdır" seçtiyse contain.
