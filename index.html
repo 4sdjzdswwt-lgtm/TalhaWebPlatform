@@ -381,38 +381,23 @@ body.light-mode .regStickyBar{
 .avatar-sm{width:32px;height:32px;border-radius:50%;object-fit:cover;border:1px solid var(--line);}
 
 .feed{padding:24px;max-width:680px;margin:0 auto;}
-.post{
-  background:var(--surface);border:1px solid var(--line);border-radius:24px;
-  margin-bottom:20px;overflow:hidden;
-  box-shadow:0 4px 20px rgba(0,0,0,.18);
-}
-.post-media{border-radius:18px;margin:0 12px;}
-.post .ig-actions{padding-top:14px;}
+.post{background:var(--surface);border:1px solid var(--line);border-radius:20px;margin-bottom:24px;overflow:hidden;}
 .post-head{display:flex;align-items:center;gap:11px;padding:16px 18px;}
 .post-head img{width:38px;height:38px;border-radius:50%;object-fit:cover;}
 .post-head .who{font-size:14.5px;font-weight:600;}
 .post-head .loc{font-size:11px;color:var(--muted);}
 .post-head .dots{margin-left:auto;color:var(--muted);cursor:pointer;font-size:18px;}
-.post-media{width:100%;background:var(--surface-2);overflow:hidden;position:relative;display:flex;align-items:center;justify-content:center;}
-/* Foto KIRPILMASIN — resmin kendi oranında, tam görünsün */
-.post-media img,.post-media video{width:100%;height:auto;max-height:600px;object-fit:contain;display:block;}
+.post-media{width:100%;aspect-ratio:4/3;background:var(--surface-2);overflow:hidden;position:relative;}
+.post-media img,.post-media video{width:100%;height:100%;object-fit:cover;display:block;}
 
-/* AKSİYON BARI — sadece simgeler, yazı yok, modern yuvarlak butonlar */
-.ig-actions{display:flex;align-items:center;padding:12px 16px 4px;gap:8px;margin-top:0;}
-.ig-actions .icon-act{
-  cursor:pointer;color:var(--text);display:flex;align-items:center;justify-content:center;
-  width:42px;height:42px;border-radius:50%;
-  background:var(--surface-2);border:1px solid var(--line);
-  transition:transform .15s, background .15s, color .15s, border-color .15s;
-}
-.ig-actions .icon-act span{display:none;} /* yazıları gizle, sadece simge */
-.ig-actions .icon-act:hover{background:var(--surface);border-color:var(--glass-border);}
+.ig-actions{display:flex;align-items:center;padding:14px 18px 4px;gap:18px;border-top:1px solid var(--line);margin-top:0;}
+.ig-actions .icon-act{cursor:pointer;color:var(--muted);display:flex;align-items:center;gap:6px;font-size:12.5px;transition:color .15s, transform .15s;}
+.ig-actions .icon-act:hover{color:var(--text);}
 .ig-actions .icon-act svg{width:21px;height:21px;}
-.ig-actions .icon-act.liked{color:var(--like-color);border-color:rgba(237,73,86,.4);background:rgba(237,73,86,.1);}
+.ig-actions .icon-act.liked{color:var(--like-color);}
 .ig-actions .icon-act.liked svg{fill:var(--like-color);}
-.ig-actions .icon-act.saved{color:var(--accent);border-color:var(--accent-dim);background:rgba(139,92,246,.1);}
 .ig-actions .icon-act.saved svg{fill:var(--accent);color:var(--accent);}
-.ig-actions .icon-act:active{transform:scale(1.18);}
+.ig-actions .icon-act:active{transform:scale(1.15);}
 .ig-actions .spacer{flex:1;}
 
 .like-count{padding:10px 18px 0;font-size:13.5px;font-weight:700;background:var(--gradient-vivid);-webkit-background-clip:text;background-clip:text;color:transparent;}
@@ -560,32 +545,11 @@ body.moment-active #island{display:none !important;}
 .chat-head .name{font-size:15px;font-weight:700;}
 .chat-head .status{font-size:11px;color:var(--accent);}
 .messages{flex:1;overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:10px;}
-.msg{
-  width:fit-content;max-width:100%;padding:9px 13px;border-radius:18px;
-  font-size:13.5px;line-height:1.4;word-wrap:break-word;overflow-wrap:break-word;
-  backdrop-filter:blur(16px) saturate(160%);-webkit-backdrop-filter:blur(16px) saturate(160%);
-  border:1px solid rgba(255,255,255,.08);
-}
-/* Gelen mesajlar (sol) — yarı saydam koyu gri cam */
-.msg.them{
-  align-self:flex-start;border-bottom-left-radius:5px;
-  background:rgba(255,255,255,.10);
-  border-color:rgba(255,255,255,.12);
-}
-/* Giden mesajlar (sağ) — yarı saydam mavi cam */
-.msg.me{
-  align-self:flex-end;color:#fff;border-bottom-right-radius:5px;
-  background:linear-gradient(135deg, rgba(99,102,241,.55), rgba(6,182,212,.45));
-  border-color:rgba(255,255,255,.22);
-  box-shadow:0 4px 16px rgba(99,102,241,.28);
-}
-body.light-mode .msg.them{
-  background:rgba(0,0,0,.06);
-  border-color:rgba(0,0,0,.08);
-  color:var(--text);
-}
+.msg{max-width:72%;padding:9px 13px;border-radius:14px;font-size:13.5px;line-height:1.4;}
+.msg.them{align-self:flex-start;background:var(--surface-2);border-bottom-left-radius:4px;}
+.msg.me{align-self:flex-end;background:var(--gradient-vivid);color:#fff;border-bottom-right-radius:4px;box-shadow:0 3px 12px rgba(124,58,237,.3);}
 .msg .time{display:block;font-size:10px;color:var(--muted);margin-top:4px;}
-.msg.me .time{color:rgba(255,255,255,.85);}
+.msg.me .time{color:rgba(255,255,255,.8);}
 .msg-media{max-width:72%;border-radius:14px;overflow:hidden;align-self:flex-start;}
 .msg-media img,.msg-media video{width:220px;display:block;}
 .composer{padding:13px 16px;border-top:1px solid var(--line);display:flex;align-items:center;gap:9px;}
@@ -1046,21 +1010,20 @@ body.light-mode #screenRegister .spam-warning{background:linear-gradient(135deg,
 
 /* Telegram tarzı süreli fotoğraf mesajı */
 .ephemeral-msg-card{
-  position:relative;width:170px;max-width:62vw;aspect-ratio:1/1;border-radius:18px;overflow:hidden;
+  position:relative;width:200px;height:200px;border-radius:18px;overflow:hidden;
   background:linear-gradient(135deg,#1e1e3f,#2a1a4a);
   display:flex;align-items:center;justify-content:center;cursor:pointer;
   border:2px solid rgba(245,158,11,.4);
 }
 .ephemeral-msg-icon{
-  font-size:42px;color:#f59e0b;
+  font-size:48px;color:#f59e0b;
   filter:drop-shadow(0 0 12px rgba(245,158,11,.5));
 }
 .ephemeral-msg-label{
-  position:absolute;bottom:0;left:0;right:0;text-align:center;
-  color:#fff;font-size:11px;font-weight:600;
+  position:absolute;bottom:14px;left:0;right:0;text-align:center;
+  color:#fff;font-size:12px;font-weight:600;
   background:linear-gradient(transparent,rgba(0,0,0,.6));
-  padding:18px 6px 8px;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  padding:20px 8px 8px;
 }
 .ephemeral-msg-card.expired{
   border-color:rgba(255,255,255,.15);
@@ -1085,14 +1048,13 @@ body.light-mode #screenRegister .spam-warning{background:linear-gradient(135deg,
   box-shadow:0 2px 8px rgba(124,58,237,.4);
 }
 .chat-photo-card{
-  width:240px !important;max-width:70vw !important;border-radius:24px;overflow:hidden;
+  max-width:260px;border-radius:24px;overflow:hidden;
   position:relative;display:inline-block;
-  background:transparent;margin:4px 0;flex-shrink:0;
+  background:transparent;margin:4px 0;
 }
 .chat-photo-card img,.chat-photo-card video{
-  width:100% !important;aspect-ratio:1/1 !important;height:auto !important;
-  max-width:none !important;max-height:none !important;min-height:0 !important;
-  object-fit:cover !important;display:block;
+  width:100%;max-width:260px;height:auto;max-height:340px;min-height:120px;
+  object-fit:contain;display:block;
   border-radius:24px;cursor:pointer;
   background:var(--surface-2);
 }
@@ -1100,56 +1062,6 @@ body.light-mode #screenRegister .spam-warning{background:linear-gradient(135deg,
   font-size:10px;color:var(--muted);
   text-align:right;padding:2px 6px 0;
 }
-
-/* ===== MESAJ JESTLERİ: sola kaydır → yanıtla, uzun bas → menü ===== */
-.msgSwipeWrap{position:relative;display:flex;flex-direction:column;width:100%;}
-.msgSwipeWrap.mine{align-items:flex-end;}
-.msgSwipeWrap.theirs{align-items:flex-start;}
-.msgSwipeInner{display:inline-flex;flex-direction:column;max-width:78%;will-change:transform;}
-.msgSwipeWrap.mine .msgSwipeInner{align-items:flex-end;}
-/* Foto/GIF/video/süreli kartı içeren inner daralmasın — kart kendi sabit boyutunu korur */
-.msgSwipeInner:has(.chat-photo-card),
-.msgSwipeInner:has(.ephemeral-msg-card){max-width:none;}
-.msgReplyIcon{
-  position:absolute;right:10px;top:50%;transform:translateY(-50%);
-  font-size:20px;color:var(--accent);opacity:0;pointer-events:none;
-  transition:opacity .15s;
-}
-/* Mesaj içindeki yanıt önizlemesi */
-.msgReplyPreview{
-  border-left:3px solid var(--accent);
-  background:rgba(124,58,237,.12);
-  border-radius:8px;padding:5px 9px;margin-bottom:5px;
-  max-width:220px;overflow:hidden;
-}
-.msg.me .msgReplyPreview{background:rgba(255,255,255,.18);border-left-color:rgba(255,255,255,.7);}
-.msgReplyWho{font-size:10.5px;font-weight:700;color:var(--accent);margin-bottom:1px;}
-.msg.me .msgReplyWho{color:rgba(255,255,255,.9);}
-.msgReplyText{font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.msg.me .msgReplyText{color:rgba(255,255,255,.8);}
-.chat-photo-card .msgReplyPreview{margin:6px 8px 0;max-width:none;}
-
-/* Mesaj seçenek menüsü (bottom sheet) */
-.msgActSheet{
-  width:100%;max-width:460px;background:var(--surface);
-  border:1px solid var(--line);border-top-left-radius:22px;border-top-right-radius:22px;
-  padding:10px 14px calc(20px + env(safe-area-inset-bottom,0px));
-  animation:msgSheetUp .22s cubic-bezier(.2,.8,.2,1);
-}
-@keyframes msgSheetUp{from{transform:translateY(100%);}to{transform:translateY(0);}}
-.msgActHandle{width:38px;height:4px;background:var(--line);border-radius:3px;margin:4px auto 12px;}
-.msgActPreview{
-  font-size:12.5px;color:var(--muted);background:var(--surface-2);
-  border-radius:10px;padding:9px 12px;margin-bottom:10px;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-}
-.msgActBtn{
-  display:flex;align-items:center;gap:12px;width:100%;
-  background:transparent;border:none;cursor:pointer;
-  font-family:'Inter',sans-serif;font-size:15px;font-weight:600;
-  padding:14px 8px;border-radius:12px;text-align:left;
-}
-.msgActBtn:active{background:var(--surface-2);}
 /* Swipe-to-Delete — sil butonu */
 .swipe-delete-btn{
   position:absolute;right:0;top:0;height:100%;
@@ -1469,15 +1381,6 @@ tbody tr:hover{background:var(--surface-2);}
 }
 .momentModeBtn.active{border-color:transparent;background:var(--gradient-vivid);color:#fff;}
 
-/* Foto sayısı seçimi (1-4) */
-.momentShotRow{display:flex;gap:8px;margin-bottom:18px;}
-.momentShotBtn{
-  flex:1;padding:12px 0;border-radius:12px;border:1.5px solid var(--line);background:var(--surface-2);
-  color:var(--muted);font-size:16px;font-weight:700;cursor:pointer;text-align:center;
-  font-family:'Space Grotesk',sans-serif;transition:all .15s;
-}
-.momentShotBtn.active{border-color:transparent;background:var(--gradient-vivid);color:#fff;transform:scale(1.05);box-shadow:0 4px 12px rgba(124,58,237,.4);}
-
 .momentFriendSearch{
   background:var(--surface-2);border:1px solid var(--line);border-radius:12px;
   padding:10px 14px;font-size:13px;color:var(--text);width:100%;outline:none;margin-bottom:12px;
@@ -1554,7 +1457,6 @@ tbody tr:hover{background:var(--surface-2);}
   flex-shrink:0;
 }
 .momentCamWrap video{width:100%;height:100%;object-fit:cover;border-radius:25px;}
-.momentCamWrap video.mirrored{transform:scaleX(-1);}
 .momentCamPlaceholder{color:rgba(255,255,255,.5);font-size:13px;text-align:center;padding:24px;}
 .momentCountdown{
   position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
@@ -1693,169 +1595,14 @@ tbody tr:hover{background:var(--surface-2);}
 .momentPreviewTop{padding:18px 20px;display:flex;align-items:center;justify-content:space-between;}
 .momentPreviewTop button{background:rgba(255,255,255,.12);border:none;color:#fff;width:34px;height:34px;border-radius:50%;cursor:pointer;}
 .momentPreviewBody{flex:1;overflow-y:auto;padding:0 20px 20px;display:flex;flex-direction:column;align-items:center;gap:16px;}
-.momentCollageWrap{width:100%;max-width:360px;border-radius:18px;overflow:hidden;box-shadow:0 14px 40px rgba(0,0,0,.5);background:#000;flex-shrink:0;}
-
-/* ===== ANI KOLAJ — ASİMETRİK GRID ===== */
-.momentGrid{
-  display:grid;gap:5px;width:100%;height:360px;max-height:360px;
-  padding:5px;background:var(--moment-bg,#1a1a2e);border-radius:18px;
-  box-sizing:border-box;
-}
-@media (max-width:380px){
-  .momentCollageWrap{max-width:330px;}
-  .momentGrid{height:330px;max-height:330px;}
-}
-.momentGridCell{
-.momentGridCell{
-  position:relative;border-radius:10px;
-  min-height:0;min-width:0;
-  background-color:transparent;
-  touch-action:none;cursor:grab;
-}
-/* Foto VARSAYILAN cover (kareyi tam doldurur). zoom/pan/rotate ile ayarlanır. */
-.momentGridCell img{
-  position:absolute;top:50%;left:50%;
-  width:100%;height:100%;object-fit:cover;display:block;
-  transform:translate(-50%,-50%) rotate(var(--rot,0deg)) scale(var(--zoom,1)) translate(var(--px,0px),var(--py,0px));
-  transform-origin:center;will-change:transform;
-  -webkit-user-drag:none;user-select:none;
-}
-/* "Sığdır" modu — kullanıcı isterse foto tam görünür (contain), boşlukta arka plan */
-.momentGridCell.fit img{object-fit:contain;}
-.momentGridCell .cellLabel{
-  position:relative;z-index:2;font-size:11px;font-weight:700;
-  padding:5px 9px;margin:8px;border-radius:8px;
-  background:rgba(0,0,0,.35);backdrop-filter:blur(4px);
-  color:#fff;pointer-events:none;
-}
-/* Etiket — kareye dokununca o kişinin profiline gider (Instagram tarzı) */
-.cellTag{
-  position:absolute;left:50%;top:8px;transform:translateX(-50%);z-index:5;
-  font-size:10px;font-weight:700;color:#fff;
-  background:rgba(0,0,0,.5);backdrop-filter:blur(6px);
-  padding:4px 9px;border-radius:20px;cursor:pointer;
-  display:flex;align-items:center;gap:4px;max-width:55%;
-  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-  border:1px solid rgba(255,255,255,.25);
-}
-.cellTag:active{transform:translateX(-50%) scale(.94);}
-/* Sığdır/doldur geçiş butonu — sol alt köşe */
-.cellFitBtn{
-  position:absolute;left:8px;bottom:8px;z-index:4;
-  width:28px;height:28px;border-radius:50%;
-  border:2px solid rgba(255,255,255,.8);cursor:pointer;
-  background:rgba(0,0,0,.45);backdrop-filter:blur(4px);
-  color:#fff;font-size:12px;display:flex;align-items:center;justify-content:center;padding:0;
-  box-shadow:0 2px 8px rgba(0,0,0,.4);
-}
-/* Yer değiştirme tutamacı — sağ alt köşe */
-.cellMoveBtn{
-  position:absolute;right:8px;bottom:8px;z-index:5;
-  width:28px;height:28px;border-radius:50%;
-  border:2px solid rgba(255,255,255,.8);cursor:grab;touch-action:none;
-  background:rgba(124,58,237,.7);backdrop-filter:blur(4px);
-  color:#fff;font-size:13px;display:flex;align-items:center;justify-content:center;padding:0;
-  box-shadow:0 2px 8px rgba(0,0,0,.4);
-}
-.cellMoveBtn:active{cursor:grabbing;transform:scale(1.15);}
-/* Şekil değiştirme butonu — sağ üst köşe */
-.cellShapeBtn{
-  position:absolute;right:8px;top:8px;z-index:5;
-  width:28px;height:28px;border-radius:50%;
-  border:2px solid rgba(255,255,255,.8);cursor:pointer;
-  background:rgba(6,182,212,.7);backdrop-filter:blur(4px);
-  color:#fff;font-size:13px;display:flex;align-items:center;justify-content:center;padding:0;
-  box-shadow:0 2px 8px rgba(0,0,0,.4);
-}
-.cellShapeBtn:active{transform:scale(1.15);}
-/* Döndürme butonu — sol üst köşe */
-.cellRotateBtn{
-  position:absolute;left:8px;top:8px;z-index:6;
-  width:28px;height:28px;border-radius:50%;
-  border:2px solid rgba(255,255,255,.8);cursor:pointer;
-  background:rgba(34,197,94,.7);backdrop-filter:blur(4px);
-  color:#fff;font-size:15px;display:flex;align-items:center;justify-content:center;padding:0;
-  box-shadow:0 2px 8px rgba(0,0,0,.4);
-}
-.cellRotateBtn:active{transform:scale(1.15) rotate(90deg);}
-
-/* ŞEKİLLER — clip-path resmi saran .cellShapeClip katmanına uygulanır,
-   böylece köşedeki butonlar (şekil/taşı/sığdır) KESİLMEZ */
-.cellShapeClip{position:absolute;inset:0;overflow:hidden;z-index:1;border-radius:10px;}
-.momentGridCell.shape-circle .cellShapeClip{border-radius:50%;}
-.momentGridCell.shape-triangle .cellShapeClip{clip-path:polygon(50% 0%, 0% 100%, 100% 100%);border-radius:0;}
-.momentGridCell.shape-star .cellShapeClip{clip-path:polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%);border-radius:0;}
-.momentGridCell.shape-pentagon .cellShapeClip{clip-path:polygon(50% 0%,100% 38%,82% 100%,18% 100%,0% 38%);border-radius:0;}
-.momentGridCell.shape-hexagon .cellShapeClip{clip-path:polygon(25% 0%,75% 0%,100% 50%,75% 100%,25% 100%,0% 50%);border-radius:0;}
-.momentGridCell.shape-heart .cellShapeClip{clip-path:path('M50,88 C50,88 10,55 10,30 C10,15 25,10 35,10 C43,10 48,16 50,22 C52,16 57,10 65,10 C75,10 90,15 90,30 C90,55 50,88 50,88 Z');border-radius:0;}
-.momentGridCell.shape-diamond .cellShapeClip{clip-path:polygon(50% 0%,100% 50%,50% 100%,0% 50%);border-radius:0;}
-.momentGridCell{overflow:visible;}
-/* Butonlar şekil katmanının üstünde, kesilmez */
-.cellTag,.cellShapeBtn,.cellMoveBtn,.cellFitBtn{z-index:6 !important;}
-/* Sürüklenen kare ve hedef vurgusu */
-.momentGridCell.swapping{opacity:.55;}
-.momentGridCell.swapping .cellShapeClip{outline:2px dashed rgba(255,255,255,.7);}
-.momentGridCell.swapTarget .cellShapeClip{outline:3px solid var(--accent);outline-offset:-3px;}
-/* Zoom ipucu rozeti */
-.cellZoomHint{
-  position:absolute;top:8px;left:8px;z-index:3;
-  font-size:9.5px;font-weight:600;color:#fff;
-  background:rgba(0,0,0,.4);backdrop-filter:blur(4px);
-  padding:3px 7px;border-radius:10px;pointer-events:none;
-  opacity:.85;
-}
-
-/* Asimetrik layout'lar — foto sayısına göre */
-.momentGrid.cells-1{grid-template-columns:1fr;grid-template-rows:1fr;}
-/* 2 kare: sol dar dikey + sağ geniş odak */
-.momentGrid.cells-2{grid-template-columns:1fr 1.6fr;grid-template-rows:1fr;}
-/* 3 kare: sol uzun dikey + sağ üst + sağ alt */
-.momentGrid.cells-3{grid-template-columns:1.4fr 1fr;grid-template-rows:1fr 1fr;}
-.momentGrid.cells-3 .momentGridCell:nth-child(1){grid-row:1 / 3;}
-/* 4 kare: sol uzun dikey + orta büyük odak + sağ iki küçük (görseldeki gibi) */
-.momentGrid.cells-4{grid-template-columns:1fr 1.5fr 1fr;grid-template-rows:1fr 1fr;}
-.momentGrid.cells-4 .momentGridCell:nth-child(1){grid-row:1 / 3;}      /* sol uzun dikey */
-.momentGrid.cells-4 .momentGridCell:nth-child(2){grid-row:1 / 3;}      /* orta büyük odak */
-.momentGrid.cells-4 .momentGridCell:nth-child(3){grid-column:3;grid-row:1;} /* sağ üst */
-.momentGrid.cells-4 .momentGridCell:nth-child(4){grid-column:3;grid-row:2;} /* sağ alt */
-/* 5-6 kare: 3 sütun düzen */
-.momentGrid.cells-5,.momentGrid.cells-6{grid-template-columns:1fr 1fr 1fr;grid-template-rows:1fr 1fr;}
-.momentGrid.cells-5 .momentGridCell:nth-child(1){grid-column:1 / 2;grid-row:1 / 3;}
-/* 7-8 kare: 4 sütun x 2 satır, ilk kare büyük odak */
-/* 7-8 kare: 4 sütun x 2 satır, dengeli — ilk kare 2x geniş odak */
-.momentGrid.cells-7,.momentGrid.cells-8{grid-template-columns:repeat(4,1fr);grid-template-rows:1fr 1fr;}
-.momentGrid.cells-7 .momentGridCell:nth-child(1),
-.momentGrid.cells-8 .momentGridCell:nth-child(1){grid-column:1 / 3;grid-row:1 / 2;}
-/* 9+ kare: 3x3 düzenli grid */
-.momentGrid.cells-9{grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);}
-
-/* Çok dar ekranda da asimetri korunur (tek sütuna düşürmüyoruz),
-   sadece zoom ipucu küçülür */
-.cellZoomHint{display:none;}
+.momentCollageWrap{width:100%;max-width:380px;border-radius:18px;overflow:hidden;box-shadow:0 14px 40px rgba(0,0,0,.5);background:#000;}
 .momentCollageWrap canvas{width:100%;display:block;}
-/* Kolaj araç çubuğu — tek çerçeve rengi seçici */
-.momentCollageToolbar{
-  width:100%;max-width:380px;display:flex;flex-direction:column;align-items:center;gap:6px;margin-top:-2px;
-}
-.momentBgColorPick{
-  display:flex;align-items:center;gap:8px;cursor:pointer;
-  background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.20);
-  padding:8px 14px;border-radius:20px;font-size:12.5px;font-weight:600;color:#fff;position:relative;
-}
-.momentBgSwatch{
-  width:20px;height:20px;border-radius:50%;border:2px solid rgba(255,255,255,.7);
-  background:#1a1a2e;display:inline-block;
-}
-.momentBgColorPick input[type=color]{
-  position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;border:none;padding:0;margin:0;
-}
-.momentToolHint{font-size:10.5px;color:rgba(255,255,255,.5);text-align:center;}
 .momentCaptionInput{
   width:100%;max-width:380px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);
   border-radius:14px;padding:12px 14px;color:#fff;font-size:13.5px;outline:none;font-family:'Inter',sans-serif;
 }
 .momentCaptionInput::placeholder{color:rgba(255,255,255,.45);}
-.momentPreviewFoot{padding:14px 20px calc(26px + env(safe-area-inset-bottom,0px));display:flex;gap:10px;max-width:380px;width:100%;margin:0 auto;flex-shrink:0;}
+.momentPreviewFoot{padding:14px 20px 26px;display:flex;gap:10px;max-width:380px;width:100%;margin:0 auto;}
 .momentPreviewFoot button{flex:1;padding:14px;border-radius:14px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;border:none;}
 .momentRetakeBtn{background:rgba(255,255,255,.12);color:#fff;}
 .momentPublishBtn{background:var(--gradient-vivid);color:#fff;box-shadow:0 8px 22px rgba(124,58,237,.45);}
@@ -1869,12 +1616,9 @@ tbody tr:hover{background:var(--surface-2);}
 .momentBadge .ring{width:16px;height:16px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;}
 .momentBadge svg{width:9px;height:9px;}
 .momentPost .post-media{position:relative;}
-.momentParticipantStrip{display:flex;align-items:center;gap:0;padding:6px 18px 0;margin-top:-2px;flex-wrap:wrap;}
+.momentParticipantStrip{display:flex;gap:-6px;padding:0 18px;margin-top:-2px;}
 .momentParticipantStrip img{width:24px;height:24px;border-radius:50%;border:2px solid var(--surface);object-fit:cover;margin-left:-8px;}
 .momentParticipantStrip img:first-child{margin-left:0;}
-.momentTaggedNames{font-size:12px;color:var(--muted);margin-left:8px;}
-.momentTaggedNames span{color:var(--accent);font-weight:600;cursor:pointer;}
-.momentTaggedNames span:active{opacity:.6;}
 
 /* ===== Davet bildirim toast'ı ===== */
 .momentInviteToast{
@@ -1968,7 +1712,7 @@ tbody tr:hover{background:var(--surface-2);}
 
     <!-- ================= EKRAN 1: NeXT GİRİŞ / KAYIT ================= -->
     <div class="screen" id="screenRegister">
-      <div id="screenRegisterInner" style="flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding:32px 16px 220px;">
+      <div id="screenRegisterInner" style="flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding:32px 16px 160px;">
       <div style="min-height:100%;display:flex;align-items:flex-start;justify-content:center;">
       <div class="card">
         <div class="auth-top-bar">
@@ -2086,7 +1830,7 @@ tbody tr:hover{background:var(--surface-2);}
                 <div class="err" id="err-username">Kullanıcı adı en az 3 karakter olmalı.</div></div>
 
               <!-- Butonlar sayfanın altında sabit -->
-              <div style="height:140px;"></div>
+              <div style="height:80px;"></div>
             </div>
 
             <div class="regstep" id="reg3">
@@ -2842,14 +2586,6 @@ tbody tr:hover{background:var(--surface-2);}
         <button class="momentModeBtn" id="momentModeVideo" onclick="setMomentMode('video')">🎥 Video</button>
       </div>
 
-      <label style="display:block;font-size:12px;color:var(--muted);margin-bottom:8px;" id="momentShotCountLabel">Kaç fotoğraf çekilsin? (kolaj için)</label>
-      <div class="momentShotRow" id="momentShotRow">
-        <button class="momentShotBtn active" data-shots="1" onclick="setMomentShotCount(1, this)">1</button>
-        <button class="momentShotBtn" data-shots="2" onclick="setMomentShotCount(2, this)">2</button>
-        <button class="momentShotBtn" data-shots="3" onclick="setMomentShotCount(3, this)">3</button>
-        <button class="momentShotBtn" data-shots="4" onclick="setMomentShotCount(4, this)">4</button>
-      </div>
-
       <label style="display:block;font-size:12px;color:var(--muted);margin-bottom:8px;">Kimleri davet edeceksin? (en fazla 6 kişi)</label>
       <input type="text" class="momentFriendSearch" id="momentFriendSearch" placeholder="Takip ettiklerinde ara..." oninput="renderMomentFriendList()">
       <div class="momentFriendList" id="momentFriendList">
@@ -2916,18 +2652,7 @@ tbody tr:hover{background:var(--surface-2);}
   </div>
   <div class="momentPreviewBody">
     <div class="momentCollageWrap" id="momentCollageWrap">
-      <!-- Asimetrik HTML grid — kutular buraya dinamik gelir -->
-      <div class="momentGrid" id="momentGrid"></div>
-      <!-- Yayınlarken görüntü üretmek için gizli canvas -->
-      <canvas id="momentCollageCanvas" width="800" height="800" style="display:none;"></canvas>
-    </div>
-    <div class="momentCollageToolbar">
-      <label class="momentBgColorPick">
-        <span class="momentBgSwatch" id="momentBgSwatch"></span>
-        Çerçeve rengi
-        <input type="color" id="momentBgColorInput" value="#1a1a2e" oninput="onMomentBgColor(this.value)">
-      </label>
-      <span class="momentToolHint">Sürükle · iki parmakla yakınlaştır · ⛶ sığdır/doldur · ⇄ yerini değiştir</span>
+      <canvas id="momentCollageCanvas" width="800" height="800"></canvas>
     </div>
     <input type="text" class="momentCaptionInput" id="momentCaptionInput" placeholder="Bir açıklama ekle... (örn. Arkadaşlarla unutulmaz an! 🎉)">
   </div>
@@ -5483,31 +5208,24 @@ function openChatThread(chatId, peerUid){
       const mine = m.from === myUid;
       const t = m.ts ? new Date(m.ts).toTimeString().slice(0,5) : '';
       const editTag = m.edited ? ' <span style="font-size:10px;color:var(--muted);font-style:italic;">düzenlendi</span>' : '';
-      // Yanıtlanan mesajın önizlemesi (varsa)
-      const replyHtml = buildReplyPreviewHtml(m.replyTo, data, myUid);
       // Süreli fotoğraf (ephemeral)
       if(m.mediaType === 'ephemeral'){
-        return wrapSwipeMsg(id, m.from, renderEphemeralMsg(id, m, mine, t, activeChatId), mine);
+        return renderEphemeralMsg(id, m, mine, t, activeChatId);
       }
       if(m.mediaUrl){
         const isGif = m.mediaType === 'gif';
         const align = mine ? 'align-self:flex-end;' : 'align-self:flex-start;';
-        let inner;
         if(m.mediaType==='video' && !isGif){
-          inner = '<div class="msg-media chat-photo-card" style="'+align+'">'+replyHtml+'<video src="'+m.mediaUrl+'" controls playsinline></video><div class="chat-photo-time">'+t+'</div></div>';
-        } else {
-          const escapedUrl = (m.mediaUrl||'').replace(/'/g, '%27');
-          const imgEl = '<img src="'+m.mediaUrl+'" loading="lazy" onclick="openChatImageFullscreen(\''+escapedUrl+'\')" onerror="this.style.opacity=0.3;">';
-          inner = '<div class="msg-media chat-photo-card" style="'+align+'">'+replyHtml+imgEl+'<div class="chat-photo-time">'+t+(isGif?' · GIF':'')+'</div></div>';
+          return '<div class="msg-media chat-photo-card" style="'+align+'"><video src="'+m.mediaUrl+'" controls playsinline></video><div class="chat-photo-time">'+t+'</div></div>';
         }
-        return wrapSwipeMsg(id, m.from, inner, mine);
+        // Resim/GIF — büyük yuvarlak köşeli kart (örnekteki gibi)
+        const escapedUrl = (m.mediaUrl||'').replace(/'/g, '%27');
+        const imgEl = '<img src="'+m.mediaUrl+'" loading="lazy" onclick="openChatImageFullscreen(\''+escapedUrl+'\')" onerror="this.style.opacity=0.3;">';
+        return '<div class="msg-media chat-photo-card" style="'+align+'">'+imgEl+'<div class="chat-photo-time">'+t+(isGif?' · GIF':'')+'</div></div>';
       }
-      const inner = '<div class="msg '+(mine?'me':'them')+'">' + replyHtml + escapeHtml(m.text||'') + editTag + ' <span class="time">'+t+'</span></div>';
-      return wrapSwipeMsg(id, m.from, inner, mine);
+      return '<div class="msg '+(mine?'me':'them')+'">' + escapeHtml(m.text||'') + editTag + ' <span class="time">'+t+'</span></div>';
     }).join('');
     box.scrollTop = box.scrollHeight;
-    // Swipe-to-reply + uzun basma menüsü jestlerini bağla
-    setTimeout(bindMessageGestures, 30);
   });
 
   // Presence + typing (gecikmeyle, DOM hazır olsun)
@@ -5812,14 +5530,11 @@ function renderPostCard(id, p, myUid){
   const isVideo = p.mediaType === 'video';
   const momentBadge = p.isMoment ? `<span class="momentBadge"><span class="ring"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span>Anı Yakala</span>` : '';
   const momentStrip = (p.isMoment && Array.isArray(p.momentParticipants) && p.momentParticipants.length)
-    ? `<div class="momentParticipantStrip">
-        ${p.momentParticipants.map(u=>`<img src="${u.photo||'https://i.pravatar.cc/60?img=68'}" title="${u.username||''}" onclick="viewOtherProfile('${u.uid||''}')" style="cursor:pointer;">`).join('')}
-        <div class="momentTaggedNames">${p.momentParticipants.map(u=>`<span onclick="viewOtherProfile('${u.uid||''}')">${u.username||'@kullanici'}</span>`).join(', ')}</div>
-       </div>`
+    ? `<div class="momentParticipantStrip">${p.momentParticipants.map(u=>`<img src="${u.photo||'https://i.pravatar.cc/60?img=68'}" title="${u.username||''}">`).join('')}</div>`
     : '';
   const mediaHtml = mediaList.length <= 1
     ? `<div class="post-media">${isVideo ? `<video controls src="${mediaList[0]||''}"></video>` : `<img src="${mediaList[0]||''}">`}</div>`
-    : `<div class="post-media" style="display:grid;grid-template-columns:1fr 1fr;gap:3px;">${mediaList.slice(0,4).map(m=>`<img src="${m}" style="width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:8px;">`).join('')}</div>`;
+    : `<div class="post-media" style="display:grid;grid-template-columns:1fr 1fr;gap:2px;aspect-ratio:1/1;">${mediaList.slice(0,4).map(m=>`<img src="${m}" style="width:100%;height:100%;object-fit:cover;">`).join('')}</div>`;
 
   return `
     <div class="post ${p.isMoment?'momentPost':''}" data-post-id="${id}">
@@ -5831,14 +5546,14 @@ function renderPostCard(id, p, myUid){
       ${mediaHtml}
       ${momentStrip}
       <div class="ig-actions">
-        <div class="icon-act ${isLiked?'liked':''}" onclick="toggleLike(this)" title="Beğen">
+        <div class="icon-act ${isLiked?'liked':''}" onclick="toggleLike(this)">
           <svg viewBox="0 0 24 24" fill="${isLiked?'var(--danger)':'none'}" stroke="${isLiked?'var(--danger)':'currentColor'}" stroke-width="2"><path d="M20.8 4.6a5 5 0 00-7.1 0L12 6.3l-1.7-1.7a5 5 0 10-7.1 7.1L12 20.3l8.8-8.6a5 5 0 000-7.1z"/></svg>
-          <span>Beğen</span>
+          Beğen
         </div>
-        <div class="icon-act" onclick="openCommentSheet('${id}')" title="Yorum"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.4 8.4 0 01-1.1 4.2L21 21l-5.4-1a8.5 8.5 0 11-.6-.4z"/></svg><span>Yorum</span></div>
-        <div class="icon-act" onclick="openShareSheet(this)" title="Paylaş"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg><span>Paylaş</span></div>
+        <div class="icon-act" onclick="openCommentSheet('${id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.4 8.4 0 01-1.1 4.2L21 21l-5.4-1a8.5 8.5 0 11-.6-.4z"/></svg>Yorum</div>
+        <div class="icon-act" onclick="openShareSheet(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>Paylaş</div>
         <div class="spacer"></div>
-        <div class="icon-act" onclick="toggleSave(this)" title="Kaydet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h12v18l-6-4-6 4V3z"/></svg><span>Kaydet</span></div>
+        <div class="icon-act" onclick="toggleSave(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h12v18l-6-4-6 4V3z"/></svg>Kaydet</div>
       </div>
       <div class="like-count"><span class="likeNum">${likeCount}</span> beğenme</div>
       <div class="caption"><b>${p.username || '@kullanici'}</b> ${linkifyCaption(p.caption || '')}</div>
@@ -6000,9 +5715,6 @@ function renderMyPostsGrid(){
 let momentSelectedFriends = [];   // [{uid, username, photo}]
 let momentSelectedMode = 'photo';
 let momentSelectedChallenge = '';
-let momentSelectedShotCount = 1;  // 1-4: kolajda kaç kare çekilecek
-let momentMyCapturedShots = [];   // bu kullanıcının çektiği kareler (base64) [shot1, shot2...]
-let momentCurrentShotIndex = 0;   // şu an kaçıncı kareyi çekiyoruz
 let momentSessionId = null;
 let momentSessionRef = null;
 let momentCamStream = null;
@@ -6021,14 +5733,8 @@ function openMomentStart(){
   momentSelectedFriends = [];
   momentSelectedMode = 'photo';
   momentSelectedChallenge = '';
-  momentSelectedShotCount = 1;
-  momentMyCapturedShots = [];
-  momentCurrentShotIndex = 0;
   document.getElementById('momentModePhoto').classList.add('active');
   document.getElementById('momentModeVideo').classList.remove('active');
-  document.querySelectorAll('.momentShotBtn').forEach((b,i)=>b.classList.toggle('active', i===0));
-  document.getElementById('momentShotRow').style.display = '';
-  document.getElementById('momentShotCountLabel').style.display = '';
   document.querySelectorAll('.momentChallengeChip').forEach(c=>c.classList.remove('active'));
   document.querySelector('.momentChallengeChip[data-c=""]').classList.add('active');
   document.getElementById('momentFriendSearch').value = '';
@@ -6051,16 +5757,6 @@ function setMomentMode(mode){
   momentSelectedMode = mode;
   document.getElementById('momentModePhoto').classList.toggle('active', mode==='photo');
   document.getElementById('momentModeVideo').classList.toggle('active', mode==='video');
-  // Video modunda çoklu kare yok — foto sayısı seçimini gizle
-  const show = (mode === 'photo');
-  document.getElementById('momentShotRow').style.display = show ? '' : 'none';
-  document.getElementById('momentShotCountLabel').style.display = show ? '' : 'none';
-  if(!show) momentSelectedShotCount = 1;
-}
-function setMomentShotCount(n, btn){
-  momentSelectedShotCount = n;
-  document.querySelectorAll('.momentShotBtn').forEach(b=>b.classList.remove('active'));
-  if(btn) btn.classList.add('active');
 }
 document.addEventListener('click', (e)=>{
   const chip = e.target.closest('.momentChallengeChip');
@@ -6156,7 +5852,6 @@ function startMomentCapture(){
     hostUid: myUid,
     mode: momentSelectedMode,
     challenge: momentSelectedChallenge,
-    shotCount: momentSelectedShotCount,
     createdAt: firebase.database.ServerValue.TIMESTAMP,
     participants: participants,
     state: 'waiting'
@@ -6289,82 +5984,57 @@ function closeAllMomentOverlays(){
   document.getElementById('momentCountdown').classList.add('hidden');
   if(momentSessionRef){ momentSessionRef.off(); momentSessionRef = null; }
   if(momentCountdownTimer){ clearInterval(momentCountdownTimer); momentCountdownTimer = null; }
-  if(typeof momentCaptureListenerRef !== 'undefined' && momentCaptureListenerRef){ momentCaptureListenerRef.off(); momentCaptureListenerRef = null; }
-  if(typeof momentCollageTimeout !== 'undefined' && momentCollageTimeout){ clearTimeout(momentCollageTimeout); momentCollageTimeout = null; }
-  if(typeof momentPreviewOpened !== 'undefined') momentPreviewOpened = false;
   stopMomentCamera();
   momentSessionId = null;
   momentIsHost = false;
   momentCapturedDataUrl = null;
   momentCountdownStarted = false;
-  momentMyCapturedShots = [];
-  momentCurrentShotIndex = 0;
-  momentCollageUrls = [];
-  if(typeof momentCollageOwners !== 'undefined') momentCollageOwners = [];
-  if(typeof momentCellZoom !== 'undefined') momentCellZoom = [];
-  if(typeof momentCellPanX !== 'undefined') momentCellPanX = [];
-  if(typeof momentCellPanY !== 'undefined') momentCellPanY = [];
-  if(typeof momentCellFit !== 'undefined') momentCellFit = [];
-  if(typeof momentCellShape !== 'undefined') momentCellShape = [];
-  if(typeof momentCellRotate !== 'undefined') momentCellRotate = [];
   document.body.classList.remove('moment-active'); // alt navigasyon adasını geri göster
 }
 
-/* ---------- 3) GERİ SAYIM + SENKRON ÇEKİM (çoklu kare) ---------- */
-let momentTotalShots = 1;
+/* ---------- 3) GERİ SAYIM + SENKRON ÇEKİM ---------- */
 function beginMomentCountdownUI(session){
   if(momentCountdownStarted) return;
   momentCountdownStarted = true;
-
-  momentTotalShots = session.shotCount || 1;
-  momentMyCapturedShots = [];
-  momentCurrentShotIndex = 0;
 
   document.getElementById('momentWaitOverlay').classList.add('hidden');
   document.getElementById('momentCaptureOverlay').classList.remove('hidden');
   startMomentCamera();
   renderMomentCaptureParticipants(session);
 
-  // İlk kare: senkron başlangıç (herkes session.countdownStartAt'e göre)
-  runShotCountdown(session.countdownStartAt, true);
-}
-
-/* Tek bir karenin geri sayımını yürütür. startAt verilmezse şimdiden +6sn başlar. */
-function runShotCountdown(startAt, isFirst){
   const countdownEl = document.getElementById('momentCountdown');
-  const label = document.getElementById('momentCamLabel');
   countdownEl.classList.remove('hidden');
-  if(momentCountdownTimer){ clearInterval(momentCountdownTimer); }
 
-  const shotNo = momentCurrentShotIndex + 1;
-  const total = momentTotalShots;
-  const target = startAt || (Date.now() + 6000);
-
-  const tick = ()=>{
-    const remainingMs = target - Date.now();
-    const secs = Math.ceil(remainingMs / 1000);
-    const shotInfo = total > 1 ? ` (${shotNo}/${total})` : '';
-    if(secs > 5){
-      countdownEl.textContent = 'HAZIR OL!';
-      countdownEl.style.fontSize = '42px';
-      if(label) label.textContent = '📸 Poz ver, hazırlan...' + shotInfo;
-    } else if(secs > 0){
-      countdownEl.textContent = secs;
-      countdownEl.style.fontSize = '';
-      countdownEl.classList.remove('flash');
-      if(label) label.textContent = secs + ' saniye...' + shotInfo;
-    } else if(secs === 0 || (secs < 0 && remainingMs > -900)){
-      countdownEl.textContent = 'YAKALA!';
-      countdownEl.style.fontSize = '48px';
-      countdownEl.classList.add('flash');
-      if(label) label.textContent = '✨ Çekildi!' + shotInfo;
-      clearInterval(momentCountdownTimer);
-      momentCountdownTimer = null;
-      captureMomentFrame();
-    }
-  };
+  // Önce "HAZIR OL!" göster, sonra 5-4-3-2-1, sonra "YAKALA!"
+    const label = document.getElementById('momentCamLabel');
+    const tick = ()=>{
+      const remainingMs = session.countdownStartAt - Date.now();
+      const secs = Math.ceil(remainingMs / 1000);
+      if(secs > 5){
+        countdownEl.textContent = 'HAZIR OL!';
+        countdownEl.style.fontSize = '42px';
+        if(label) label.textContent = '📸 Hazırlan, geri sayım başlıyor...';
+      } else if(secs > 0){
+        countdownEl.textContent = secs;
+        countdownEl.style.fontSize = '';
+        countdownEl.classList.remove('flash');
+        if(label) label.textContent = secs + ' saniye sonra çekiliyor...';
+      } else if(secs === 0 || (secs < 0 && remainingMs > -1000)){
+        countdownEl.textContent = 'YAKALA!';
+        countdownEl.style.fontSize = '48px';
+        countdownEl.classList.add('flash');
+        if(label) label.textContent = '✨ Fotoğraf çekildi!';
+        captureMomentFrame();
+      } else {
+        clearInterval(momentCountdownTimer);
+        momentCountdownTimer = null;
+        countdownEl.classList.add('hidden');
+        countdownEl.style.fontSize = '';
+        if(label) label.textContent = '⏳ Diğerleri bekleniyor...';
+      }
+    };
   tick();
-  momentCountdownTimer = setInterval(tick, 200);
+  momentCountdownTimer = setInterval(tick, 250);
 }
 
 function renderMomentCaptureParticipants(session){
@@ -6378,10 +6048,6 @@ function startMomentCamera(){
   const placeholder = document.getElementById('momentCamPlaceholder');
   placeholder.classList.add('hidden');
   video.classList.remove('hidden');
-
-  // Ön kamerada canlı önizlemeyi aynala (telefonda nasıl görüyorsan öyle),
-  // arka kamerada normal göster.
-  video.classList.toggle('mirrored', momentFacingMode === 'user');
 
   if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
     placeholder.classList.remove('hidden');
@@ -6414,17 +6080,9 @@ function momentManualShutter(){
   captureMomentFrame();
 }
 
-function captureMomentFrame(retryCount){
-  retryCount = retryCount || 0;
+function captureMomentFrame(){
+  if(momentCapturedDataUrl) return; // zaten çekildi, tekrar çekme
   const video = document.getElementById('momentCamVideo');
-
-  // Kamera henüz hazır değilse (videoWidth=0) boş kare üretme — kısa bekle, tekrar dene.
-  // En fazla ~1.5sn bekler (10 x 150ms), sonra mecbur gradient'e düşer.
-  if((!video || !video.videoWidth) && retryCount < 10){
-    setTimeout(()=> captureMomentFrame(retryCount + 1), 150);
-    return;
-  }
-
   const canvas = document.createElement('canvas');
   const W = 480, H = 480;
   canvas.width = W; canvas.height = H;
@@ -6433,136 +6091,84 @@ function captureMomentFrame(retryCount){
   if(video && video.videoWidth){
     const side = Math.min(video.videoWidth, video.videoHeight);
     const sx = (video.videoWidth - side)/2, sy = (video.videoHeight - side)/2;
-    // NOT: drawImage ham (aynalanmamış) kamera verisini çizer; önizlemedeki ayna
-    // CSS scaleX(-1) ile sağlanıyor. Çekilen karenin önizlemeyle BİREBİR aynı
-    // (elin sağda) görünmesi için ham veriyi yatay çevirerek çiziyoruz.
+    // Selfie kamerasında ayna efekti doğal görünsün diye yatay çeviriyoruz
     if(momentFacingMode === 'user'){
-      ctx.save();
-      ctx.translate(W, 0);
-      ctx.scale(-1, 1);
-      ctx.drawImage(video, sx, sy, side, side, 0, 0, W, H);
-      ctx.restore();
-    } else {
-      ctx.drawImage(video, sx, sy, side, side, 0, 0, W, H);
+      ctx.translate(W, 0); ctx.scale(-1, 1);
     }
+    ctx.drawImage(video, sx, sy, side, side, 0, 0, W, H);
   } else {
     // Kamera yoksa nötr bir gradient kare üret (akış kesintiye uğramasın)
     const grad = ctx.createLinearGradient(0,0,W,H);
-    const palette = [['#7c3aed','#06b6d4'],['#ec4899','#f59e0b'],['#22c55e','#3b82f6'],['#ef4444','#8b5cf6']];
-    const pair = palette[momentCurrentShotIndex % palette.length];
-    grad.addColorStop(0,pair[0]); grad.addColorStop(1,pair[1]);
+    grad.addColorStop(0,'#7c3aed'); grad.addColorStop(1,'#06b6d4');
     ctx.fillStyle = grad; ctx.fillRect(0,0,W,H);
   }
+  momentCapturedDataUrl = canvas.toDataURL('image/jpeg', 0.85);
 
-  const shot = canvas.toDataURL('image/jpeg', 0.85);
-  momentMyCapturedShots.push(shot);
-  momentCurrentShotIndex++;
-
-  // Daha çekilecek kare var mı?
-  if(momentCurrentShotIndex < momentTotalShots){
-    // Sonraki kare için kısa bir hazırlık + yeni geri sayım
-    const label = document.getElementById('momentCamLabel');
-    const countdownEl = document.getElementById('momentCountdown');
-    countdownEl.classList.add('flash');
-    if(label) label.textContent = '✅ ' + momentCurrentShotIndex + '. kare alındı! Sıradaki için hazırlan...';
-    setTimeout(()=>{
-      countdownEl.classList.remove('flash');
-      runShotCountdown(Date.now() + 6000, false); // sonraki kare 6sn sonra
-    }, 1100);
-    return;
-  }
-
-  // Tüm kareler bitti — kamerayı kapat ve yükle
   setTimeout(()=>{
     stopMomentCamera();
     document.getElementById('momentCaptureOverlay').classList.add('hidden');
     document.getElementById('momentCountdown').classList.add('hidden');
-    document.getElementById('momentCountdown').classList.remove('flash');
     momentCountdownStarted = false;
-    // Tüm kareleri sıkıştır
-    Promise.all(momentMyCapturedShots.map(s => compressImageToBase64(s, 480, 0.80)))
-      .then(compressedShots => {
-        uploadMyMomentCapture(compressedShots);
-      });
-  }, 300);
+    // Yüklemeden önce sıkıştır (480x480 zaten küçük ama yine de optimize edelim)
+    compressImageToBase64(momentCapturedDataUrl, 480, 0.80).then(compressed => {
+      momentCapturedDataUrl = compressed;
+      uploadMyMomentCapture();
+    });
+  }, 650);
 }
 
-function uploadMyMomentCapture(shots){
+function uploadMyMomentCapture(){
   if(!momentSessionId || !fbAuth.currentUser) return;
   const myUid = fbAuth.currentUser.uid;
-  const shotList = Array.isArray(shots) ? shots : (shots ? [shots] : momentMyCapturedShots);
 
-  const finishLocal = (urls)=>{
-    // captures/{uid} = { shots: [url1, url2...], url: ilkKare (geriye uyum), ts }
-    fbDb.ref('momentSessions/' + momentSessionId + '/captures/' + myUid).set({
-      shots: urls, url: urls[0], ts: Date.now()
-    });
+  const finishLocal = (url)=>{
+    fbDb.ref('momentSessions/' + momentSessionId + '/captures/' + myUid).set({ url, ts: Date.now() });
     fbDb.ref('momentSessions/' + momentSessionId + '/participants/' + myUid + '/status').set('captured');
-    // HERKES (host + katılımcı) tüm kareler toplanınca önizlemeyi açar
-    watchAllCapturesForCollage();
+    if(momentIsHost){
+      watchAllCapturesForCollage();
+    }
   };
 
-  // Kareler zaten küçük (480px, sıkıştırılmış) — Storage'a yükleme turu beklemeden
-  // doğrudan base64'ü DB'ye yaz. Bu, kolaj önizlemesinin ANINDA açılmasını sağlar.
-  finishLocal(shotList);
+  if(fbStorage){
+    fetch(momentCapturedDataUrl).then(r=>r.blob()).then(blob=>{
+      const path = 'momentCaptures/' + momentSessionId + '/' + myUid + '.jpg';
+      return fbStorage.ref().child(path).put(blob);
+    }).then(snap => snap.ref.getDownloadURL()).then(finishLocal).catch(()=>{
+      // Storage başarısız olursa base64'ü doğrudan DB'ye yazarak akışı kesmeyelim
+      finishLocal(momentCapturedDataUrl);
+    });
+  } else {
+    finishLocal(momentCapturedDataUrl);
+  }
 
-  // Çekimini bitiren herkese "diğerleri bekleniyor" ekranı (önizleme açılana kadar)
-  showMomentParticipantWaitingForHost();
+  // Katılımcı (host olmayan) için: kendi çekimini yaptıktan sonra host'un
+  // collage'ı yayınlamasını bekleyen bir bekleme ekranı göster.
+  if(!momentIsHost){
+    showMomentParticipantWaitingForHost();
+  }
 }
 
 function showMomentParticipantWaitingForHost(){
   document.getElementById('momentWaitOverlay').classList.remove('hidden');
   document.getElementById('momentWaitHeading').textContent = 'Anın birleştiriliyor...';
-  document.getElementById('momentWaitSub').textContent = 'Herkesin karesi toplanınca kolaj önizlemesi açılacak.';
+  document.getElementById('momentWaitSub').textContent = 'Herkesin karesi toplandıktan sonra anı otomatik olarak akışına düşecek.';
   document.getElementById('momentReadyBtn').style.display = 'none';
 }
 
-/* ---------- 4) TÜM ÇEKİMLER TOPLANINCA COLLAGE ÖNİZLEMESİ (herkes açar) ---------- */
-let momentCaptureListenerRef = null;
-let momentPreviewOpened = false;
-let momentCollageTimeout = null;
+/* ---------- 4) HOST: TÜM ÇEKİMLER TOPLANINCA COLLAGE ÖNİZLEMESİ ---------- */
 function watchAllCapturesForCollage(){
-  if(!momentSessionId) return;
-  if(momentCaptureListenerRef){ momentCaptureListenerRef.off(); momentCaptureListenerRef = null; }
-  momentPreviewOpened = false;
-
   fbDb.ref('momentSessions/' + momentSessionId).once('value').then((snap)=>{
     const session = snap.val();
     if(!session) return;
-    // Aktif katılımcılar (left olmayanlar)
     const participantUids = Object.keys(session.participants || {}).filter(uid => session.participants[uid].status !== 'left');
-
-    const captureCount = (captures)=> participantUids.filter(uid => captures[uid] && (captures[uid].url || (captures[uid].shots && captures[uid].shots.length))).length;
-
-    const checkAndOpen = (captures, force)=>{
-      if(momentPreviewOpened) return true;
-      const have = captureCount(captures);
-      const allIn = participantUids.length > 0 && have >= participantUids.length;
-      if(allIn || (force && have > 0)){
-        momentPreviewOpened = true;
-        if(momentCaptureListenerRef){ momentCaptureListenerRef.off(); momentCaptureListenerRef = null; }
-        if(momentCollageTimeout){ clearTimeout(momentCollageTimeout); momentCollageTimeout = null; }
+    const captureListener = fbDb.ref('momentSessions/' + momentSessionId + '/captures');
+    captureListener.on('value', (csnap)=>{
+      const captures = csnap.val() || {};
+      const allIn = participantUids.every(uid => captures[uid]);
+      if(allIn){
+        captureListener.off();
         openMomentPreview(session, captures);
-        return true;
       }
-      return false;
-    };
-
-    // Önce anlık kontrol
-    fbDb.ref('momentSessions/' + momentSessionId + '/captures').once('value').then((cs)=>{
-      if(checkAndOpen(cs.val() || {})) return;
-      // Değilse canlı dinle
-      momentCaptureListenerRef = fbDb.ref('momentSessions/' + momentSessionId + '/captures');
-      momentCaptureListenerRef.on('value', (csnap)=>{
-        checkAndOpen(csnap.val() || {});
-      });
-      // Güvenlik: 4 sn içinde herkes gelmezse, eldeki karelerle önizlemeyi yine de aç
-      if(momentCollageTimeout) clearTimeout(momentCollageTimeout);
-      momentCollageTimeout = setTimeout(()=>{
-        fbDb.ref('momentSessions/' + momentSessionId + '/captures').once('value').then((cs2)=>{
-          checkAndOpen(cs2.val() || {}, true);
-        });
-      }, 4000);
     });
   });
 }
@@ -6570,40 +6176,12 @@ function watchAllCapturesForCollage(){
 function openMomentPreview(session, captures){
   document.getElementById('momentWaitOverlay').classList.add('hidden');
   document.getElementById('momentPreviewOverlay').classList.remove('hidden');
-  // Önizleme tam ekran — alt navigasyon adasını gizle (paylaş butonu adanın altında kalmasın)
-  document.body.classList.add('moment-active');
   document.getElementById('momentCaptionInput').value = session.challenge ? session.challenge + ' — ' : '';
 
   const uids = Object.keys(captures);
-  // Her kullanıcının tüm karelerini (shots) sırayla topla — her kareye sahibini bağla
-  const urls = [];
-  const owners = []; // her kareye: {uid, username, photo}
-  uids.forEach(uid => {
-    const c = captures[uid];
-    const pInfo = {
-      uid,
-      username: (session.participants[uid]||{}).username || '@kullanici',
-      photo: (session.participants[uid]||{}).photo || ''
-    };
-    if(Array.isArray(c.shots) && c.shots.length){
-      c.shots.forEach(u => { if(u && typeof u==='string' && u.length>20){ urls.push(u); owners.push(pInfo); } });
-    } else if(c.url && typeof c.url==='string' && c.url.length>20){
-      urls.push(c.url); owners.push(pInfo);
-    }
-  });
-  // Kareleri + sahiplerini sakla (yeniden çizim ve etiketleme için)
-  momentCollageUrls = urls;
-  momentCollageOwners = owners;
-  momentCollageBg = '#1a1a2e'; // TEK arka plan/çerçeve rengi
-  const bgInput = document.getElementById('momentBgColorInput');
-  const bgSwatch = document.getElementById('momentBgSwatch');
-  if(bgInput) bgInput.value = '#1a1a2e';
-  if(bgSwatch) bgSwatch.style.background = '#1a1a2e';
-  const gridEl = document.getElementById('momentGrid');
-  if(gridEl) gridEl.style.setProperty('--moment-bg', momentCollageBg);
-
+  const urls = uids.map(uid => captures[uid].url);
   document.getElementById('momentPublishBtn').disabled = true;
-  buildMomentCollageGrid(urls, owners).then(()=>{
+  drawMomentCollage(urls).then(()=>{
     document.getElementById('momentPublishBtn').disabled = false;
   });
 
@@ -6613,368 +6191,52 @@ function openMomentPreview(session, captures){
     photo: (session.participants[uid]||{}).photo || ''
   }));
   momentSessionPendingMode = session.mode;
-  momentSessionPendingChallenge = session.challenge || '';
-
-  // Sadece HOST yayınlayabilir. Katılımcı önizlemeyi görür ama "Host bekleniyor" der.
-  const publishBtn = document.getElementById('momentPublishBtn');
-  const retakeBtn = document.querySelector('.momentRetakeBtn');
-  const captionInput = document.getElementById('momentCaptionInput');
-  if(momentIsHost){
-    publishBtn.textContent = 'Yayınla 🚀';
-    publishBtn.onclick = publishMoment;
-    if(retakeBtn) retakeBtn.style.display = '';
-    if(captionInput) captionInput.disabled = false;
-  } else {
-    publishBtn.textContent = '⏳ Host yayınlıyor...';
-    publishBtn.disabled = true;
-    publishBtn.onclick = null;
-    if(retakeBtn) retakeBtn.style.display = 'none';
-    if(captionInput) captionInput.disabled = true;
-    // Katılımcı: host yayınlayınca (state=done) otomatik kapansın → feed'e gitsin
-    if(momentSessionRef) momentSessionRef.off();
-    momentSessionRef = fbDb.ref('momentSessions/' + momentSessionId);
-    momentSessionRef.on('value', (s)=>{
-      const sv = s.val();
-      if(!sv || sv.state === 'cancelled'){ closeAllMomentOverlays(); return; }
-      if(sv.state === 'done'){
-        closeAllMomentOverlays();
-        showToast('Ortak anınız yayınlandı 🎉');
-        goNav('feed', document.getElementById('navFeed'));
-      }
-    });
-  }
 }
 let momentSessionPendingParticipants = [];
 let momentSessionPendingMode = 'photo';
 
-let momentCollageUrls = [];
-
-/* Asimetrik HTML grid kutularını oluştur — etiket + cover + zoom/pan */
-let momentCellZoom = [];   // her hücre için zoom
-let momentCellPanX = [];   // her hücre için x kaydırma (px)
-let momentCellPanY = [];   // her hücre için y kaydırma (px)
-let momentCellFit = [];    // her hücre contain (true) mu cover (false=varsayılan) mı
-let momentCellShape = [];  // her hücre şekli: rect, circle, triangle, star, pentagon, hexagon, heart, diamond
-let momentCellRotate = []; // her hücre döndürme açısı (0/90/180/270)
-let momentCollageOwners = []; // her kareye {uid, username, photo}
-let momentCollageBg = '#1a1a2e'; // tek arka plan/çerçeve rengi
-
-const MOMENT_SHAPES = ['rect','circle','triangle','star','pentagon','hexagon','heart','diamond'];
-const MOMENT_SHAPE_ICONS = {rect:'▭',circle:'⬤',triangle:'▲',star:'★',pentagon:'⬠',hexagon:'⬡',heart:'♥',diamond:'◆'};
-
-function buildMomentCollageGrid(urls, owners){
-  const grid = document.getElementById('momentGrid');
-  if(!grid) return Promise.resolve();
-  owners = owners || momentCollageOwners || [];
-  const n = Math.min(urls.length || 1, 9);
-  grid.className = 'momentGrid cells-' + n;
-  grid.style.setProperty('--moment-bg', momentCollageBg);
-  momentCellZoom = []; momentCellPanX = []; momentCellPanY = []; momentCellFit = [];
-  if(!momentCellShape.length || momentCellShape.length !== urls.length) momentCellShape = urls.map(()=> 'rect');
-  if(!momentCellRotate.length || momentCellRotate.length !== urls.length) momentCellRotate = urls.map(()=> 0);
-  grid.innerHTML = urls.slice(0,9).map((url, i)=>{
-    momentCellZoom[i] = 1; momentCellPanX[i] = 0; momentCellPanY[i] = 0; momentCellFit[i] = false;
-    const ow = owners[i] || {};
-    const tag = ow.username
-      ? `<div class="cellTag" onclick="event.stopPropagation();goToTaggedProfile('${ow.uid||''}')">@${(ow.username||'').replace(/^@/,'')}</div>`
-      : '';
-    const shape = momentCellShape[i] || 'rect';
-    const shapeIcon = MOMENT_SHAPE_ICONS[shape] || '▭';
-    const rot = momentCellRotate[i] || 0;
-    return `
-    <div class="momentGridCell shape-${shape}" id="momentCell${i}" data-idx="${i}" style="--zoom:1;--px:0px;--py:0px;--rot:${rot}deg;">
-      <div class="cellShapeClip"><img src="${url}" alt="" id="momentCellImg${i}"></div>
-      ${tag}
-      <button class="cellShapeBtn" title="Şekli değiştir" onclick="event.stopPropagation();cycleCellShape(${i})">${shapeIcon}</button>
-      <button class="cellRotateBtn" title="Döndür (yana yatır)" onclick="event.stopPropagation();rotateCell(${i})">⟳</button>
-      <button class="cellMoveBtn" title="Yerini değiştir (tut ve sürükle)" onmousedown="startCellSwap(event,${i})" ontouchstart="startCellSwap(event,${i})">⇄</button>
-      <button class="cellFitBtn" title="Sığdır / doldur" onclick="event.stopPropagation();toggleCellFit(${i})">⛶</button>
-    </div>`;
-  }).join('');
-  // Zoom/pan jestlerini bağla
-  urls.slice(0,9).forEach((_, i)=> bindCellZoomPan(i));
-  return Promise.resolve();
-}
-
-/* Hücre fotoğrafını 90° döndür (yana yatır) */
-function rotateCell(idx){
-  momentCellRotate[idx] = ((momentCellRotate[idx] || 0) + 90) % 360;
-  const cell = document.getElementById('momentCell'+idx);
-  if(cell) cell.style.setProperty('--rot', momentCellRotate[idx] + 'deg');
-  if(navigator.vibrate) navigator.vibrate(12);
-}
-
-/* Hücre şeklini sırayla değiştir */
-function cycleCellShape(idx){
-  const cur = momentCellShape[idx] || 'rect';
-  const next = MOMENT_SHAPES[(MOMENT_SHAPES.indexOf(cur) + 1) % MOMENT_SHAPES.length];
-  momentCellShape[idx] = next;
-  const cell = document.getElementById('momentCell'+idx);
-  if(cell){
-    MOMENT_SHAPES.forEach(s=> cell.classList.remove('shape-'+s));
-    cell.classList.add('shape-'+next);
-    const btn = cell.querySelector('.cellShapeBtn');
-    if(btn) btn.textContent = MOMENT_SHAPE_ICONS[next] || '▭';
-  }
-  if(navigator.vibrate) navigator.vibrate(12);
-}
-
-/* ---- KARE YER DEĞİŞTİRME (sürükle-bırak) ---- */
-let momentSwapFrom = null;
-function startCellSwap(e, idx){
-  e.preventDefault(); e.stopPropagation();
-  momentSwapFrom = idx;
-  const fromCell = document.getElementById('momentCell'+idx);
-  if(fromCell) fromCell.classList.add('swapping');
-
-  const move = (ev)=>{
-    const pt = ev.touches ? ev.touches[0] : ev;
-    const el = document.elementFromPoint(pt.clientX, pt.clientY);
-    const overCell = el && el.closest ? el.closest('.momentGridCell') : null;
-    document.querySelectorAll('.momentGridCell.swapTarget').forEach(c=>c.classList.remove('swapTarget'));
-    if(overCell && overCell.dataset.idx != idx) overCell.classList.add('swapTarget');
-  };
-  const up = (ev)=>{
-    const pt = ev.changedTouches ? ev.changedTouches[0] : ev;
-    const el = document.elementFromPoint(pt.clientX, pt.clientY);
-    const overCell = el && el.closest ? el.closest('.momentGridCell') : null;
-    if(overCell && overCell.dataset.idx != null){
-      const toIdx = parseInt(overCell.dataset.idx);
-      if(!isNaN(toIdx) && toIdx !== idx) swapCollageCells(idx, toIdx);
-    }
-    document.querySelectorAll('.momentGridCell.swapTarget,.momentGridCell.swapping').forEach(c=>c.classList.remove('swapTarget','swapping'));
-    momentSwapFrom = null;
-    document.removeEventListener('mousemove',move); document.removeEventListener('mouseup',up);
-    document.removeEventListener('touchmove',move); document.removeEventListener('touchend',up);
-  };
-  document.addEventListener('mousemove',move); document.addEventListener('mouseup',up);
-  document.addEventListener('touchmove',move,{passive:false}); document.addEventListener('touchend',up);
-}
-
-/* İki karenin yerini (resim + sahip + ayarlar) değiştir, grid'i yeniden kur */
-function swapCollageCells(a, b){
-  [momentCollageUrls[a], momentCollageUrls[b]] = [momentCollageUrls[b], momentCollageUrls[a]];
-  if(momentCollageOwners.length){
-    [momentCollageOwners[a], momentCollageOwners[b]] = [momentCollageOwners[b], momentCollageOwners[a]];
-  }
-  if(momentCellShape.length){
-    [momentCellShape[a], momentCellShape[b]] = [momentCellShape[b], momentCellShape[a]];
-  }
-  if(momentCellRotate.length){
-    [momentCellRotate[a], momentCellRotate[b]] = [momentCellRotate[b], momentCellRotate[a]];
-  }
-  buildMomentCollageGrid(momentCollageUrls, momentCollageOwners);
-  if(navigator.vibrate) navigator.vibrate(20);
-}
-
-/* Etiketlenen kullanıcının profiline git */
-function goToTaggedProfile(uid){
-  if(!uid) return;
-  closeAllMomentOverlays();
-  if(typeof viewOtherProfile === 'function') viewOtherProfile(uid);
-}
-
-/* TEK arka plan/çerçeve rengini değiştir (kareler arası ince boşlukta görünür) */
-function onMomentBgColor(color){
-  momentCollageBg = color;
-  const grid = document.getElementById('momentGrid');
-  if(grid) grid.style.setProperty('--moment-bg', color);
-  const sw = document.getElementById('momentBgSwatch');
-  if(sw) sw.style.background = color;
-}
-
-/* Bir hücrenin transform'unu güncelle */
-function applyCellTransform(idx){
-  const cell = document.getElementById('momentCell' + idx);
-  if(!cell) return;
-  cell.style.setProperty('--zoom', momentCellZoom[idx] || 1);
-  cell.style.setProperty('--px', (momentCellPanX[idx] || 0) + 'px');
-  cell.style.setProperty('--py', (momentCellPanY[idx] || 0) + 'px');
-}
-
-/* Doldur (cover, varsayılan) ↔ sığdır (contain) geçişi */
-function toggleCellFit(idx){
-  const cell = document.getElementById('momentCell' + idx);
-  if(!cell) return;
-  momentCellFit[idx] = !momentCellFit[idx];
-  cell.classList.toggle('fit', momentCellFit[idx]);
-  momentCellZoom[idx] = 1; momentCellPanX[idx] = 0; momentCellPanY[idx] = 0;
-  applyCellTransform(idx);
-}
-
-/* Tek/iki parmak ile yakınlaştırma + kaydırma */
-function bindCellZoomPan(idx){
-  const cell = document.getElementById('momentCell' + idx);
-  if(!cell) return;
-  let dragging=false, startX=0, startY=0, baseX=0, baseY=0;
-  let pinchDist=0, pinchZoom=1;
-
-  const dist = (t)=> Math.hypot(t[0].clientX-t[1].clientX, t[0].clientY-t[1].clientY);
-
-  cell.addEventListener('touchstart', e=>{
-    if(e.target.closest('button')) return;
-    if(e.touches.length===1){
-      dragging=true; startX=e.touches[0].clientX; startY=e.touches[0].clientY;
-      baseX=momentCellPanX[idx]||0; baseY=momentCellPanY[idx]||0;
-    } else if(e.touches.length===2){
-      dragging=false; pinchDist=dist(e.touches); pinchZoom=momentCellZoom[idx]||1;
-    }
-  }, {passive:true});
-
-  cell.addEventListener('touchmove', e=>{
-    if(e.target.closest('button')) return;
-    if(e.touches.length===2 && pinchDist>0){
-      e.preventDefault();
-      const z = Math.max(1, Math.min(4, pinchZoom * (dist(e.touches)/pinchDist)));
-      momentCellZoom[idx]=z; applyCellTransform(idx);
-    } else if(e.touches.length===1 && dragging){
-      e.preventDefault();
-      momentCellPanX[idx]=baseX+(e.touches[0].clientX-startX);
-      momentCellPanY[idx]=baseY+(e.touches[0].clientY-startY);
-      applyCellTransform(idx);
-    }
-  }, {passive:false});
-
-  cell.addEventListener('touchend', ()=>{ dragging=false; pinchDist=0; });
-
-  // Masaüstü: fare tekeri zoom, sürükle pan
-  cell.addEventListener('wheel', e=>{
-    e.preventDefault();
-    const z = Math.max(1, Math.min(4, (momentCellZoom[idx]||1) + (e.deltaY<0?0.12:-0.12)));
-    momentCellZoom[idx]=z; applyCellTransform(idx);
-  }, {passive:false});
-  cell.addEventListener('mousedown', e=>{
-    if(e.target.closest('button')) return;
-    dragging=true; startX=e.clientX; startY=e.clientY;
-    baseX=momentCellPanX[idx]||0; baseY=momentCellPanY[idx]||0;
-    const mv=ev=>{ if(!dragging)return; momentCellPanX[idx]=baseX+(ev.clientX-startX); momentCellPanY[idx]=baseY+(ev.clientY-startY); applyCellTransform(idx); };
-    const up=()=>{ dragging=false; document.removeEventListener('mousemove',mv); document.removeEventListener('mouseup',up); };
-    document.addEventListener('mousemove',mv); document.addEventListener('mouseup',up);
-  });
-}
-
-/* Canvas'ta verilen şekle göre clip yolu çiz (CSS clip-path ile aynı şekiller) */
-function clipShapePath(ctx, shape, x, y, w, h){
-  const poly = (pts)=>{
-    ctx.beginPath();
-    pts.forEach((p,i)=>{ const px=x+p[0]*w, py=y+p[1]*h; i?ctx.lineTo(px,py):ctx.moveTo(px,py); });
-    ctx.closePath();
-  };
-  switch(shape){
-    case 'circle':{
-      ctx.beginPath();
-      ctx.ellipse(x+w/2, y+h/2, w/2, h/2, 0, 0, Math.PI*2);
-      ctx.closePath(); break;
-    }
-    case 'triangle': poly([[0.5,0],[0,1],[1,1]]); break;
-    case 'star': poly([[0.5,0],[0.61,0.35],[0.98,0.35],[0.68,0.57],[0.79,0.91],[0.5,0.70],[0.21,0.91],[0.32,0.57],[0.02,0.35],[0.39,0.35]]); break;
-    case 'pentagon': poly([[0.5,0],[1,0.38],[0.82,1],[0.18,1],[0,0.38]]); break;
-    case 'hexagon': poly([[0.25,0],[0.75,0],[1,0.5],[0.75,1],[0.25,1],[0,0.5]]); break;
-    case 'diamond': poly([[0.5,0],[1,0.5],[0.5,1],[0,0.5]]); break;
-    case 'heart':{
-      ctx.beginPath();
-      const cx=x+w/2;
-      ctx.moveTo(cx, y+h*0.85);
-      ctx.bezierCurveTo(x+w*0.05, y+h*0.55, x+w*0.10, y+h*0.10, cx, y+h*0.28);
-      ctx.bezierCurveTo(x+w*0.90, y+h*0.10, x+w*0.95, y+h*0.55, cx, y+h*0.85);
-      ctx.closePath(); break;
-    }
-    default:{ // rect — yuvarlak köşeli
-      const r=10;
-      ctx.beginPath();
-      ctx.moveTo(x+r,y);
-      ctx.arcTo(x+w,y,x+w,y+h,r);
-      ctx.arcTo(x+w,y+h,x,y+h,r);
-      ctx.arcTo(x,y+h,x,y,r);
-      ctx.arcTo(x,y,x+w,y,r);
-      ctx.closePath();
-    }
-  }
-}
-
-/* Yayınlarken HTML grid'i canvas'a aynı asimetrik düzende render et */
-function renderCollageToCanvas(){
+function drawMomentCollage(urls){
   const canvas = document.getElementById('momentCollageCanvas');
   const ctx = canvas.getContext('2d');
-  const SIZE = 800, GAP = 8; // ince çerçeve boşluğu
+  const SIZE = 800;
   canvas.width = SIZE; canvas.height = SIZE;
-  // TEK arka plan/çerçeve rengi — tüm tuvali boyar, kareler arası boşlukta görünür
-  ctx.fillStyle = momentCollageBg || '#1a1a2e';
-  ctx.fillRect(0,0,SIZE,SIZE);
+  ctx.fillStyle = '#000'; ctx.fillRect(0,0,SIZE,SIZE);
 
-  const urls = momentCollageUrls;
-  const n = Math.min(urls.length || 1, 9);
-  const S = SIZE - GAP*2; // iç alan
-
-  // CSS grid'le aynı asimetrik layout'lar (x,y,w,h oranları 0-1)
-  let L;
-  if(n===1) L=[[0,0,1,1]];
-  else if(n===2) L=[[0,0,1/2.6,1],[1/2.6,0,1.6/2.6,1]];
-  else if(n===3) L=[[0,0,1.4/2.4,1],[1.4/2.4,0,1/2.4,1/2],[1.4/2.4,1/2,1/2.4,1/2]];
-  else if(n===4){
-    const cw1=1/3.5, cw2=1.5/3.5, cw3=1/3.5;
-    L=[[0,0,cw1,1],[cw1,0,cw2,1],[cw1+cw2,0,cw3,1/2],[cw1+cw2,1/2,cw3,1/2]];
-  } else if(n===5 || n===6){
-    const cols=3, rows=2;
-    L=urls.slice(0,n).map((_,i)=>[(i%cols)/cols,Math.floor(i/cols)/rows,1/cols,1/rows]);
-    if(n===5){ L[0]=[0,0,1/3,1]; L[1]=[1/3,0,1/3,1/2]; L[2]=[2/3,0,1/3,1/2]; L[3]=[1/3,1/2,1/3,1/2]; L[4]=[2/3,1/2,1/3,1/2]; }
-  } else if(n===7 || n===8){
-    // CSS ile aynı: 4 sütun x 2 satır, ilk kare 2x geniş (sol üst)
-    const cw=1/4, ch=1/2;
-    L=[[0,0,2*cw,ch]]; // ilk kare: 2 sütun geniş, üst satır
-    // kalan kareler: önce üst satırın sağ 2 hücresi, sonra alt satırın 4 hücresi
-    const slots=[
-      [2*cw,0,cw,ch],[3*cw,0,cw,ch], // üst sağ 2
-      [0,ch,cw,ch],[cw,ch,cw,ch],[2*cw,ch,cw,ch],[3*cw,ch,cw,ch] // alt 4
-    ];
-    for(let i=0;i<n-1 && i<slots.length;i++) L.push(slots[i]);
-  } else {
-    // 9: 3x3 düzenli
-    const cols=3, rows=3;
-    L=urls.slice(0,9).map((_,i)=>[(i%cols)/cols,Math.floor(i/cols)/rows,1/cols,1/rows]);
-  }
-
-  const loadImg = (src)=> new Promise((res)=>{
+  const loadImg = (src)=> new Promise((resolve)=>{
     const img = new Image();
-    if(src && /^https?:/i.test(src)) img.crossOrigin='anonymous';
-    img.onload=()=>res(img); img.onerror=()=>res(null); img.src=src;
+    img.crossOrigin = 'anonymous';
+    img.onload = ()=>resolve(img);
+    img.onerror = ()=>resolve(null);
+    img.src = src;
   });
 
-  return Promise.all(urls.slice(0,9).map(loadImg)).then(imgs=>{
-    imgs.forEach((img,i)=>{
-      if(!L[i]) return;
-      const x = GAP + L[i][0]*S, y = GAP + L[i][1]*S;
-      const w = L[i][2]*S - GAP, h = L[i][3]*S - GAP;
-      const shape = (momentCellShape[i] || 'rect');
+  return Promise.all(urls.map(loadImg)).then((imgs)=>{
+    imgs = imgs.filter(Boolean);
+    const n = imgs.length || 1;
+    let layout;
+    if(n === 1) layout = [[0,0,SIZE,SIZE]];
+    else if(n === 2) layout = [[0,0,SIZE/2,SIZE],[SIZE/2,0,SIZE/2,SIZE]];
+    else if(n === 3) layout = [[0,0,SIZE,SIZE/2],[0,SIZE/2,SIZE/2,SIZE/2],[SIZE/2,SIZE/2,SIZE/2,SIZE/2]];
+    else if(n === 4) layout = [[0,0,SIZE/2,SIZE/2],[SIZE/2,0,SIZE/2,SIZE/2],[0,SIZE/2,SIZE/2,SIZE/2],[SIZE/2,SIZE/2,SIZE/2,SIZE/2]];
+    else {
+      // 5-6 kişi: 3x2 grid
+      const cols = 3, rows = Math.ceil(n/cols);
+      const cw = SIZE/cols, ch = SIZE/rows;
+      layout = imgs.map((_,i)=>[(i%cols)*cw, Math.floor(i/cols)*ch, cw, ch]);
+    }
+    imgs.forEach((img, i)=>{
+      if(!layout[i]) return;
+      const [x,y,w,h] = layout[i];
+      // Kareyi (cover) doldur
+      const ratio = Math.max(w/img.width, h/img.height);
+      const dw = img.width*ratio, dh = img.height*ratio;
+      const dx = x + (w-dw)/2, dy = y + (h-dh)/2;
       ctx.save();
-      clipShapePath(ctx, shape, x, y, w, h);
-      ctx.clip();
-
-      // Fotoğraf — VARSAYILAN cover (doldur). Kullanıcı "sığdır" seçtiyse contain.
-      if(img){
-        const fit = momentCellFit[i]; // true = contain (sığdır)
-        const zoom = momentCellZoom[i] || 1;
-        const rot = (momentCellRotate[i] || 0) * Math.PI / 180;
-        // Döndürme varsa, kapsama oranını döndürülmüş boyuta göre hesapla
-        const swap = (momentCellRotate[i] === 90 || momentCellRotate[i] === 270);
-        const fitW = swap ? h : w, fitH = swap ? w : h;
-        const baseRatio = fit ? Math.min(fitW/img.width, fitH/img.height) : Math.max(fitW/img.width, fitH/img.height);
-        const ratio = baseRatio * zoom;
-        const dw = img.width*ratio, dh = img.height*ratio;
-        const cell = document.getElementById('momentCell'+i);
-        let panRatio = 1;
-        if(cell){ const rect = cell.getBoundingClientRect(); if(rect.width) panRatio = w / rect.width; }
-        const px = (momentCellPanX[i]||0) * panRatio;
-        const py = (momentCellPanY[i]||0) * panRatio;
-        // Hücre merkezinde döndürerek çiz
-        const cxp = x + w/2 + px, cyp = y + h/2 + py;
-        ctx.translate(cxp, cyp);
-        if(rot) ctx.rotate(rot);
-        ctx.drawImage(img, -dw/2, -dh/2, dw, dh);
-      } else {
-        ctx.fillStyle = '#2a2a3e'; ctx.fillRect(x,y,w,h);
-      }
+      ctx.beginPath(); ctx.rect(x,y,w,h); ctx.clip();
+      ctx.drawImage(img, dx, dy, dw, dh);
       ctx.restore();
+      ctx.strokeStyle = 'rgba(255,255,255,.15)'; ctx.lineWidth = 3;
+      ctx.strokeRect(x,y,w,h);
     });
   });
 }
@@ -6993,28 +6255,16 @@ function retakeMoment(){
     return fbDb.ref('momentSessions/' + momentSessionId + '/participants').update(resetUpdates);
   }).then(()=>{
     momentCapturedDataUrl = null;
-    momentMyCapturedShots = [];
-    momentCurrentShotIndex = 0;
-    momentCountdownStarted = false;
     document.getElementById('momentPreviewOverlay').classList.add('hidden');
     return fbDb.ref('momentSessions/' + momentSessionId).update({ state: 'countdown', countdownStartAt: Date.now() + 7000 });
   });
 }
 
 function publishMoment(){
-  if(!momentSessionId || !fbAuth.currentUser){ showToast('Oturum bulunamadı.'); return; }
+  if(!momentSessionId || !fbAuth.currentUser) return;
   const btn = document.getElementById('momentPublishBtn');
   btn.disabled = true; btn.textContent = 'Yayınlanıyor...';
 
-  // Önce HTML asimetrik grid'i (renk seçimleriyle birlikte) canvas'a çiz, sonra yayınla.
-  // Render bir nedenle patlasa bile yayını yine de dene (canvas'ta en azından bir şey vardır).
-  Promise.resolve()
-    .then(()=> renderCollageToCanvas())
-    .catch((e)=>{ console.error('Kolaj render hatası (yayın yine de denenecek):', e); })
-    .then(()=> doPublishMoment(btn));
-}
-
-function doPublishMoment(btn){
   const canvas = document.getElementById('momentCollageCanvas');
   const myUid = fbAuth.currentUser.uid;
   const caption = (document.getElementById('momentCaptionInput').value || '').trim() || 'Arkadaşlarla unutulmaz an! 🎉';
@@ -7034,49 +6284,55 @@ function doPublishMoment(btn){
       momentParticipants: momentSessionPendingParticipants,
       momentChallenge: momentSessionPendingChallenge || ''
     };
+    const storyRef = fbDb.ref('stories').push();
+    const expiresAt = Date.now() + 24*60*60*1000;
 
-    // KRİTİK: önce postu yaz — bu başarılı olursa anı yayınlanmış sayılır.
-    // NOT: Anı paylaşımı hikaye OLUŞTURMAZ — sadece akışa düşer (kullanıcı isteği).
-    postRef.set(postData).then(()=>{
-      // Post yazıldı → diğerleri opsiyonel, hata verseler bile yayını bozmaz
-      fbDb.ref('users/' + myUid + '/postsCount').transaction(n => (n||0)+1).catch(()=>{});
-      fbDb.ref('momentSessions/' + momentSessionId).update({ state: 'done', publishedPostId: postId }).catch(()=>{});
-      momentSessionPendingParticipants.forEach(p =>
-        fbDb.ref('users/' + p.uid + '/sharedMoments/' + postId).set(true).catch(()=>{})
-      );
+    const sharedWrites = {};
+    momentSessionPendingParticipants.forEach(p => { sharedWrites[p.uid] = true; });
 
+    Promise.all([
+      postRef.set(postData),
+      storyRef.set({
+        postId: postId,
+        mediaUrl: collageUrl,
+        uid: myUid,
+        username: savedUsername || '@kullanici',
+        photo: savedProfilePhoto || '',
+        createdAt: firebase.database.ServerValue.TIMESTAMP,
+        expiresAt: expiresAt,
+        isMoment: true
+      }),
+      fbDb.ref('users/' + myUid + '/postsCount').transaction(n => (n||0)+1),
+      fbDb.ref('momentSessions/' + momentSessionId).update({ state: 'done', publishedPostId: postId }),
+      // Tüm katılımcıların "Ortak Anılarım" kalıcı albümüne de eklenir
+      ...momentSessionPendingParticipants.map(p =>
+        fbDb.ref('users/' + p.uid + '/sharedMoments/' + postId).set(true)
+      )
+    ]).then(()=>{
       btn.disabled = false; btn.textContent = 'Yayınla 🚀';
       closeAllMomentOverlays();
       showToast('Anın yayınlandı 🎉');
       goNav('feed', document.getElementById('navFeed'));
     }).catch((err)=>{
       btn.disabled = false; btn.textContent = 'Yayınla 🚀';
-      console.error('Anı yayın hatası:', err);
       showToast('Yayınlanamadı: ' + (err && err.message ? err.message : 'bilinmeyen hata'));
     });
   };
 
-  // Canvas'ı güvenli şekilde base64'e çevir (tainted olursa hata fırlatır → yakala)
-  const safeCanvasDataUrl = ()=>{
-    try{
-      return canvas.toDataURL('image/jpeg', 0.85);
-    }catch(e){
-      console.error('Canvas export hatası (tainted olabilir):', e);
-      return null;
-    }
-  };
-
-  // Storage yükleme bazen sessizce takılıyor — collage zaten küçük (800px),
-  // doğrudan base64 olarak sıkıştırıp yayınla. Hızlı ve güvenilir.
-  const d = safeCanvasDataUrl();
-  if(d){
-    compressImageToBase64(d, 700, 0.78).then(finishPublish).catch(()=>{
-      btn.disabled=false; btn.textContent='Yayınla 🚀';
-      showToast('Anı oluşturulamadı, yeniden çekmeyi dene.');
-    });
+  if(fbStorage){
+    canvas.toBlob((blob)=>{
+      if(!blob){ 
+        compressImageToBase64(canvas.toDataURL('image/jpeg',0.85), 600, 0.75).then(finishPublish);
+        return; 
+      }
+      const path = 'momentCollages/' + momentSessionId + '.jpg';
+      fbStorage.ref().child(path).put(blob).then(snap=>snap.ref.getDownloadURL()).then(finishPublish).catch(()=>{
+        compressImageToBase64(canvas.toDataURL('image/jpeg',0.85), 600, 0.75).then(finishPublish);
+      });
+    }, 'image/jpeg', 0.85);
   } else {
-    btn.disabled=false; btn.textContent='Yayınla 🚀';
-    showToast('Anı oluşturulamadı, yeniden çekmeyi dene.');
+    // Storage yoksa canvas'ı sıkıştırarak base64 kaydet (600px, %75)
+    compressImageToBase64(canvas.toDataURL('image/jpeg',0.85), 600, 0.75).then(finishPublish);
   }
 }
 
@@ -7958,9 +7214,6 @@ function loadStoryStrip(){
       Object.keys(data).forEach(id=>{
         const s = data[id];
         if(!s.uid || s.expiresAt < now) return;
-        // Anı paylaşımları hikaye DEĞİLDİR — atla. Bozuk/geçersiz görselli kayıtları da atla.
-        if(s.isMoment) return;
-        if(!s.mediaUrl || typeof s.mediaUrl !== 'string' || s.mediaUrl.length < 10) return;
         if(!byUser[s.uid]) byUser[s.uid] = [];
         byUser[s.uid].push({...s, id});
       });
@@ -8038,7 +7291,7 @@ function handleMyStoryClick(){
   fbDb.ref('stories').orderByChild('uid').equalTo(myUid).once('value').then(snap=>{
     const data = snap.val() || {};
     const active = Object.keys(data).map(id => ({...data[id], id}))
-      .filter(s => s.expiresAt > now && !s.isMoment)
+      .filter(s => s.expiresAt > now)
       .sort((a,b)=>a.ts-b.ts);
     if(active.length){
       // Hikayem var — seçenek sun: Görüntüle veya Yeni Ekle
@@ -8093,7 +7346,7 @@ function viewUserStories(uid){
     const data = snap.val() || {};
     // ID'leri de koru — silme butonu için gerekli!
     currentStoryList = Object.keys(data).map(id => ({...data[id], id}))
-      .filter(s=>s.expiresAt > now && !s.isMoment)
+      .filter(s=>s.expiresAt > now)
       .sort((a,b)=>a.ts-b.ts);
     if(!currentStoryList.length){ showToast('Bu kullanıcının aktif hikayesi yok.'); return; }
     currentStoryUser = uid;
@@ -8885,30 +8138,6 @@ function onMsgInputType(){
    MESAJ YANITI (Reply) + MESAJ BEĞENİ (Heart)
    ============================================================ */
 let replyToMsg = null;
-
-/* Her mesajı, sola kaydırma ve uzun basma için saran kapsayıcı.
-   data-msg-id ve data-from, jestlerin hangi mesaja ait olduğunu bilmesini sağlar. */
-function wrapSwipeMsg(msgId, fromUid, innerHtml, mine){
-  return '<div class="msgSwipeWrap '+(mine?'mine':'theirs')+'" data-msg-id="'+msgId+'" data-from="'+(fromUid||'')+'">'
-    + '<div class="msgReplyIcon">↩</div>'
-    + '<div class="msgSwipeInner">'+innerHtml+'</div>'
-    + '</div>';
-}
-
-/* Yanıtlanan mesajın küçük önizlemesi — balonun/kartın içinde gösterilir */
-function buildReplyPreviewHtml(replyId, allData, myUid){
-  if(!replyId || !allData || !allData[replyId]) return '';
-  const r = allData[replyId];
-  let preview;
-  if(r.mediaType === 'ephemeral') preview = '🔥 Süreli fotoğraf';
-  else if(r.mediaType === 'gif') preview = '🎬 GIF';
-  else if(r.mediaType === 'video') preview = '🎥 Video';
-  else if(r.mediaUrl) preview = '📷 Fotoğraf';
-  else preview = (r.text || '').slice(0, 60);
-  const who = (r.from === myUid) ? 'Sen' : 'Yanıt';
-  return '<div class="msgReplyPreview"><div class="msgReplyWho">'+who+'</div><div class="msgReplyText">'+escapeHtml(preview)+'</div></div>';
-}
-
 function setReplyTo(msgId, text){
   replyToMsg = msgId;
   const bar = document.getElementById('replyBar');
@@ -8922,141 +8151,6 @@ function clearReply(){
   const bar = document.getElementById('replyBar');
   if(bar) bar.style.display='none';
 }
-
-/* Bir mesajın metnini/etiketini özetle — reply bar ve menüde gösterim için */
-function summarizeMsgFromEl(wrapEl){
-  if(!wrapEl) return '';
-  const inner = wrapEl.querySelector('.msgSwipeInner');
-  if(!inner) return '';
-  if(inner.querySelector('video')) return '🎥 Video';
-  if(inner.querySelector('img')) return '📷 Fotoğraf';
-  const balon = inner.querySelector('.msg');
-  if(balon){
-    // time ve reply preview hariç metni al
-    const clone = balon.cloneNode(true);
-    clone.querySelectorAll('.time, .msgReplyPreview').forEach(e=>e.remove());
-    return (clone.textContent || '').trim().slice(0,60);
-  }
-  if(inner.querySelector('.ephemeral-msg-card')) return '🔥 Süreli fotoğraf';
-  return 'Mesaj';
-}
-
-/* Sola kaydır → yanıtla; uzun bas → seçenek menüsü. Tek yerden bağlanır. */
-function bindMessageGestures(){
-  document.querySelectorAll('#messagesBox .msgSwipeWrap').forEach(wrap => {
-    if(wrap._gesturesBound) return;
-    wrap._gesturesBound = true;
-    const inner = wrap.querySelector('.msgSwipeInner');
-    const msgId = wrap.dataset.msgId;
-    const fromUid = wrap.dataset.from;
-
-    let startX=0, startY=0, dir=null, swiping=false, pressTimer=null, moved=false;
-    const THRESHOLD = 55;
-
-    const startPress = ()=>{
-      pressTimer = setTimeout(()=>{
-        if(!moved){
-          if(navigator.vibrate) navigator.vibrate(25);
-          openMsgActionMenu(msgId, fromUid, summarizeMsgFromEl(wrap));
-        }
-      }, 480);
-    };
-    const cancelPress = ()=>{ if(pressTimer){ clearTimeout(pressTimer); pressTimer=null; } };
-
-    wrap.addEventListener('touchstart', e=>{
-      startX = e.touches[0].clientX; startY = e.touches[0].clientY;
-      dir=null; swiping=true; moved=false;
-      inner.style.transition='none';
-      startPress();
-    }, {passive:true});
-
-    wrap.addEventListener('touchmove', e=>{
-      if(!swiping) return;
-      const dx = e.touches[0].clientX - startX;
-      const dy = e.touches[0].clientY - startY;
-      if(Math.abs(dx)>6 || Math.abs(dy)>6){ moved=true; cancelPress(); }
-      if(dir===null){
-        if(Math.abs(dy) > Math.abs(dx) && Math.abs(dy)>10){ dir='vertical'; return; }
-        if(Math.abs(dx) > 10) dir='horizontal';
-      }
-      if(dir!=='horizontal') return;
-      // Sadece sola kaydırmaya izin ver (max 80px)
-      const offset = Math.max(-80, Math.min(0, dx));
-      inner.style.transform = 'translateX('+offset+'px)';
-      const icon = wrap.querySelector('.msgReplyIcon');
-      if(icon) icon.style.opacity = Math.min(1, Math.abs(offset)/THRESHOLD);
-    }, {passive:true});
-
-    const endTouch = ()=>{
-      if(!swiping) return;
-      swiping=false; cancelPress();
-      inner.style.transition='transform .22s cubic-bezier(.2,.8,.2,1)';
-      const tf = inner.style.transform;
-      const m = tf.match(/-?\d+(\.\d+)?/);
-      const offset = m ? parseFloat(m[0]) : 0;
-      if(offset <= -THRESHOLD){
-        // Yanıtla tetiklendi
-        if(navigator.vibrate) navigator.vibrate(15);
-        setReplyTo(msgId, summarizeMsgFromEl(wrap));
-      }
-      inner.style.transform='';
-      const icon = wrap.querySelector('.msgReplyIcon');
-      if(icon) icon.style.opacity='0';
-    };
-    wrap.addEventListener('touchend', endTouch);
-    wrap.addEventListener('touchcancel', endTouch);
-
-    // Masaüstü: sağ tık → menü
-    wrap.addEventListener('contextmenu', e=>{
-      e.preventDefault();
-      openMsgActionMenu(msgId, fromUid, summarizeMsgFromEl(wrap));
-    });
-  });
-}
-
-/* Şık seçenek menüsü (prompt yerine) — Yanıtla / Düzelt / Sil / Kopyala */
-function openMsgActionMenu(msgId, fromUid, previewText){
-  const isMine = fbAuth.currentUser && fromUid === fbAuth.currentUser.uid;
-  const old = document.getElementById('msgActionSheet');
-  if(old) old.remove();
-
-  const overlay = document.createElement('div');
-  overlay.id = 'msgActionSheet';
-  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:560;display:flex;align-items:flex-end;justify-content:center;';
-  overlay.onclick = (e)=>{ if(e.target===overlay) overlay.remove(); };
-
-  const item = (icon, label, color, handler) =>
-    '<button class="msgActBtn" style="color:'+(color||'var(--text)')+';" data-act="'+handler+'">'
-    + '<span style="font-size:18px;width:26px;text-align:center;">'+icon+'</span>'+label+'</button>';
-
-  let buttons = item('↩️','Yanıtla','', 'reply');
-  buttons += item('📋','Kopyala','', 'copy');
-  if(isMine){
-    buttons += item('✏️','Düzenle','', 'edit');
-    buttons += item('🗑️','Sil','#ef4444', 'delete');
-  }
-  buttons += item('✖️','İptal','var(--muted)', 'cancel');
-
-  overlay.innerHTML =
-    '<div class="msgActSheet">'
-    + '<div class="msgActHandle"></div>'
-    + '<div class="msgActPreview">'+escapeHtml(previewText||'Mesaj')+'</div>'
-    + buttons
-    + '</div>';
-  document.body.appendChild(overlay);
-
-  overlay.querySelectorAll('.msgActBtn').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      const act = btn.dataset.act;
-      overlay.remove();
-      if(act==='reply') setReplyTo(msgId, previewText);
-      else if(act==='copy') copyMessage(msgId);
-      else if(act==='edit') editMessage(msgId);
-      else if(act==='delete') deleteMessage(msgId);
-    });
-  });
-}
-
 
 /* Mesaj beğenme */
 function toggleMsgHeart(msgId){
@@ -9176,26 +8270,26 @@ NAV_MAP['reels'] = 'screenMomentFeed';
    ============================================================ */
 function renderEphemeralMsg(msgId, m, isMine, timeStr, chatId){
   const views = m.viewCount || 0;
-  const align = isMine ? 'align-self:flex-end;align-items:flex-end;' : 'align-self:flex-start;align-items:flex-start;';
+  const align = isMine ? 'align-self:flex-end;' : '';
   const secs = m.ephemeralSecs;
-  const label = secs === -1 ? '1 Kez' : (secs > 0 ? secs + ' sn' : 'Süreli');
-
+  const label = secs === -1 ? '1 Kez' : (secs > 0 ? secs + ' Saniye' : 'Süreli');
+  
   if(views >= 1 || m.expired){
-    return `<div style="display:flex;flex-direction:column;${align}">
+    return `<div class="msg-media" style="${align}">
       <div class="ephemeral-msg-card expired">
-        <span class="ephemeral-msg-icon">👁️</span>
+        <span class="ephemeral-msg-icon" style="font-size:42px;">👁️</span>
         <div class="ephemeral-msg-label" style="color:#888;">Görüntülendi</div>
       </div>
-      <div style="font-size:10px;color:var(--muted);margin-top:3px;">${timeStr}</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:3px;text-align:${isMine?'right':'left'};">${timeStr}</div>
     </div>`;
   }
-
-  return `<div style="display:flex;flex-direction:column;${align}">
+  
+  return `<div class="msg-media" style="${align}">
     <div class="ephemeral-msg-card" onclick="openEphemeralPhoto('${msgId}','${chatId}')">
       <span class="ephemeral-msg-icon">🔥</span>
-      <div class="ephemeral-msg-label">📷 Aç · ${label}</div>
+      <div class="ephemeral-msg-label">📷 Fotoğrafı Aç · ${label}</div>
     </div>
-    <div style="font-size:10px;color:var(--muted);margin-top:3px;">${timeStr}</div>
+    <div style="font-size:10px;color:var(--muted);margin-top:3px;text-align:${isMine?'right':'left'};">${timeStr}</div>
   </div>`;
 }
 
@@ -9205,21 +8299,16 @@ function openEphemeralPhoto(msgId, chatId){
     const m = snap.val();
     if(!m || !m.mediaUrl || m.expired || (m.viewCount||0) >= 1) return;
     
-    // Önceki açık ephemeral overlay varsa kaldır
-    const existing = document.getElementById('ephemeralViewerOverlay');
-    if(existing) existing.remove();
-
     // Tam ekran göster + sayaç
     const overlay = document.createElement('div');
-    overlay.id = 'ephemeralViewerOverlay';
     overlay.style.cssText = 'position:fixed;inset:0;background:#000;z-index:500;display:flex;align-items:center;justify-content:center;flex-direction:column;';
     const newCount = (m.viewCount||0) + 1;
-
-    // Üst bar — kapatma. Boş alana tıklayınca da kapansın.
+    
+    // Üst bar — kapatma
     overlay.innerHTML = `
       <div style="position:absolute;top:0;left:0;right:0;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;background:linear-gradient(rgba(0,0,0,.6),transparent);z-index:2;">
         <span style="color:#ef4444;font-weight:700;font-size:14px;">🔥 Süreli Fotoğraf</span>
-        <button id="ephemeralCloseBtn" style="background:rgba(0,0,0,.5);border:none;color:#fff;font-size:22px;width:42px;height:42px;border-radius:50%;cursor:pointer;z-index:3;">✕</button>
+        <button onclick="closeEphemeralAndExpire('${msgId}','${chatId}',${newCount})" style="background:rgba(0,0,0,.5);border:none;color:#fff;font-size:22px;width:42px;height:42px;border-radius:50%;cursor:pointer;">✕</button>
       </div>
       <img src="${m.mediaUrl}" style="max-width:100%;max-height:100%;object-fit:contain;">
       <div style="position:absolute;bottom:30px;left:0;right:0;text-align:center;color:#fff;font-size:13px;background:rgba(0,0,0,.6);padding:10px;backdrop-filter:blur(8px);">
@@ -9227,19 +8316,16 @@ function openEphemeralPhoto(msgId, chatId){
       </div>
     `;
     document.body.appendChild(overlay);
-
-    // Kapatma — buton + boş alana tıklama (img hariç)
-    const doClose = () => closeEphemeralAndExpire(msgId, chatId, newCount);
-    overlay.querySelector('#ephemeralCloseBtn').addEventListener('click', (e)=>{ e.stopPropagation(); doClose(); });
-    overlay.addEventListener('click', (e)=>{ if(e.target === overlay) doClose(); });
   });
 }
 
 function closeEphemeralAndExpire(msgId, chatId, newCount){
-  // Overlay'i ID ile bul ve kaldır — güvenilir
-  const overlay = document.getElementById('ephemeralViewerOverlay');
-  if(overlay) overlay.remove();
-  // Firebase'de görüntülendi olarak işaretle (artık tekrar açılamaz)
+  // Overlay'i kapat
+  const overlays = document.querySelectorAll('[style*="z-index:500"]');
+  overlays.forEach(o => {
+    if(o.querySelector('img')) o.remove();
+  });
+  // Firebase'de görüntülendi olarak işaretle
   if(newCount >= 1){
     fbDb.ref('chats/'+chatId+'/messages/'+msgId).update({
       viewCount: 1, expired: true, mediaUrl: ''
@@ -10520,15 +9606,6 @@ function bootApp(){
     setTimeout(()=>splash.remove(), 550);
   }, 900);
 }
-/* Kayıt ekranındaki inputlara focus olunca görünür alana kaydır */
-document.querySelectorAll('#screenRegister input').forEach(inp => {
-  inp.addEventListener('focus', () => {
-    setTimeout(() => {
-      inp.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }, 300);
-  });
-});
-
 bootApp();
 </script>
 
