@@ -393,7 +393,7 @@ body.light-mode .regStickyBar{
 .post-head .who{font-size:14.5px;font-weight:600;}
 .post-head .loc{font-size:11px;color:var(--muted);}
 .post-head .dots{margin-left:auto;color:var(--muted);cursor:pointer;font-size:18px;}
-.post-media{width:100%;background:var(--surface-2);overflow:hidden;position:relative;display:flex;align-items:center;justify-content:center;}
+.post-media{width:auto;background:var(--surface-2);overflow:hidden;position:relative;display:flex;align-items:center;justify-content:center;}
 /* Foto KIRPILMASIN — resmin kendi oranında, tam görünsün */
 .post-media img,.post-media video{width:100%;height:auto;max-height:600px;object-fit:contain;display:block;}
 
@@ -1912,7 +1912,8 @@ tbody tr:hover{background:var(--surface-2);}
 }
 .momentBadge .ring{width:16px;height:16px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;}
 .momentBadge svg{width:9px;height:9px;}
-.momentPost .post-media{position:relative;}
+.momentPost .post-media{position:relative;aspect-ratio:1/1;max-height:none;}
+.momentPost .post-media img{width:100%;height:100%;max-height:none;object-fit:cover;}
 .momentParticipantStrip{display:flex;align-items:center;gap:0;padding:6px 18px 0;margin-top:-2px;flex-wrap:wrap;}
 .momentParticipantStrip img{width:24px;height:24px;border-radius:50%;border:2px solid var(--surface);object-fit:cover;margin-left:-8px;}
 .momentParticipantStrip img:first-child{margin-left:0;}
