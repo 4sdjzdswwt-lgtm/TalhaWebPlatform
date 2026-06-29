@@ -2968,11 +2968,6 @@ tbody tr:hover{background:var(--surface-2);}
     </div>
     <div class="momentLayoutPicker" id="momentLayoutPicker"></div>
     <div class="momentCollageToolbar">
-      <label class="momentBgColorPick">
-        <span class="momentBgSwatch" id="momentBgSwatch"></span>
-        Çerçeve rengi
-        <input type="color" id="momentBgColorInput" value="#1a1a2e" oninput="onMomentBgColor(this.value)">
-      </label>
       <span class="momentToolHint">Yerleşim şablonu seç · ⟳ döndür · ⛶ sığdır/doldur · ⇄ yerini değiştir</span>
     </div>
     <input type="text" class="momentCaptionInput" id="momentCaptionInput" placeholder="Bir açıklama ekle... (örn. Arkadaşlarla unutulmaz an! 🎉)">
@@ -6811,7 +6806,7 @@ function buildMomentCollageGrid(urls, owners){
   if(momentLayoutVariant > maxV) momentLayoutVariant = 0;
   grid.className = 'momentGrid cells-' + n + ' layout-' + momentLayoutVariant;
   grid.style.setProperty('--moment-bg', momentCollageBg);
-  grid.style.setProperty('--moment-gap', momentCollageHasColor ? '2px' : '0px');
+  grid.style.setProperty('--moment-gap', '0px');
   momentCellZoom = []; momentCellPanX = []; momentCellPanY = []; momentCellFit = [];
   if(!momentCellRotate.length || momentCellRotate.length !== urls.length) momentCellRotate = urls.map(()=> 0);
   grid.innerHTML = urls.slice(0,9).map((url, i)=>{
@@ -7050,7 +7045,7 @@ function layoutBoxes(n, v){
 function renderCollageToCanvas(){
   const canvas = document.getElementById('momentCollageCanvas');
   const ctx = canvas.getContext('2d');
-  const SIZE = 800, GAP = momentCollageHasColor ? 4 : 0; // renk seçilince ince çerçeve, yoksa bitişik
+  const SIZE = 800, GAP = 0; // her zaman boşluksuz, fotoğraflar bitişik
   canvas.width = SIZE; canvas.height = SIZE;
   // TEK arka plan/çerçeve rengi — tüm tuvali boyar, kareler arası boşlukta görünür
   ctx.fillStyle = momentCollageBg || '#1a1a2e';
