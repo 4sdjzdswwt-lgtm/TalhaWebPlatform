@@ -2293,7 +2293,7 @@ tbody tr:hover{background:var(--surface-2);}
           <button class="momentFeedTab" onclick="filterMomentFeed('following', this)" style="flex:1;padding:12px;font-size:13px;font-weight:600;background:none;border:none;color:var(--muted);border-bottom:2px solid transparent;cursor:pointer;">Takip</button>
           <button class="momentFeedTab" onclick="filterMomentFeed('mine', this)" style="flex:1;padding:12px;font-size:13px;font-weight:600;background:none;border:none;color:var(--muted);border-bottom:2px solid transparent;cursor:pointer;">Benimkiler</button>
         </div>
-        <div id="momentFeedContainer" style="padding:0 0 80px;"></div>
+        <div id="momentFeedContainer" style="padding:14px 0 80px;"></div>
       </div>
     </div>
 
@@ -6813,14 +6813,14 @@ function buildMomentCollageGrid(urls, owners){
   momentCellZoom = []; momentCellPanX = []; momentCellPanY = []; momentCellFit = [];
   if(!momentCellRotate.length || momentCellRotate.length !== urls.length) momentCellRotate = urls.map(()=> 0);
   grid.innerHTML = urls.slice(0,9).map((url, i)=>{
-    momentCellZoom[i] = 1; momentCellPanX[i] = 0; momentCellPanY[i] = 0; momentCellFit[i] = false;
+    momentCellZoom[i] = 1; momentCellPanX[i] = 0; momentCellPanY[i] = 0; momentCellFit[i] = true;
     const ow = owners[i] || {};
     const tag = ow.username
       ? `<div class="cellTag" onclick="event.stopPropagation();goToTaggedProfile('${ow.uid||''}')">@${(ow.username||'').replace(/^@/,'')}</div>`
       : '';
     const rot = momentCellRotate[i] || 0;
     return `
-    <div class="momentGridCell" id="momentCell${i}" data-idx="${i}" style="--zoom:1;--px:0px;--py:0px;--rot:${rot}deg;">
+    <div class="momentGridCell fit" id="momentCell${i}" data-idx="${i}" style="--zoom:1;--px:0px;--py:0px;--rot:${rot}deg;">
       <div class="cellShapeClip"><img src="${url}" alt="" id="momentCellImg${i}"></div>
       ${tag}
       <button class="cellRotateBtn" title="Döndür (yana yatır)" onclick="event.stopPropagation();rotateCell(${i})">⟳</button>
