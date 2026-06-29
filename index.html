@@ -1710,8 +1710,8 @@ tbody tr:hover{background:var(--surface-2);}
 
 /* ===== ANI KOLAJ — ASİMETRİK GRID ===== */
 .momentGrid{
-  display:grid;gap:5px;width:100%;height:320px;max-height:320px;
-  padding:5px;background:var(--moment-bg,#1a1a2e);border-radius:18px;
+  display:grid;gap:2px;width:100%;height:320px;max-height:320px;
+  padding:3px;background:var(--moment-bg,#1a1a2e);border-radius:18px;
   box-sizing:border-box;
 }
 @media (max-width:380px){
@@ -1793,7 +1793,7 @@ tbody tr:hover{background:var(--surface-2);}
 
 /* ŞEKİLLER — clip-path resmi saran .cellShapeClip katmanına uygulanır,
    böylece köşedeki butonlar (döndür/taşı/sığdır) KESİLMEZ */
-.cellShapeClip{position:absolute;inset:0;overflow:hidden;z-index:1;border-radius:10px;}
+.cellShapeClip{position:absolute;inset:0;overflow:hidden;z-index:1;border-radius:8px;}
 .momentGridCell{overflow:visible;}
 /* Butonlar resim katmanının üstünde, kesilmez */
 .cellTag,.cellRotateBtn,.cellMoveBtn,.cellFitBtn{z-index:6 !important;}
@@ -7044,7 +7044,7 @@ function layoutBoxes(n, v){
 function renderCollageToCanvas(){
   const canvas = document.getElementById('momentCollageCanvas');
   const ctx = canvas.getContext('2d');
-  const SIZE = 800, GAP = 8; // ince çerçeve boşluğu
+  const SIZE = 800, GAP = 4; // ince çerçeve boşluğu
   canvas.width = SIZE; canvas.height = SIZE;
   // TEK arka plan/çerçeve rengi — tüm tuvali boyar, kareler arası boşlukta görünür
   ctx.fillStyle = momentCollageBg || '#1a1a2e';
