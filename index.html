@@ -1710,8 +1710,8 @@ tbody tr:hover{background:var(--surface-2);}
 
 /* ===== ANI KOLAJ — ASİMETRİK GRID ===== */
 .momentGrid{
-  display:grid;gap:0;width:100%;aspect-ratio:1/1;
-  padding:0;background:var(--moment-bg,#1a1a2e);border-radius:18px;
+  display:grid;gap:var(--moment-gap,0px);width:100%;aspect-ratio:1/1;
+  padding:var(--moment-gap,0px);background:var(--moment-bg,#1a1a2e);border-radius:18px;
   box-sizing:border-box;
 }
 @media (max-width:380px){
@@ -6727,6 +6727,7 @@ function openMomentPreview(session, captures){
   momentCollageUrls = urls;
   momentCollageOwners = owners;
   momentCollageBg = '#1a1a2e'; // TEK arka plan/çerçeve rengi
+  momentCollageHasColor = false; // başlangıçta renk yok → boşluksuz
   momentLayoutVariant = 0; // varsayılan yerleşim şablonu
   const bgInput = document.getElementById('momentBgColorInput');
   const bgSwatch = document.getElementById('momentBgSwatch');
@@ -6794,6 +6795,7 @@ let momentCellFit = [];    // her hücre contain (true) mu cover (false=varsayı
 let momentCellRotate = []; // her hücre döndürme açısı (0/90/180/270)
 let momentCollageOwners = []; // her kareye {uid, username, photo}
 let momentCollageBg = '#1a1a2e'; // tek arka plan/çerçeve rengi
+let momentCollageHasColor = false; // kullanıcı renk seçti mi (ince çerçeve için)
 let momentLayoutVariant = 0;  // seçili yerleşim şablonu varyantı
 
 // Her foto sayısı için kaç farklı yerleşim şablonu var
@@ -6809,6 +6811,7 @@ function buildMomentCollageGrid(urls, owners){
   if(momentLayoutVariant > maxV) momentLayoutVariant = 0;
   grid.className = 'momentGrid cells-' + n + ' layout-' + momentLayoutVariant;
   grid.style.setProperty('--moment-bg', momentCollageBg);
+  grid.style.setProperty('--moment-gap', momentCollageHasColor ? '2px' : '0px');
   momentCellZoom = []; momentCellPanX = []; momentCellPanY = []; momentCellFit = [];
   if(!momentCellRotate.length || momentCellRotate.length !== urls.length) momentCellRotate = urls.map(()=> 0);
   grid.innerHTML = urls.slice(0,9).map((url, i)=>{
@@ -6928,8 +6931,12 @@ function goToTaggedProfile(uid){
 /* TEK arka plan/çerçeve rengini değiştir (kareler arası ince boşlukta görünür) */
 function onMomentBgColor(color){
   momentCollageBg = color;
+  momentCollageHasColor = true; // kullanıcı bir renk seçti → ince çerçeve göster
   const grid = document.getElementById('momentGrid');
-  if(grid) grid.style.setProperty('--moment-bg', color);
+  if(grid){
+    grid.style.setProperty('--moment-bg', color);
+    grid.style.setProperty('--moment-gap', '2px'); // renk seçilince ince çerçeve
+  }
   const sw = document.getElementById('momentBgSwatch');
   if(sw) sw.style.background = color;
 }
@@ -7043,7 +7050,7 @@ function layoutBoxes(n, v){
 function renderCollageToCanvas(){
   const canvas = document.getElementById('momentCollageCanvas');
   const ctx = canvas.getContext('2d');
-  const SIZE = 800, GAP = 0; // boşluksuz, bitişik kolaj
+  const SIZE = 800, GAP = momentCollageHasColor ? 4 : 0; // renk seçilince ince çerçeve, yoksa bitişik
   canvas.width = SIZE; canvas.height = SIZE;
   // TEK arka plan/çerçeve rengi — tüm tuvali boyar, kareler arası boşlukta görünür
   ctx.fillStyle = momentCollageBg || '#1a1a2e';
