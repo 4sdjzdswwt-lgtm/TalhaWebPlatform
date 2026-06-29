@@ -1710,8 +1710,8 @@ tbody tr:hover{background:var(--surface-2);}
 
 /* ===== ANI KOLAJ — ASİMETRİK GRID ===== */
 .momentGrid{
-  display:grid;gap:var(--moment-gap,0px);width:100%;aspect-ratio:1/1;
-  padding:var(--moment-gap,0px);background:var(--moment-bg,#1a1a2e);border-radius:18px;
+  position:relative;display:block;width:100%;aspect-ratio:1/1;
+  background:var(--moment-bg,#1a1a2e);border-radius:18px;overflow:hidden;
   box-sizing:border-box;
 }
 @media (max-width:380px){
@@ -6807,6 +6807,8 @@ function buildMomentCollageGrid(urls, owners){
   grid.className = 'momentGrid cells-' + n + ' layout-' + momentLayoutVariant;
   grid.style.setProperty('--moment-bg', momentCollageBg);
   grid.style.setProperty('--moment-gap', '0px');
+  // Layout kutularını al (canvas render ile BİREBİR aynı kaynak) — önizleme=yayın
+  const boxes = layoutBoxes(n, momentLayoutVariant);
   momentCellZoom = []; momentCellPanX = []; momentCellPanY = []; momentCellFit = [];
   if(!momentCellRotate.length || momentCellRotate.length !== urls.length) momentCellRotate = urls.map(()=> 0);
   grid.innerHTML = urls.slice(0,9).map((url, i)=>{
@@ -6816,8 +6818,11 @@ function buildMomentCollageGrid(urls, owners){
       ? `<div class="cellTag" onclick="event.stopPropagation();goToTaggedProfile('${ow.uid||''}')">@${(ow.username||'').replace(/^@/,'')}</div>`
       : '';
     const rot = momentCellRotate[i] || 0;
+    // Kutuyu yüzde olarak konumla (mutlak) — hiç boşluk yok
+    const b = boxes[i] || [0,0,1,1];
+    const pos = `position:absolute;left:${b[0]*100}%;top:${b[1]*100}%;width:${b[2]*100}%;height:${b[3]*100}%;`;
     return `
-    <div class="momentGridCell" id="momentCell${i}" data-idx="${i}" style="--zoom:1;--px:0px;--py:0px;--rot:${rot}deg;">
+    <div class="momentGridCell" id="momentCell${i}" data-idx="${i}" style="${pos}--zoom:1;--px:0px;--py:0px;--rot:${rot}deg;">
       <div class="cellShapeClip"><img src="${url}" alt="" id="momentCellImg${i}"></div>
       ${tag}
       <button class="cellRotateBtn" title="Döndür (yana yatır)" onclick="event.stopPropagation();rotateCell(${i})">⟳</button>
@@ -7012,23 +7017,23 @@ function layoutBoxes(n, v){
   const key = n + '-' + v;
   const T = {
     '1-0':[[0,0,100,100]],
-    '2-0':[[0,0,48,100],[52,0,48,100]],
-    '2-1':[[0,0,100,48],[0,52,100,48]],
-    '2-2':[[0,0,62,100],[66,0,34,100]],
-    '3-0':[[0,0,56,100],[60,0,40,48],[60,52,40,48]],
-    '3-1':[[0,0,100,31],[0,35,100,30],[0,69,100,31]],
-    '3-2':[[0,0,31,100],[35,0,30,100],[69,0,31,100]],
-    '3-3':[[0,0,100,48],[0,52,48,48],[52,52,48,48]],
-    '4-0':[[0,0,48,48],[52,0,48,48],[0,52,48,48],[52,52,48,48]],
-    '4-1':[[0,0,28,100],[32,0,40,100],[76,0,24,48],[76,52,24,48]],
-    '4-2':[[0,0,100,22],[0,26,100,22],[0,52,100,22],[0,78,100,22]],
-    '4-3':[[0,0,62,100],[66,0,34,31],[66,35,34,30],[66,69,34,31]],
-    '5-0':[[0,0,40,100],[44,0,28,48],[76,0,24,48],[44,52,28,48],[76,52,24,48]],
-    '5-1':[[0,0,100,40],[0,44,48,26],[52,44,48,26],[0,74,48,26],[52,74,48,26]],
-    '5-2':[[0,0,48,31],[52,0,48,31],[0,35,48,30],[52,35,48,30],[0,69,100,31]],
-    '6-0':[[0,0,31,48],[35,0,30,48],[69,0,31,48],[0,52,31,48],[35,52,30,48],[69,52,31,48]],
-    '6-1':[[0,0,48,31],[52,0,48,31],[0,35,48,30],[52,35,48,30],[0,69,48,31],[52,69,48,31]],
-    '6-2':[[0,0,62,100],[66,0,34,48],[66,52,34,48]]
+    '2-0':[[0,0,50,100],[50,0,50,100]],
+    '2-1':[[0,0,100,50],[0,50,100,50]],
+    '2-2':[[0,0,64,100],[64,0,36,100]],
+    '3-0':[[0,0,58,100],[58,0,42,50],[58,50,42,50]],
+    '3-1':[[0,0,100,33.34],[0,33.33,100,33.34],[0,66.66,100,33.34]],
+    '3-2':[[0,0,33.34,100],[33.33,0,33.34,100],[66.66,0,33.34,100]],
+    '3-3':[[0,0,100,50],[0,50,50,50],[50,50,50,50]],
+    '4-0':[[0,0,50,50],[50,0,50,50],[0,50,50,50],[50,50,50,50]],
+    '4-1':[[0,0,30,100],[30,0,42,100],[72,0,28,50],[72,50,28,50]],
+    '4-2':[[0,0,100,25],[0,25,100,25],[0,50,100,25],[0,75,100,25]],
+    '4-3':[[0,0,64,100],[64,0,36,33.34],[64,33.33,36,33.34],[64,66.66,36,33.34]],
+    '5-0':[[0,0,42,100],[42,0,29,50],[71,0,29,50],[42,50,29,50],[71,50,29,50]],
+    '5-1':[[0,0,100,42],[0,42,50,29],[50,42,50,29],[0,71,50,29],[50,71,50,29]],
+    '5-2':[[0,0,50,33.34],[50,0,50,33.34],[0,33.33,50,33.34],[50,33.33,50,33.34],[0,66.66,100,33.34]],
+    '6-0':[[0,0,33.34,50],[33.33,0,33.34,50],[66.66,0,33.34,50],[0,50,33.34,50],[33.33,50,33.34,50],[66.66,50,33.34,50]],
+    '6-1':[[0,0,50,33.34],[50,0,50,33.34],[0,33.33,50,33.34],[50,33.33,50,33.34],[0,66.66,50,33.34],[50,66.66,50,33.34]],
+    '6-2':[[0,0,64,100],[64,0,36,50],[64,50,36,50]]
   };
   let boxes = T[key];
   if(!boxes){
