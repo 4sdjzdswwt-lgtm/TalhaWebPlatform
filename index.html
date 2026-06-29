@@ -1710,13 +1710,12 @@ tbody tr:hover{background:var(--surface-2);}
 
 /* ===== ANI KOLAJ — ASİMETRİK GRID ===== */
 .momentGrid{
-  display:grid;gap:1px;width:100%;height:320px;max-height:320px;
+  display:grid;gap:1px;width:100%;aspect-ratio:1/1;
   padding:1px;background:var(--moment-bg,#1a1a2e);border-radius:18px;
   box-sizing:border-box;
 }
 @media (max-width:380px){
-  .momentCollageWrap{max-width:310px;}
-  .momentGrid{height:300px;max-height:300px;}
+  .momentCollageWrap{max-width:330px;}
 }
 .momentGridCell{
   position:relative;border-radius:10px;overflow:visible;
@@ -7084,15 +7083,14 @@ function renderCollageToCanvas(){
       ctx.closePath();
       ctx.clip();
 
-      // Fotoğraf — VARSAYILAN cover (doldur). Kullanıcı "sığdır" seçtiyse contain.
+      // Fotoğraf — önizlemedeki CSS ile BİREBİR aynı: önce contain/cover oranını
+      // (döndürmeden bağımsız) hesapla, transform'da sonra döndür. Böylece önizleme = yayın.
       if(img){
-        const fit = momentCellFit[i]; // true = contain (sığdır)
+        const fit = momentCellFit[i]; // true = contain (sığdır), false = cover (doldur)
         const zoom = momentCellZoom[i] || 1;
         const rot = (momentCellRotate[i] || 0) * Math.PI / 180;
-        // Döndürme varsa, kapsama oranını döndürülmüş boyuta göre hesapla
-        const swap = (momentCellRotate[i] === 90 || momentCellRotate[i] === 270);
-        const fitW = swap ? h : w, fitH = swap ? w : h;
-        const baseRatio = fit ? Math.min(fitW/img.width, fitH/img.height) : Math.max(fitW/img.width, fitH/img.height);
+        // CSS object-fit ile aynı: contain = en küçük oran, cover = en büyük oran (hücreye göre)
+        const baseRatio = fit ? Math.min(w/img.width, h/img.height) : Math.max(w/img.width, h/img.height);
         const ratio = baseRatio * zoom;
         const dw = img.width*ratio, dh = img.height*ratio;
         const cell = document.getElementById('momentCell'+i);
@@ -7100,7 +7098,7 @@ function renderCollageToCanvas(){
         if(cell){ const rect = cell.getBoundingClientRect(); if(rect.width) panRatio = w / rect.width; }
         const px = (momentCellPanX[i]||0) * panRatio;
         const py = (momentCellPanY[i]||0) * panRatio;
-        // Hücre merkezinde döndürerek çiz
+        // Hücre merkezinde döndürerek çiz (CSS: rotate sonra scale ile aynı sıra)
         const cxp = x + w/2 + px, cyp = y + h/2 + py;
         ctx.translate(cxp, cyp);
         if(rot) ctx.rotate(rot);
