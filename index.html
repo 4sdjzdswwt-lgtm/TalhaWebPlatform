@@ -6812,14 +6812,14 @@ function buildMomentCollageGrid(urls, owners){
   momentCellZoom = []; momentCellPanX = []; momentCellPanY = []; momentCellFit = [];
   if(!momentCellRotate.length || momentCellRotate.length !== urls.length) momentCellRotate = urls.map(()=> 0);
   grid.innerHTML = urls.slice(0,9).map((url, i)=>{
-    momentCellZoom[i] = 1; momentCellPanX[i] = 0; momentCellPanY[i] = 0; momentCellFit[i] = true;
+    momentCellZoom[i] = 1; momentCellPanX[i] = 0; momentCellPanY[i] = 0; momentCellFit[i] = false;
     const ow = owners[i] || {};
     const tag = ow.username
       ? `<div class="cellTag" onclick="event.stopPropagation();goToTaggedProfile('${ow.uid||''}')">@${(ow.username||'').replace(/^@/,'')}</div>`
       : '';
     const rot = momentCellRotate[i] || 0;
     return `
-    <div class="momentGridCell fit" id="momentCell${i}" data-idx="${i}" style="--zoom:1;--px:0px;--py:0px;--rot:${rot}deg;">
+    <div class="momentGridCell" id="momentCell${i}" data-idx="${i}" style="--zoom:1;--px:0px;--py:0px;--rot:${rot}deg;">
       <div class="cellShapeClip"><img src="${url}" alt="" id="momentCellImg${i}"></div>
       ${tag}
       <button class="cellRotateBtn" title="Döndür (yana yatır)" onclick="event.stopPropagation();rotateCell(${i})">⟳</button>
