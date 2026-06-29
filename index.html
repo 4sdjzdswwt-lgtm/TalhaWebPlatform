@@ -6620,6 +6620,10 @@ function openMomentPreview(session, captures){
   const retakeBtn = document.querySelector('.momentRetakeBtn');
   const captionInput = document.getElementById('momentCaptionInput');
   if(momentIsHost){
+    // Host önizlemedeyken eski 'wait/countdown' dinleyicisi kapatılmalı —
+    // aksi halde kareleri düzenlerken session güncellenince dinleyici tetiklenip
+    // önizlemeden çıkıyordu. Önizlemede artık dinlemeye gerek yok.
+    if(momentSessionRef){ momentSessionRef.off(); momentSessionRef = null; }
     publishBtn.textContent = 'Yayınla 🚀';
     publishBtn.onclick = publishMoment;
     if(retakeBtn) retakeBtn.style.display = '';
