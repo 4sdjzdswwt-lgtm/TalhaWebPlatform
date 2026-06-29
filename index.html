@@ -1692,18 +1692,18 @@ tbody tr:hover{background:var(--surface-2);}
 .momentPreviewOverlay.hidden{display:none;}
 .momentPreviewTop{padding:18px 20px;display:flex;align-items:center;justify-content:space-between;}
 .momentPreviewTop button{background:rgba(255,255,255,.12);border:none;color:#fff;width:34px;height:34px;border-radius:50%;cursor:pointer;}
-.momentPreviewBody{flex:1;overflow-y:auto;padding:0 20px 20px;display:flex;flex-direction:column;align-items:center;gap:16px;}
+.momentPreviewBody{flex:1;overflow-y:auto;padding:0 20px 16px;display:flex;flex-direction:column;align-items:center;gap:10px;}
 .momentCollageWrap{width:100%;max-width:360px;border-radius:18px;overflow:hidden;box-shadow:0 14px 40px rgba(0,0,0,.5);background:#000;flex-shrink:0;}
 
 /* ===== ANI KOLAJ — ASİMETRİK GRID ===== */
 .momentGrid{
-  display:grid;gap:5px;width:100%;height:360px;max-height:360px;
+  display:grid;gap:5px;width:100%;height:320px;max-height:320px;
   padding:5px;background:var(--moment-bg,#1a1a2e);border-radius:18px;
   box-sizing:border-box;
 }
 @media (max-width:380px){
-  .momentCollageWrap{max-width:330px;}
-  .momentGrid{height:330px;max-height:330px;}
+  .momentCollageWrap{max-width:310px;}
+  .momentGrid{height:300px;max-height:300px;}
 }
 .momentGridCell{
   position:relative;border-radius:10px;overflow:visible;
@@ -1850,17 +1850,18 @@ tbody tr:hover{background:var(--surface-2);}
 
 /* Layout şablonu seçici (alt şerit) */
 .momentLayoutPicker{
-  display:flex;gap:10px;overflow-x:auto;padding:6px 4px;width:100%;max-width:360px;
+  display:flex;gap:10px;overflow-x:auto;overflow-y:visible;padding:10px 4px;width:100%;max-width:360px;
   justify-content:flex-start;scrollbar-width:none;-webkit-overflow-scrolling:touch;
+  flex-shrink:0;margin-top:4px;min-height:60px;align-items:center;
 }
 .momentLayoutPicker::-webkit-scrollbar{display:none;}
 .momentLayoutBtn{
-  flex-shrink:0;width:48px;height:48px;border-radius:50%;
-  background:rgba(255,255,255,.08);border:2px solid rgba(255,255,255,.15);
+  flex-shrink:0;width:46px;height:46px;border-radius:14px;
+  background:rgba(255,255,255,.08);border:2px solid rgba(255,255,255,.18);
   display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;
   transition:all .15s;
 }
-.momentLayoutBtn.active{border-color:var(--accent);background:rgba(139,92,246,.2);transform:scale(1.08);}
+.momentLayoutBtn.active{border-color:var(--accent);background:rgba(139,92,246,.25);transform:scale(1.08);}
 .momentLayoutBtn svg{width:26px;height:26px;}
 .momentLayoutBtn rect{fill:rgba(255,255,255,.85);}
 .momentLayoutBtn.active rect{fill:#fff;}
