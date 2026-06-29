@@ -1655,9 +1655,9 @@ tbody tr:hover{background:var(--surface-2);}
 }
 .momentFeedCardHead{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
 .momentFeedCardHead img{width:40px;height:40px;border-radius:50%;object-fit:cover;border:2px solid var(--accent);}
-.momentFeedMedia{width:100%;border-radius:14px;overflow:hidden;background:var(--surface-2);max-height:420px;}
+.momentFeedMedia{width:100%;border-radius:14px;overflow:hidden;background:var(--surface-2);aspect-ratio:1/1;}
 .momentFeedMedia img{width:100%;height:100%;object-fit:cover;display:block;}
-.momentFeedMedia video{width:100%;max-height:420px;object-fit:cover;display:block;}
+.momentFeedMedia video{width:100%;height:100%;object-fit:cover;display:block;}
 .momentFeedActions{display:flex;gap:18px;margin-top:10px;align-items:center;}
 .momentFeedBtn{background:none;border:none;color:var(--muted);font-size:13px;cursor:pointer;display:flex;align-items:center;gap:5px;padding:4px 0;}
 .momentFeedBtn svg{width:18px;height:18px;}
@@ -2286,9 +2286,9 @@ tbody tr:hover{background:var(--surface-2);}
           + Başlat
         </button>
       </div>
-      <div class="screen-body" style="padding:0;">
+      <div class="screen-body" style="padding:86px 0 100px;">
         <!-- Filtre sekmeleri -->
-        <div style="display:flex;gap:0;border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:none;">
+        <div style="display:flex;gap:0;border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:none;background:var(--bg);position:sticky;top:0;z-index:5;">
           <button class="momentFeedTab active" onclick="filterMomentFeed('all', this)" style="flex:1;padding:12px;font-size:13px;font-weight:600;background:none;border:none;color:var(--accent);border-bottom:2px solid var(--accent);cursor:pointer;">Tümü</button>
           <button class="momentFeedTab" onclick="filterMomentFeed('following', this)" style="flex:1;padding:12px;font-size:13px;font-weight:600;background:none;border:none;color:var(--muted);border-bottom:2px solid transparent;cursor:pointer;">Takip</button>
           <button class="momentFeedTab" onclick="filterMomentFeed('mine', this)" style="flex:1;padding:12px;font-size:13px;font-weight:600;background:none;border:none;color:var(--muted);border-bottom:2px solid transparent;cursor:pointer;">Benimkiler</button>
