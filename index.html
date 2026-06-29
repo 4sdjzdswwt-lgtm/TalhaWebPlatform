@@ -1553,8 +1553,21 @@ tbody tr:hover{background:var(--surface-2);}
   box-shadow:0 0 40px rgba(124,58,237,.3), 0 0 80px rgba(124,58,237,.1);
   flex-shrink:0;
 }
-.momentCamWrap video{width:100%;height:100%;object-fit:cover;border-radius:25px;}
-.momentCamWrap video.mirrored{transform:scaleX(-1);}
+.momentCamWrap video{width:100%;height:100%;object-fit:cover;border-radius:25px;transform:scale(var(--cam-zoom,1));transition:transform .2s;}
+.momentCamWrap video.mirrored{transform:scaleX(-1) scale(var(--cam-zoom,1));}
+/* Zoom seviye butonları — kameranın alt-ortasında */
+.momentZoomPicker{
+  position:absolute;bottom:74px;left:50%;transform:translateX(-50%);
+  display:flex;gap:8px;z-index:8;padding:6px 10px;
+  background:rgba(0,0,0,.4);backdrop-filter:blur(10px);border-radius:24px;
+}
+.momentZoomBtn{
+  min-width:38px;height:34px;padding:0 10px;border-radius:18px;
+  background:rgba(255,255,255,.12);border:none;cursor:pointer;
+  color:#fff;font-size:13px;font-weight:700;font-family:'Space Grotesk',sans-serif;
+  transition:all .15s;
+}
+.momentZoomBtn.active{background:#fff;color:#000;transform:scale(1.12);}
 .momentCamPlaceholder{color:rgba(255,255,255,.5);font-size:13px;text-align:center;padding:24px;}
 .momentCountdown{
   position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
@@ -2934,6 +2947,7 @@ tbody tr:hover{background:var(--surface-2);}
       <button class="momentCamBtn" id="momentFlipBtn" onclick="flipMomentCamera()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 1 2.6 6.3M3 12V6m0 6h6"/></svg></button>
     </div>
     <div class="momentCountdown hidden" id="momentCountdown">5</div>
+    <div class="momentZoomPicker" id="momentZoomPicker"></div>
     <div class="momentParticipantsBottom" id="momentParticipantsBottom"></div>
   </div>
   <div class="momentCamLabel" id="momentCamLabel">📸 Hazırlan, geri sayım başlıyor...</div>
@@ -6425,12 +6439,94 @@ function startMomentCamera(){
     .then((stream)=>{
       momentCamStream = stream;
       video.srcObject = stream;
+      // Stream hazır olunca cihazın zoom yeteneğini tespit et ve zoom butonlarını kur
+      setupMomentZoom(stream);
     })
     .catch(()=>{
       placeholder.classList.remove('hidden');
       video.classList.add('hidden');
       showToast('Kamera erişimi reddedildi — manuel çekim yapabilirsin.');
     });
+}
+
+/* Cihazın zoom yeteneğini tespit edip zoom butonlarını oluştur.
+   Donanımsal zoom (getCapabilities().zoom) varsa onu kullanır, yoksa dijital zoom'a düşer. */
+let momentZoomTrack = null;
+let momentZoomCaps = null;     // {min, max, step} — donanım destekliyorsa
+let momentDigitalZoom = 1;     // donanım yoksa CSS dijital zoom
+function setupMomentZoom(stream){
+  const picker = document.getElementById('momentZoomPicker');
+  if(!picker) return;
+  momentZoomTrack = stream.getVideoTracks()[0];
+  momentZoomCaps = null;
+  momentDigitalZoom = 1;
+  const video = document.getElementById('momentCamVideo');
+  if(video) video.style.setProperty('--cam-zoom', 1);
+
+  let caps = null;
+  try { caps = momentZoomTrack.getCapabilities ? momentZoomTrack.getCapabilities() : null; } catch(e){}
+
+  let zoomLevels;
+  if(caps && caps.zoom && typeof caps.zoom.max === 'number' && caps.zoom.max > caps.zoom.min){
+    // DONANIMSAL ZOOM destekleniyor — cihazın gerçek aralığını kullan
+    momentZoomCaps = caps.zoom;
+    const min = caps.zoom.min, max = caps.zoom.max;
+    // Cihazın desteklediği aralıkta mantıklı kademeler üret
+    zoomLevels = [];
+    // 0.5x destekliyorsa ekle
+    if(min <= 0.5) zoomLevels.push(0.5);
+    zoomLevels.push(1);
+    [2,3,5].forEach(z=>{ if(z <= max && z > 1) zoomLevels.push(z); });
+    if(max > zoomLevels[zoomLevels.length-1]) zoomLevels.push(Math.round(max*10)/10);
+    // min/max sınırlarına kırp
+    zoomLevels = zoomLevels.filter(z=> z>=min && z<=max);
+    if(!zoomLevels.length) zoomLevels = [1];
+  } else {
+    // Donanım zoom yok — dijital zoom kademeleri (CSS ile)
+    zoomLevels = [1, 2, 3];
+  }
+
+  // Butonları oluştur
+  picker.innerHTML = '';
+  zoomLevels.forEach((z, i)=>{
+    const btn = document.createElement('button');
+    btn.className = 'momentZoomBtn' + ((z===1)?' active':'');
+    btn.textContent = (z===Math.floor(z)? z : z) + '×';
+    btn.dataset.zoom = z;
+    btn.onclick = ()=> applyMomentZoom(z);
+    picker.appendChild(btn);
+  });
+  picker.style.display = zoomLevels.length > 1 ? 'flex' : 'none';
+}
+
+/* Seçilen zoom seviyesini uygula (donanım veya dijital) */
+function applyMomentZoom(z){
+  const picker = document.getElementById('momentZoomPicker');
+  if(picker){
+    picker.querySelectorAll('.momentZoomBtn').forEach(b=>{
+      b.classList.toggle('active', parseFloat(b.dataset.zoom) === z);
+    });
+  }
+  if(momentZoomCaps && momentZoomTrack){
+    // DONANIMSAL zoom — gerçek lens/zoom
+    const clamped = Math.max(momentZoomCaps.min, Math.min(momentZoomCaps.max, z));
+    momentZoomTrack.applyConstraints({ advanced: [{ zoom: clamped }] }).catch(()=>{
+      // Donanım uygulanamazsa dijitale düş
+      applyDigitalZoom(z);
+    });
+    // Dijital zoom'u sıfırla (donanım yapıyor)
+    const video = document.getElementById('momentCamVideo');
+    if(video) video.style.setProperty('--cam-zoom', 1);
+  } else {
+    applyDigitalZoom(z);
+  }
+  if(navigator.vibrate) navigator.vibrate(8);
+}
+/* CSS ile dijital zoom (donanım yoksa) */
+function applyDigitalZoom(z){
+  momentDigitalZoom = z;
+  const video = document.getElementById('momentCamVideo');
+  if(video) video.style.setProperty('--cam-zoom', z);
 }
 function stopMomentCamera(){
   if(momentCamStream){
@@ -6464,7 +6560,11 @@ function captureMomentFrame(retryCount){
   const ctx = canvas.getContext('2d');
 
   if(video && video.videoWidth){
-    const side = Math.min(video.videoWidth, video.videoHeight);
+    // Dijital zoom uygulanmışsa (donanım yoksa) kırpma alanını zoom oranında daralt,
+    // böylece çekilen kare de önizlemedeki gibi yakınlaşmış olur.
+    const dz = (momentZoomCaps ? 1 : (momentDigitalZoom || 1));
+    const baseSide = Math.min(video.videoWidth, video.videoHeight);
+    const side = baseSide / dz;
     const sx = (video.videoWidth - side)/2, sy = (video.videoHeight - side)/2;
     // NOT: drawImage ham (aynalanmamış) kamera verisini çizer; önizlemedeki ayna
     // CSS scaleX(-1) ile sağlanıyor. Çekilen karenin önizlemeyle BİREBİR aynı
