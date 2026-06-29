@@ -118,7 +118,7 @@ input:focus{border-color:var(--accent);}
 
 /* ALT ADA (PILL) NAVİGASYON */
 .island{
-  position:absolute;left:50%;bottom:25px;transform:translateX(-50%);
+  position:absolute;left:50%;bottom:calc(25px + env(safe-area-inset-bottom, 0px));transform:translateX(-50%);
   display:flex;gap:6px;padding:9px;border-radius:38px;
   background:var(--glass-bg);border:1px solid var(--glass-border);
   backdrop-filter:blur(24px) saturate(190%);-webkit-backdrop-filter:blur(24px) saturate(190%);
@@ -356,7 +356,7 @@ body.light-mode .regStickyBar{
 
 /* Her ekranın SABİT üst başlığı + kendi içinde bağımsız kayan gövdesi */
 .screen-header{
-  position:absolute;top:14px;left:14px;right:14px;z-index:40;
+  position:absolute;top:calc(14px + env(safe-area-inset-top, 0px));left:14px;right:14px;z-index:40;
   background:var(--glass-bg);
   backdrop-filter:blur(24px) saturate(190%);-webkit-backdrop-filter:blur(24px) saturate(190%);
   border:1px solid var(--glass-border);border-radius:999px;
@@ -367,11 +367,12 @@ body.light-mode .regStickyBar{
   overflow-y:auto;overflow-x:hidden;
   -webkit-overflow-scrolling:touch;
   overscroll-behavior:contain;
-  padding-top:86px;padding-bottom:100px;
+  padding-top:calc(86px + env(safe-area-inset-top, 0px));
+  padding-bottom:calc(100px + env(safe-area-inset-bottom, 0px));
 }
 /* Explore ve MomentFeed için padding:0 olduğunda scroll yine çalışsın */
 .screen-body.no-pad{padding:0;}
-.screen-body.no-pad>.screen-body-inner{padding-top:86px;padding-bottom:100px;}
+.screen-body.no-pad>.screen-body-inner{padding-top:calc(86px + env(safe-area-inset-top,0px));padding-bottom:calc(100px + env(safe-area-inset-bottom,0px));}
 
 /* ===== FEED SCREEN (siteye özgü tasarım) ===== */
 .topbar{padding:12px 20px;display:flex;align-items:center;justify-content:space-between;}
@@ -2286,7 +2287,7 @@ tbody tr:hover{background:var(--surface-2);}
           + Başlat
         </button>
       </div>
-      <div class="screen-body" style="padding:86px 0 100px;">
+      <div class="screen-body" style="padding:calc(86px + env(safe-area-inset-top,0px)) 0 calc(100px + env(safe-area-inset-bottom,0px));">
         <!-- Filtre sekmeleri -->
         <div style="display:flex;gap:0;border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:none;background:var(--bg);position:sticky;top:0;z-index:5;">
           <button class="momentFeedTab active" onclick="filterMomentFeed('all', this)" style="flex:1;padding:12px;font-size:13px;font-weight:600;background:none;border:none;color:var(--accent);border-bottom:2px solid var(--accent);cursor:pointer;">Tümü</button>
