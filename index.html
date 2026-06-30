@@ -141,6 +141,12 @@ body[data-accent="black"]{
   --glass-border:rgba(163,163,163,.35); --glass-shadow:0 8px 32px rgba(0,0,0,.45);
 }
 body.light-mode[data-accent="black"]{ --accent:#404040; --accent-dim:#e5e5e5; --grad-1:#262626; --grad-2:#404040; --grad-3:#525252; --glass-border:rgba(64,64,64,.30); }
+
+/* Gradient'i body seviyesinde yeniden hesapla — hangi tema/accent seçili olursa
+   olsun --grad-1/2/3 güncel değerleriyle gradient otomatik o renge döner. */
+body{
+  --gradient-vivid:linear-gradient(135deg, var(--grad-1) 0%, var(--grad-2) 55%, var(--grad-3) 100%);
+}
 html,body{height:100%;overflow:hidden;}
 html,body{scroll-behavior:smooth;}
 
@@ -178,25 +184,30 @@ input:focus{border-color:var(--accent);}
 
 /* ===== APP SHELL ===== */
 #appShell{display:flex;max-width:1000px;margin:0 auto;height:100dvh;position:relative;overflow:hidden;}
-/* Tema rengine göre canlı arka plan ışığı — her şeyin arkasında parıltı.
-   --accent kullanır, tema değişince ışık da değişir. Mutlak konumlu ve z-index:0;
-   .screen'ler (z-index'siz ama sonradan geldikleri için) üstte kalır. */
-#appShell::before, #appShell::after{
-  content:'';position:absolute;border-radius:50%;pointer-events:none;z-index:0;
-  filter:blur(80px);opacity:.22;
+/* Tema rengine göre arka plan ışığı — ayrı bir alt katman div'i (#appGlow).
+   Tüm içeriğin ARKASINDA kalır, asla üstüne binmez. --accent ile renk değişir. */
+#appGlow{
+  position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden;
+}
+#appGlow::before, #appGlow::after{
+  content:'';position:absolute;border-radius:50%;
+  filter:blur(90px);opacity:.20;
   background:radial-gradient(circle, var(--accent), transparent 70%);
   animation:appGlowFloat 22s ease-in-out infinite alternate;
 }
-#appShell::before{ width:60%;height:40%;top:-6%;left:-14%; }
-#appShell::after{ width:66%;height:44%;bottom:-8%;right:-16%;
-  animation-delay:-11s;animation-duration:28s;opacity:.18; }
+#appGlow::before{ width:55%;height:38%;top:-4%;left:-12%; }
+#appGlow::after{ width:60%;height:42%;bottom:-6%;right:-14%;
+  animation-delay:-11s;animation-duration:28s;opacity:.16; }
 @keyframes appGlowFloat{
   0%{transform:translate(0,0) scale(1);}
   50%{transform:translate(5%,-4%) scale(1.08);}
   100%{transform:translate(-4%,5%) scale(.95);}
 }
-body.light-mode #appShell::before{opacity:.12;}
-body.light-mode #appShell::after{opacity:.10;}
+body.light-mode #appGlow::before{opacity:.10;}
+body.light-mode #appGlow::after{opacity:.08;}
+/* Tüm ekranlar ve ada ışığın ÜSTÜNDE */
+#appShell > .screen{z-index:1;}
+#appShell > .island{z-index:9999;}
 #sidebar{
   width:210px;flex-shrink:0;border-right:1px solid var(--line);padding:20px 14px;
   position:sticky;top:0;height:100vh;
@@ -238,7 +249,7 @@ body.light-mode #appShell::after{opacity:.10;}
   transform:scale(.88);transition:transform .25s ease, color .2s ease, background .2s ease;
 }
 .island button svg{width:24px;height:24px;}
-.island button.active{color:#fff;background:var(--gradient-vivid);transform:scale(1.05);box-shadow:0 4px 14px var(--accent);}
+.island button.active{color:#fff;background:linear-gradient(135deg, var(--grad-1) 0%, var(--grad-2) 55%, var(--grad-3) 100%);transform:scale(1.05);box-shadow:0 4px 14px var(--accent);}
 .island button.pulse{animation:islandPulse .32s ease;}
 .island.chat-fullscreen-hide{display:none;}
 @keyframes islandPulse{0%{transform:scale(1.05);}45%{transform:scale(1.28);}100%{transform:scale(1.05);}}
@@ -1299,11 +1310,11 @@ body.light-mode #screenRegister .spam-warning{background:linear-gradient(135deg,
 
 /* Ada ortasındaki Anı Yakala butonu — daha büyük ve vurgulu */
 #navMomentFeed{
-  background:var(--gradient-vivid) !important;
+  background:linear-gradient(135deg, var(--grad-1) 0%, var(--grad-2) 55%, var(--grad-3) 100%) !important;
   color:#fff !important;
   width:52px !important; height:52px !important;
   border-radius:16px !important;
-  box-shadow:0 4px 16px rgba(124,58,237,.45);
+  box-shadow:0 4px 16px var(--accent);
 }
 #navMomentFeed svg{stroke:#fff !important;}
 .notif-badge{
@@ -2119,6 +2130,9 @@ tbody tr:hover{background:var(--surface-2);}
 </div>
 
 <div id="appShell">
+
+  <!-- Tema rengine göre arka plan ışığı (içeriğin arkasında) -->
+  <div id="appGlow"></div>
 
   <!-- ALT ADA (PILL) NAVİGASYON -->
   <div class="island hidden" id="island">
