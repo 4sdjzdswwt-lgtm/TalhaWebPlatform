@@ -8604,7 +8604,7 @@ function publishStory(){
 
   const saveStory = (mediaUrl) => {
     const storyData = {
-      uid, url: mediaUrl, mediaType: storyMediaType,
+      uid, url: mediaUrl, mediaUrl: mediaUrl, mediaType: storyMediaType,
       caption, username: savedUsername || '@kullanici',
       userPhoto: currentPhoto, ts: Date.now(),
       expiresAt: Date.now() + 24*60*60*1000
@@ -8668,7 +8668,9 @@ function loadStoryStrip(){
         if(!s.uid || s.expiresAt < now) return;
         // Anı paylaşımları hikaye DEĞİLDİR — atla. Bozuk/geçersiz görselli kayıtları da atla.
         if(s.isMoment) return;
-        if(!s.mediaUrl || typeof s.mediaUrl !== 'string' || s.mediaUrl.length < 10) return;
+        // Görsel alanı 'url' VEYA 'mediaUrl' olabilir (eski/yeni kayıt uyumu)
+        const media = s.mediaUrl || s.url;
+        if(!media || typeof media !== 'string' || media.length < 10) return;
         if(!byUser[s.uid]) byUser[s.uid] = [];
         byUser[s.uid].push({...s, id});
       });
@@ -8694,20 +8696,9 @@ function loadStoryStrip(){
       Promise.all(otherUids.map(uid =>
         fbDb.ref('users/'+uid).once('value').then(us=>({uid, user:us.val()||{}}))
       )).then(userList=>{
-        // Silinmiş + KENDİME ait hesapları (email/username/displayName eşleşmesi) çıkar
-        const visibleUsers = userList.filter(({user}) => {
-          if(user.deleted) return false;
-          const uEmail = (user.email||'').toLowerCase().trim();
-          const uName = (user.username||'').toLowerCase().replace(/^@/,'').trim();
-          const uDisp = (user.displayName||'').toLowerCase().trim();
-          // Kendi e-postam → benim hesabım, gizle
-          if(myEmail && uEmail && uEmail === myEmail) return false;
-          // Kendi kullanıcı adım → gizle
-          if(myUsernameLower && uName && uName === myUsernameLower) return false;
-          // Kendi görünen adım (anlamlı uzunluktaysa) → gizle
-          if(myDisplayLower && uDisp && uDisp === myDisplayLower && myDisplayLower.length > 2) return false;
-          return true;
-        });
+        // Sadece silinmiş hesapları çıkar. Kendi hikayem zaten yukarıda
+        // uid !== myUid ile elendi (her kullanıcı kendi hikayesini şeritte görmez).
+        const visibleUsers = userList.filter(({user}) => !user.deleted);
         if(!visibleUsers.length){ container.innerHTML=''; return; }
         // LocalStorage'da kullanıcının gizlediği UID'leri al
         let hiddenUids = [];
@@ -8920,10 +8911,11 @@ function showStoryAtIndex(idx){
 
   const img = document.getElementById('storyViewerImg');
   const vid = document.getElementById('storyViewerVid');
+  const mediaSrc = s.url || s.mediaUrl; // eski/yeni kayıt uyumu
   if(s.mediaType === 'video'){
-    img.style.display = 'none'; vid.style.display = ''; vid.src = s.url; vid.play();
+    img.style.display = 'none'; vid.style.display = ''; vid.src = mediaSrc; vid.play();
   } else {
-    vid.style.display = 'none'; vid.pause(); img.style.display = ''; img.src = s.url;
+    vid.style.display = 'none'; vid.pause(); img.style.display = ''; img.src = mediaSrc;
   }
 
   const bar = document.getElementById('storyProgressBar');
