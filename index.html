@@ -63,6 +63,84 @@ body.light-mode{
   --glass-shine:rgba(255,255,255,.55);
   --glass-shadow:0 8px 32px rgba(99,40,255,.14);
 }
+
+/* ============================================================
+   RENK TEMALARI — accent + gradient + cam yüzeyleri override eder.
+   Açık/koyu moddan BAĞIMSIZ çalışır (ör. koyu mod + pembe).
+   Her renk doygun ve parlak seçildi ki yazılar her zaman okunsun.
+   ============================================================ */
+/* MAVİ */
+body[data-accent="blue"]{
+  --accent:#3b82f6; --accent-dim:#1e3a5f; --bubble-me:#2563eb;
+  --grad-1:#2563eb; --grad-2:#3b82f6; --grad-3:#22d3ee;
+  --glass-bg:linear-gradient(135deg, rgba(37,99,235,.22) 0%, rgba(59,130,246,.16) 50%, rgba(34,211,238,.14) 100%);
+  --glass-border:rgba(147,197,253,.40); --glass-shadow:0 8px 32px rgba(37,99,235,.30);
+}
+body.light-mode[data-accent="blue"]{ --accent-dim:#dbeafe; --glass-border:rgba(37,99,235,.30); }
+/* PEMBE */
+body[data-accent="pink"]{
+  --accent:#ec4899; --accent-dim:#5c1e3e; --bubble-me:#db2777;
+  --grad-1:#db2777; --grad-2:#ec4899; --grad-3:#f472b6;
+  --glass-bg:linear-gradient(135deg, rgba(219,39,119,.22) 0%, rgba(236,72,153,.16) 50%, rgba(244,114,182,.14) 100%);
+  --glass-border:rgba(249,168,212,.42); --glass-shadow:0 8px 32px rgba(219,39,119,.30);
+}
+body.light-mode[data-accent="pink"]{ --accent-dim:#fce7f3; --glass-border:rgba(219,39,119,.30); }
+/* SARI (koyu metin gerektiren parlak renk — accent koyulaştırıldı ki okunsun) */
+body[data-accent="yellow"]{
+  --accent:#eab308; --accent-dim:#5c4a0e; --bubble-me:#ca8a04;
+  --grad-1:#f59e0b; --grad-2:#eab308; --grad-3:#fde047;
+  --glass-bg:linear-gradient(135deg, rgba(245,158,11,.24) 0%, rgba(234,179,8,.18) 50%, rgba(253,224,71,.16) 100%);
+  --glass-border:rgba(253,224,71,.45); --glass-shadow:0 8px 32px rgba(234,179,8,.30);
+}
+body.light-mode[data-accent="yellow"]{ --accent:#a16207; --accent-dim:#fef9c3; --glass-border:rgba(161,98,7,.30); }
+/* KIRMIZI */
+body[data-accent="red"]{
+  --accent:#ef4444; --accent-dim:#5c1d1d; --bubble-me:#dc2626;
+  --grad-1:#dc2626; --grad-2:#ef4444; --grad-3:#fb7185;
+  --glass-bg:linear-gradient(135deg, rgba(220,38,38,.22) 0%, rgba(239,68,68,.16) 50%, rgba(251,113,133,.14) 100%);
+  --glass-border:rgba(252,165,165,.42); --glass-shadow:0 8px 32px rgba(220,38,38,.30);
+}
+body.light-mode[data-accent="red"]{ --accent-dim:#fee2e2; --glass-border:rgba(220,38,38,.30); }
+/* YEŞİL */
+body[data-accent="green"]{
+  --accent:#22c55e; --accent-dim:#14401f; --bubble-me:#16a34a;
+  --grad-1:#16a34a; --grad-2:#22c55e; --grad-3:#4ade80;
+  --glass-bg:linear-gradient(135deg, rgba(22,163,74,.22) 0%, rgba(34,197,94,.16) 50%, rgba(74,222,128,.14) 100%);
+  --glass-border:rgba(134,239,172,.42); --glass-shadow:0 8px 32px rgba(22,163,74,.30);
+}
+body.light-mode[data-accent="green"]{ --accent:#15803d; --accent-dim:#dcfce7; --glass-border:rgba(21,128,61,.30); }
+/* BEBEK MAVİSİ */
+body[data-accent="babyblue"]{
+  --accent:#38bdf8; --accent-dim:#143b52; --bubble-me:#0ea5e9;
+  --grad-1:#0ea5e9; --grad-2:#38bdf8; --grad-3:#7dd3fc;
+  --glass-bg:linear-gradient(135deg, rgba(14,165,233,.20) 0%, rgba(56,189,248,.15) 50%, rgba(125,211,252,.13) 100%);
+  --glass-border:rgba(186,230,253,.45); --glass-shadow:0 8px 32px rgba(14,165,233,.28);
+}
+body.light-mode[data-accent="babyblue"]{ --accent:#0284c7; --accent-dim:#e0f2fe; --glass-border:rgba(2,132,199,.30); }
+/* TURUNCU */
+body[data-accent="orange"]{
+  --accent:#f97316; --accent-dim:#5c2f0e; --bubble-me:#ea580c;
+  --grad-1:#ea580c; --grad-2:#f97316; --grad-3:#fb923c;
+  --glass-bg:linear-gradient(135deg, rgba(234,88,12,.22) 0%, rgba(249,115,22,.16) 50%, rgba(251,146,60,.14) 100%);
+  --glass-border:rgba(253,186,116,.45); --glass-shadow:0 8px 32px rgba(234,88,12,.30);
+}
+body.light-mode[data-accent="orange"]{ --accent:#c2410c; --accent-dim:#ffedd5; --glass-border:rgba(194,65,12,.30); }
+/* BORDO */
+body[data-accent="maroon"]{
+  --accent:#be123c; --accent-dim:#4a0f1f; --bubble-me:#9f1239;
+  --grad-1:#9f1239; --grad-2:#be123c; --grad-3:#e11d48;
+  --glass-bg:linear-gradient(135deg, rgba(159,18,57,.24) 0%, rgba(190,18,60,.18) 50%, rgba(225,29,72,.15) 100%);
+  --glass-border:rgba(253,164,175,.40); --glass-shadow:0 8px 32px rgba(159,18,57,.32);
+}
+body.light-mode[data-accent="maroon"]{ --accent:#9f1239; --accent-dim:#ffe4e6; --glass-border:rgba(159,18,57,.30); }
+/* SİYAH (mono/gri aksanlı şık tema) */
+body[data-accent="black"]{
+  --accent:#a3a3a3; --accent-dim:#2a2a2a; --bubble-me:#404040;
+  --grad-1:#404040; --grad-2:#525252; --grad-3:#737373;
+  --glass-bg:linear-gradient(135deg, rgba(82,82,82,.30) 0%, rgba(64,64,64,.22) 50%, rgba(38,38,38,.20) 100%);
+  --glass-border:rgba(163,163,163,.35); --glass-shadow:0 8px 32px rgba(0,0,0,.45);
+}
+body.light-mode[data-accent="black"]{ --accent:#404040; --accent-dim:#e5e5e5; --grad-1:#262626; --grad-2:#404040; --grad-3:#525252; --glass-border:rgba(64,64,64,.30); }
 html,body{height:100%;overflow:hidden;}
 html,body{scroll-behavior:smooth;}
 
@@ -627,6 +705,15 @@ body.light-mode .msg.them{
   background:var(--surface-2);border:1px solid var(--line);border-radius:12px;
   padding:13px 14px;font-size:13.5px;margin-bottom:14px;
 }
+/* Renk teması seçici noktaları */
+.accentPicker{display:flex;flex-wrap:wrap;gap:10px;}
+.accentDot{
+  width:34px;height:34px;border-radius:50%;cursor:pointer;padding:0;
+  border:2.5px solid transparent;transition:transform .15s, border-color .15s;
+  box-shadow:0 2px 8px rgba(0,0,0,.3);
+}
+.accentDot:active{transform:scale(.9);}
+.accentDot.active{border-color:var(--text);transform:scale(1.12);}
 .drawer-btn{
   background:var(--surface-2);border:1px solid var(--line);color:var(--text);
   padding:13px 14px;border-radius:11px;font-size:13.5px;text-align:left;cursor:pointer;font-family:'Inter',sans-serif;
@@ -2500,6 +2587,22 @@ tbody tr:hover{background:var(--surface-2);}
             <input type="checkbox" id="themeToggle" onchange="toggleTheme()">
             <span class="switch-slider"></span>
           </label>
+        </div>
+
+        <div style="margin:6px 0 14px;">
+          <div style="font-size:13px;color:var(--muted);margin-bottom:10px;">🎨 Renk Teması</div>
+          <div class="accentPicker" id="accentPicker">
+            <button class="accentDot" data-accent="default" style="background:linear-gradient(135deg,#7c3aed,#06b6d4);" onclick="applyAccent('default')" title="Mor (varsayılan)"></button>
+            <button class="accentDot" data-accent="blue" style="background:linear-gradient(135deg,#2563eb,#22d3ee);" onclick="applyAccent('blue')" title="Mavi"></button>
+            <button class="accentDot" data-accent="babyblue" style="background:linear-gradient(135deg,#0ea5e9,#7dd3fc);" onclick="applyAccent('babyblue')" title="Bebek Mavisi"></button>
+            <button class="accentDot" data-accent="pink" style="background:linear-gradient(135deg,#db2777,#f472b6);" onclick="applyAccent('pink')" title="Pembe"></button>
+            <button class="accentDot" data-accent="red" style="background:linear-gradient(135deg,#dc2626,#fb7185);" onclick="applyAccent('red')" title="Kırmızı"></button>
+            <button class="accentDot" data-accent="maroon" style="background:linear-gradient(135deg,#9f1239,#e11d48);" onclick="applyAccent('maroon')" title="Bordo"></button>
+            <button class="accentDot" data-accent="orange" style="background:linear-gradient(135deg,#ea580c,#fb923c);" onclick="applyAccent('orange')" title="Turuncu"></button>
+            <button class="accentDot" data-accent="yellow" style="background:linear-gradient(135deg,#f59e0b,#fde047);" onclick="applyAccent('yellow')" title="Sarı"></button>
+            <button class="accentDot" data-accent="green" style="background:linear-gradient(135deg,#16a34a,#4ade80);" onclick="applyAccent('green')" title="Yeşil"></button>
+            <button class="accentDot" data-accent="black" style="background:linear-gradient(135deg,#262626,#737373);" onclick="applyAccent('black')" title="Siyah"></button>
+          </div>
         </div>
 
         <div class="drawer-theme-row">
@@ -5164,6 +5267,29 @@ function initTheme(){
   let mode = 'dark';
   try{ mode = localStorage.getItem('next_theme') || 'dark'; }catch(e){}
   applyTheme(mode);
+  let accent = 'default';
+  try{ accent = localStorage.getItem('next_accent') || 'default'; }catch(e){}
+  applyAccent(accent);
+}
+
+/* Renk teması (accent) uygula — açık/koyu moddan bağımsız */
+function applyAccent(accent){
+  if(accent === 'default'){
+    document.body.removeAttribute('data-accent');
+  } else {
+    document.body.setAttribute('data-accent', accent);
+  }
+  try{ localStorage.setItem('next_accent', accent); }catch(e){}
+  // Seçili noktayı işaretle
+  document.querySelectorAll('.accentDot').forEach(d=>{
+    d.classList.toggle('active', d.dataset.accent === accent);
+  });
+  // PWA tema rengini de güncelle (durum çubuğu)
+  const themeMeta = document.querySelector('meta[name="theme-color"]');
+  if(themeMeta){
+    const c = getComputedStyle(document.body).getPropertyValue('--accent').trim();
+    if(c) themeMeta.setAttribute('content', c);
+  }
 }
 
 function saveBio(){
