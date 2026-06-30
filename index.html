@@ -7664,28 +7664,17 @@ function doPublishMoment(btn){
   }
 }
 
-/* ---------- 5) FEED ÜSTÜ HİKAYE ŞERİDİ — aktif/yakın zamanda biten anılar ---------- */
+/* ---------- 5) FEED ÜSTÜ HİKAYE ŞERİDİ ----------
+   NOT: Hikaye halkalarını ARTIK SADECE loadStoryStrip() çiziyor (storyStripItems).
+   Bu fonksiyon eskiden aynı 'stories' kayıtlarını ikinci bir konteynere
+   (momentStripItems) de bastığı için her hikaye ÇİFT halka olarak görünüyordu.
+   O çizim kaldırıldı; sadece anı davet dinleyicisi korundu. */
 function initMomentStripListener(){
   if(!requireFirebase() || !fbAuth.currentUser) return;
   const myUid = fbAuth.currentUser.uid;
-  if(momentStripListenerRef) momentStripListenerRef.off();
-  // Son 24 saatteki hikayeleri çek
-  momentStripListenerRef = fbDb.ref('stories').orderByChild('createdAt').limitToLast(30);
-  momentStripListenerRef.on('value', (snap)=>{
-    const data = snap.val() || {};
-    const now = Date.now();
-    const items = Object.keys(data).map(id=>({id, ...data[id]})).filter(s => s.expiresAt && s.expiresAt > now);
-    items.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
-    const container = document.getElementById('momentStripItems');
-    if(!container) return;
-    if(!items.length){ container.innerHTML = ''; return; }
-    container.innerHTML = items.map(s => `
-      <div class="momentStripItem" onclick="scrollToPost('${s.postId}')">
-        <div class="momentStripAvatarRing"><img src="${s.photo || 'https://i.pravatar.cc/60?img=68'}"></div>
-        <span class="momentStripLabel">${s.username || '@kullanici'}</span>
-      </div>
-    `).join('');
-  });
+  // Çift halka yaratan eski şerit çizimi devre dışı — momentStripItems boş kalır.
+  const momentItems = document.getElementById('momentStripItems');
+  if(momentItems) momentItems.innerHTML = '';
 
   // Kendime gelen davetleri dinle (toast olarak göster) — sadece bir kez bağla
   if(!window.__momentInviteListenerBound){
@@ -8698,13 +8687,31 @@ function loadStoryStrip(){
       )).then(userList=>{
         // Sadece silinmiş hesapları çıkar. Kendi hikayem zaten yukarıda
         // uid !== myUid ile elendi (her kullanıcı kendi hikayesini şeritte görmez).
-        const visibleUsers = userList.filter(({user}) => !user.deleted);
+        let visibleUsers = userList.filter(({user}) => !user.deleted);
         if(!visibleUsers.length){ container.innerHTML=''; return; }
         // LocalStorage'da kullanıcının gizlediği UID'leri al
         let hiddenUids = [];
         try { hiddenUids = JSON.parse(localStorage.getItem('hiddenStoryUsers') || '[]'); } catch(e){}
         const hiddenSet = new Set(hiddenUids);
-        const finalUsers = visibleUsers.filter(({uid}) => !hiddenSet.has(uid));
+        visibleUsers = visibleUsers.filter(({uid}) => !hiddenSet.has(uid));
+
+        // KULLANICI ADINA GÖRE TEKİLLEŞTİR — aynı @kullanıcıadı birden fazla hesapta
+        // varsa (duplicate kayıt) tek halka göster. Kendi uid/kullanıcıadı/e-posta
+        // taşıyan hesapları kendi ekranımdan tamamen çıkar.
+        const seenNames = new Set();
+        const finalUsers = [];
+        for(const item of visibleUsers){
+          const u = item.user || {};
+          const uNameRaw = (u.username || (byUser[item.uid][0] && byUser[item.uid][0].username) || '').toLowerCase().replace(/^@/,'').trim();
+          const uEmail = (u.email||'').toLowerCase().trim();
+          if(item.uid === myUid) continue;
+          if(myUsernameLower && uNameRaw && uNameRaw === myUsernameLower) continue;
+          if(myEmail && uEmail && uEmail === myEmail) continue;
+          const dedupKey = uNameRaw || item.uid;
+          if(seenNames.has(dedupKey)) continue;
+          seenNames.add(dedupKey);
+          finalUsers.push(item);
+        }
         if(!finalUsers.length){ container.innerHTML=''; return; }
         container.innerHTML = finalUsers.map(({uid,user})=>{
           const stories = byUser[uid].sort((a,b)=>a.ts-b.ts);
