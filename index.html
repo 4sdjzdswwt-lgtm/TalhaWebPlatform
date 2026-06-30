@@ -4660,17 +4660,27 @@ function loadAdminUsers(){
 
     tbody.innerHTML = uids.map((uid)=>{
       const u = data[uid] || {};
-      const name = u.username || '@kullanici';
-      const email = u.email || '—';
+      const hasEmail = !!(u.email && u.email.includes('@'));
+      const hasRealUsername = !!(u.username && u.username !== '@kullanici' && u.username.replace(/^@/,'').length > 0);
+      const isDeleted = !!u.deleted;
+      // Onaylanmamış/eksik: email yok VEYA gerçek kullanıcı adı yok (yarım kayıt) VEYA silinmiş işaretli
+      const isIncomplete = isDeleted || !hasEmail || !hasRealUsername;
+      const name = u.username || (hasEmail ? '@' + u.email.split('@')[0] : '@kullanici');
+      const email = u.email || '— (e-posta yok)';
       const blocked = !!u.blocked;
       const photo = u.photo || 'https://i.pravatar.cc/60?img=68';
+      let badge;
+      if(isDeleted) badge = '<span class="badge blocked">● Silinmiş</span>';
+      else if(isIncomplete) badge = '<span class="badge" style="background:rgba(245,158,11,.18);color:#f59e0b;">● Onaylanmadı</span>';
+      else if(blocked) badge = '<span class="badge blocked">● Engelli</span>';
+      else badge = '<span class="badge active">● Aktif</span>';
       return `
-        <tr data-uid="${uid}" data-name="${name.toLowerCase()}" data-email="${email.toLowerCase()}">
+        <tr data-uid="${uid}" data-name="${(u.username||'').toLowerCase()}" data-email="${(u.email||'').toLowerCase()}">
           <td><div class="user-cell" style="cursor:pointer;" onclick="viewOtherProfile('${uid}')"><img src="${photo}">${name}</div></td>
           <td class="email">${email}</td>
-          <td><span class="badge ${blocked ? 'blocked' : 'active'}">${blocked ? '● Engelli' : '● Aktif'}</span></td>
+          <td>${badge}</td>
           <td><div class="actions-cell">
-            <button class="actbtn ${blocked ? 'success' : ''}" onclick="toggleBlock(this)">${blocked ? 'Kaldır' : 'Engelle'}</button>
+            ${isIncomplete ? '' : `<button class="actbtn ${blocked ? 'success' : ''}" onclick="toggleBlock(this)">${blocked ? 'Kaldır' : 'Engelle'}</button>`}
             <button class="actbtn danger" onclick="removeRow(this)">Sil</button>
           </div></td>
         </tr>`;
@@ -5764,21 +5774,33 @@ function toggleBlock(btn){
   }
 }
 function removeRow(btn){
-  if(!confirm('Bu üyeyi silmek istediğine emin misin? Bu işlem geri alınamaz.')) return;
+  if(!confirm('Bu hesabı ve TÜM verilerini kalıcı olarak silmek istediğine emin misin?\n\nBu işlem geri alınamaz.')) return;
   const row = btn.closest('tr');
   const uid = row.dataset.uid;
-  const name = row.dataset.name;
+  const rawName = row.dataset.name || ''; // küçük harf, @ içerebilir
   row.remove();
   document.getElementById('statTotal').textContent = Math.max(0, parseInt(document.getElementById('statTotal').textContent) - 1);
 
   if(uid && requireFirebase()){
-    fbDb.ref('users/' + uid).remove();
-    if(name) fbDb.ref('usernames/' + name).remove();
-    // Not: Firebase Authentication kaydı (gerçek giriş hesabı) sadece sunucu
-    // tarafından (Admin SDK / Cloud Functions) silinebilir; bu, istemci
-    // tarafından (bu site) güvenlik nedeniyle yapılamaz. Bu yüzden kullanıcı
-    // burada "silinmiş" görünür ama login hesabı Firebase Authentication'da
-    // kalır — tamamen silmek istersen Firebase konsolünden manuel silebilirsin.
+    // Username key: @ kaldır + küçük harf (kayıttaki formatla aynı)
+    const usernameKey = rawName.replace(/^@/, '').toLowerCase();
+    const rm = (path)=> fbDb.ref(path).remove().catch(()=>{});
+    // Ana kayıt
+    rm('users/' + uid);
+    if(usernameKey) rm('usernames/' + usernameKey);
+    // İzler: gönderiler, hikayeler, takip ilişkileri, bildirimler, sohbetler
+    fbDb.ref('posts').orderByChild('uid').equalTo(uid).once('value').then(s=>{
+      const d = s.val()||{}; Object.keys(d).forEach(pid=> rm('posts/'+pid));
+    }).catch(()=>{});
+    fbDb.ref('stories').orderByChild('uid').equalTo(uid).once('value').then(s=>{
+      const d = s.val()||{}; Object.keys(d).forEach(sid=> rm('stories/'+sid));
+    }).catch(()=>{});
+    rm('follows/' + uid);
+    rm('followers/' + uid);
+    rm('notifications/' + uid);
+    showToast('Hesap ve izleri silindi.');
+    // Not: Firebase Authentication (gerçek giriş kaydı) yalnızca sunucu tarafından
+    // (Admin SDK) silinebilir; istemciden silinemez. DB izleri tamamen temizlenir.
   }
 }
 function resolveReport(btn){ btn.closest('.flagged-item').remove(); }
