@@ -179,25 +179,24 @@ input:focus{border-color:var(--accent);}
 /* ===== APP SHELL ===== */
 #appShell{display:flex;max-width:1000px;margin:0 auto;height:100dvh;position:relative;overflow:hidden;}
 /* Tema rengine göre canlı arka plan ışığı — her şeyin arkasında parıltı.
-   --accent değişkenini kullanır, böylece renk teması değişince ışık da değişir. */
+   --accent kullanır, tema değişince ışık da değişir. Mutlak konumlu ve z-index:0;
+   .screen'ler (z-index'siz ama sonradan geldikleri için) üstte kalır. */
 #appShell::before, #appShell::after{
-  content:'';position:fixed;border-radius:50%;pointer-events:none;z-index:0;
-  filter:blur(80px);opacity:.30;
-  background:radial-gradient(circle, var(--accent), transparent 68%);
-  animation:appGlowFloat 20s ease-in-out infinite alternate;
+  content:'';position:absolute;border-radius:50%;pointer-events:none;z-index:0;
+  filter:blur(80px);opacity:.22;
+  background:radial-gradient(circle, var(--accent), transparent 70%);
+  animation:appGlowFloat 22s ease-in-out infinite alternate;
 }
-#appShell::before{ width:46vw;height:46vw;max-width:480px;max-height:480px;top:-8vh;left:-12vw; }
-#appShell::after{ width:52vw;height:52vw;max-width:540px;max-height:540px;bottom:-12vh;right:-14vw;
-  animation-delay:-10s;animation-duration:26s;opacity:.24; }
+#appShell::before{ width:60%;height:40%;top:-6%;left:-14%; }
+#appShell::after{ width:66%;height:44%;bottom:-8%;right:-16%;
+  animation-delay:-11s;animation-duration:28s;opacity:.18; }
 @keyframes appGlowFloat{
   0%{transform:translate(0,0) scale(1);}
-  50%{transform:translate(4vw,-3vh) scale(1.1);}
-  100%{transform:translate(-3vw,4vh) scale(.94);}
+  50%{transform:translate(5%,-4%) scale(1.08);}
+  100%{transform:translate(-4%,5%) scale(.95);}
 }
-body.light-mode #appShell::before{opacity:.16;}
-body.light-mode #appShell::after{opacity:.13;}
-/* İçerik ışığın üstünde kalsın */
-#appShell > .screen, #appShell > .island{position:relative;z-index:1;}
+body.light-mode #appShell::before{opacity:.12;}
+body.light-mode #appShell::after{opacity:.10;}
 #sidebar{
   width:210px;flex-shrink:0;border-right:1px solid var(--line);padding:20px 14px;
   position:sticky;top:0;height:100vh;
@@ -239,7 +238,7 @@ body.light-mode #appShell::after{opacity:.13;}
   transform:scale(.88);transition:transform .25s ease, color .2s ease, background .2s ease;
 }
 .island button svg{width:24px;height:24px;}
-.island button.active{color:#fff;background:var(--gradient-vivid);transform:scale(1.05);box-shadow:0 4px 14px rgba(124,58,237,.5);}
+.island button.active{color:#fff;background:var(--gradient-vivid);transform:scale(1.05);box-shadow:0 4px 14px var(--accent);}
 .island button.pulse{animation:islandPulse .32s ease;}
 .island.chat-fullscreen-hide{display:none;}
 @keyframes islandPulse{0%{transform:scale(1.05);}45%{transform:scale(1.28);}100%{transform:scale(1.05);}}
@@ -458,7 +457,7 @@ body.light-mode .regStickyBar{
   background:linear-gradient(180deg, transparent 0%, rgba(255,255,255,.92) 40%, var(--bg) 100%);
 }
 
-.screen{display:none;position:absolute;inset:0;flex-direction:column;opacity:0;}
+.screen{display:none;position:absolute;inset:0;flex-direction:column;opacity:0;z-index:1;}
 .screen.active{display:flex;animation:screenIn .28s ease both;}
 @keyframes screenIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
 
