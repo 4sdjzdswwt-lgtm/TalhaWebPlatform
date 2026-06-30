@@ -252,6 +252,20 @@ body.light-mode #appGlow::after{opacity:.08;}
 .island button.active{color:#fff;background:linear-gradient(135deg, var(--grad-1) 0%, var(--grad-2) 55%, var(--grad-3) 100%);transform:scale(1.05);box-shadow:0 4px 14px var(--accent);}
 .island button.pulse{animation:islandPulse .32s ease;}
 .island.chat-fullscreen-hide{display:none;}
+/* Sohbet duvar kağıdı renk seçici noktaları */
+.wallpaperColors{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;}
+.wpColor{
+  width:100%;aspect-ratio:1/1;border-radius:50%;cursor:pointer;
+  border:2px solid var(--line);padding:0;transition:transform .15s;
+}
+.wpColor:active{transform:scale(.88);}
+.wpColor.active{border-color:var(--accent);transform:scale(1.1);}
+/* messagesBox duvar kağıdı katmanı */
+#messagesBox{
+  background-color:var(--chat-wp-color, transparent);
+  background-image:var(--chat-wp-image, none);
+  background-size:cover;background-position:center;background-repeat:no-repeat;
+}
 @keyframes islandPulse{0%{transform:scale(1.05);}45%{transform:scale(1.28);}100%{transform:scale(1.05);}}
 
 /* BIO / PROFİL EKRANI */
@@ -2474,6 +2488,9 @@ tbody tr:hover{background:var(--surface-2);}
               <div class="name" id="chatName">Sohbet</div>
               <div class="status" id="chatStatus" style="font-size:11.5px;color:var(--muted);"></div>
             </div>
+            <button class="back-btn" onclick="openWallpaperPicker()" title="Duvar kağıdı" style="margin-left:auto;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+            </button>
           </div>
           <!-- Reply bar — bir mesaja yanıt verirken görünür -->
           <div id="replyBar" style="display:none;padding:8px 14px;background:var(--surface-2);border-bottom:1px solid var(--line);display:none;align-items:center;gap:8px;">
@@ -3217,6 +3234,37 @@ tbody tr:hover{background:var(--surface-2);}
 
 <!-- ALTTAN ÇIKAN SİSTEM MESAJI (TOAST) -->
 <div class="toast" id="toast"></div>
+
+<!-- SOHBET DUVAR KAĞIDI SEÇİCİ -->
+<div class="momentModalOverlay hidden" id="wallpaperOverlay" onclick="if(event.target===this) closeWallpaperPicker()">
+  <div class="momentModal" style="max-width:380px;">
+    <div class="momentModalHead">
+      <h2>🎨 Sohbet Duvar Kağıdı</h2>
+      <button class="momentModalClose" onclick="closeWallpaperPicker()">✕</button>
+    </div>
+    <div style="padding:4px 2px;">
+      <div style="font-size:12.5px;color:var(--muted);margin-bottom:10px;">Renk seç</div>
+      <div class="wallpaperColors" id="wallpaperColors">
+        <button class="wpColor" style="background:#0b0b14;" onclick="setChatWallpaper('color','#0b0b14')" title="Varsayılan"></button>
+        <button class="wpColor" style="background:#1a1a2e;" onclick="setChatWallpaper('color','#1a1a2e')"></button>
+        <button class="wpColor" style="background:#0f2027;" onclick="setChatWallpaper('color','#0f2027')"></button>
+        <button class="wpColor" style="background:#2d1b2e;" onclick="setChatWallpaper('color','#2d1b2e')"></button>
+        <button class="wpColor" style="background:#1e3a5f;" onclick="setChatWallpaper('color','#1e3a5f')"></button>
+        <button class="wpColor" style="background:#3d2645;" onclick="setChatWallpaper('color','#3d2645')"></button>
+        <button class="wpColor" style="background:#14401f;" onclick="setChatWallpaper('color','#14401f')"></button>
+        <button class="wpColor" style="background:#4a1f1f;" onclick="setChatWallpaper('color','#4a1f1f')"></button>
+        <button class="wpColor" style="background:#5c4a0e;" onclick="setChatWallpaper('color','#5c4a0e')"></button>
+        <button class="wpColor" style="background:linear-gradient(135deg,#667eea,#764ba2);" onclick="setChatWallpaper('color','linear-gradient(135deg,#667eea,#764ba2)')"></button>
+        <button class="wpColor" style="background:linear-gradient(135deg,#f093fb,#f5576c);" onclick="setChatWallpaper('color','linear-gradient(135deg,#f093fb,#f5576c)')"></button>
+        <button class="wpColor" style="background:linear-gradient(135deg,#0ba360,#3cba92);" onclick="setChatWallpaper('color','linear-gradient(135deg,#0ba360,#3cba92)')"></button>
+      </div>
+      <div style="font-size:12.5px;color:var(--muted);margin:16px 0 10px;">Veya fotoğraf yükle</div>
+      <button class="momentStartBtn" style="margin:0;" onclick="document.getElementById('wallpaperFile').click()">📷 Galeriden Fotoğraf Seç</button>
+      <input type="file" id="wallpaperFile" accept="image/*" style="display:none;" onchange="onWallpaperFile(this)">
+      <button class="momentRetakeBtn" style="width:100%;margin-top:10px;" onclick="setChatWallpaper('reset')">Varsayılana Dön</button>
+    </div>
+  </div>
+</div>
 
 <!-- ZORUNLU SÖZLEŞME + ONAY VİDEOSU -->
 <div class="overlay hidden" id="contractOverlay">
@@ -5776,6 +5824,7 @@ function openChatThread(chatId, peerUid){
   if(!requireFirebase() || !fbAuth.currentUser) return;
   activeChatId = chatId;
   activeChatPeerUid = peerUid;
+  loadChatWallpaper(); // kayıtlı duvar kağıdını uygula
 
   document.querySelectorAll('#screenMessages .chat-item').forEach(i=>i.classList.remove('active'));
   fbDb.ref('chatMeta/' + chatId + '/unreadFor/' + fbAuth.currentUser.uid).set(false).catch(()=>{});
@@ -5974,6 +6023,7 @@ function exitChatThread(){
   // Mesaj listesine geri dönüldü: ada tekrar görünür olur.
   document.getElementById('island').classList.remove('chat-fullscreen-hide');
   if(activeChatMessagesRef){ activeChatMessagesRef.off(); activeChatMessagesRef = null; }
+  if(wallpaperListenerRef){ try{ wallpaperListenerRef.off(); }catch(e){} wallpaperListenerRef = null; }
   activeChatId = null; activeChatPeerUid = null;
 }
 
@@ -10208,6 +10258,97 @@ function sendGifFromPicker(url){
   }
   document.getElementById('emojiPickerOverlay').classList.add('hidden');
   document.body.classList.remove('modal-open');
+}
+
+/* ============================================================
+   SOHBET DUVAR KAĞIDI — renk veya fotoğraf (kişi bazlı kayıt)
+   ============================================================ */
+function openWallpaperPicker(){
+  const ov = document.getElementById('wallpaperOverlay');
+  if(ov){ ov.classList.remove('hidden'); document.body.classList.add('modal-open'); }
+}
+function closeWallpaperPicker(){
+  const ov = document.getElementById('wallpaperOverlay');
+  if(ov){ ov.classList.add('hidden'); document.body.classList.remove('modal-open'); }
+}
+/* Aktif sohbetin duvar kağıdı anahtarı (kişiye özel) */
+function currentWallpaperKey(){
+  return 'next_chat_wp_' + (activeChatId || 'global');
+}
+function applyChatWallpaper(value){
+  const box = document.getElementById('messagesBox');
+  if(!box) return;
+  if(!value || value === 'reset'){
+    box.style.removeProperty('--chat-wp-color');
+    box.style.removeProperty('--chat-wp-image');
+    return;
+  }
+  if(value.startsWith('img:')){
+    box.style.setProperty('--chat-wp-image', 'url("' + value.slice(4) + '")');
+    box.style.setProperty('--chat-wp-color', '#0b0b14');
+  } else {
+    // renk veya gradient
+    box.style.removeProperty('--chat-wp-image');
+    if(value.startsWith('linear-gradient')){
+      box.style.setProperty('--chat-wp-image', value);
+      box.style.setProperty('--chat-wp-color', 'transparent');
+    } else {
+      box.style.setProperty('--chat-wp-color', value);
+    }
+  }
+}
+function setChatWallpaper(type, value){
+  let stored;
+  if(type === 'reset'){ stored = ''; }
+  else if(type === 'color'){ stored = value; }
+  else if(type === 'image'){ stored = 'img:' + value; }
+  // Duvar kağıdını SOHBETE kaydet (Firebase) — iki taraf da aynı temayı görür.
+  // Karşı taraf beğenmezse kendi tarafından değiştirebilir (o da sohbete yazılır).
+  applyChatWallpaper(stored);
+  if(activeChatId && requireFirebase()){
+    const ref = fbDb.ref('chatMeta/' + activeChatId + '/wallpaper');
+    const op = stored ? ref.set(stored) : ref.remove();
+    op.catch(()=> showToast('Duvar kağıdı kaydedilemedi.'));
+  }
+  closeWallpaperPicker();
+  showToast(type === 'reset' ? 'Duvar kağıdı sıfırlandı.' : 'Duvar kağıdı güncellendi.');
+}
+function onWallpaperFile(input){
+  const file = input.files && input.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (e)=>{
+    // Büyük resmi küçült (depolama + paylaşım için)
+    const img = new Image();
+    img.onload = ()=>{
+      const canvas = document.createElement('canvas');
+      const maxW = 720;
+      const scale = Math.min(1, maxW / img.width);
+      canvas.width = img.width * scale;
+      canvas.height = img.height * scale;
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      let dataUrl;
+      try { dataUrl = canvas.toDataURL('image/jpeg', 0.75); } catch(err){ dataUrl = e.target.result; }
+      setChatWallpaper('image', dataUrl);
+    };
+    img.onerror = ()=> setChatWallpaper('image', e.target.result);
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+  input.value = '';
+}
+/* Sohbet açılınca duvar kağıdını SOHBETTEN (Firebase) canlı dinle —
+   karşı taraf değiştirince anında güncellenir. */
+let wallpaperListenerRef = null;
+function loadChatWallpaper(){
+  // Önceki dinleyiciyi kapat
+  if(wallpaperListenerRef){ try{ wallpaperListenerRef.off(); }catch(e){} wallpaperListenerRef = null; }
+  applyChatWallpaper(''); // önce temizle
+  if(!activeChatId || !requireFirebase()) return;
+  wallpaperListenerRef = fbDb.ref('chatMeta/' + activeChatId + '/wallpaper');
+  wallpaperListenerRef.on('value', (snap)=>{
+    applyChatWallpaper(snap.val() || '');
+  });
 }
 
 /* ============================================================
