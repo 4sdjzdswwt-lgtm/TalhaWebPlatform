@@ -1459,7 +1459,7 @@ body.modal-open #island{display:none !important;}
 /* Strip'teki hikaye avatarlarının gradient ring'i */
 .storyAvatarRing{
   width:58px;height:58px;border-radius:50%;padding:3px;
-  background:linear-gradient(135deg,#833AB4,#FD1D1D,#F77737);
+  background:linear-gradient(135deg, var(--grad-1), var(--grad-2), var(--grad-3));
 }
 .storyAvatarRing.seen{background:var(--line);}
 .storyAvatarRing img{width:100%;height:100%;border-radius:50%;object-fit:cover;border:2.5px solid var(--bg);display:block;}
@@ -1792,7 +1792,7 @@ tbody tr:hover{background:var(--surface-2);}
   position:relative;flex-shrink:0;transition:background .3s;
 }
 .myStoryRing.has-story{
-  background:linear-gradient(135deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);
+  background:linear-gradient(135deg, var(--grad-1), var(--grad-2), var(--grad-3));
 }
 .myStoryRing img{
   width:100%;height:100%;border-radius:50%;object-fit:cover;
@@ -3024,8 +3024,8 @@ tbody tr:hover{background:var(--surface-2);}
     </div>
     <!-- Orta: canlı önizleme + giriş -->
     <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:20px;position:relative;">
-      <div id="storyTextEditPreview" style="position:absolute;pointer-events:none;max-width:88%;text-align:center;word-break:break-word;padding:6px 14px;border-radius:12px;line-height:1.2;">Yazını gör...</div>
-      <textarea id="storyTextEditInput" oninput="updateStoryTextPreview()" rows="2" placeholder="Yazmaya başla..."
+      <div id="storyTextEditPreview" style="position:absolute;pointer-events:none;max-width:88%;text-align:center;word-break:break-word;padding:6px 14px;border-radius:12px;line-height:1.2;opacity:.55;">Yazmaya başla...</div>
+      <textarea id="storyTextEditInput" oninput="updateStoryTextPreview()" rows="2"
         style="position:absolute;width:88%;height:60%;background:transparent;border:none;outline:none;color:transparent;caret-color:#fff;text-align:center;font-size:24px;resize:none;font-family:inherit;"></textarea>
     </div>
     <!-- Boyut slider (yanda dikey değil, altta yatay — daha kullanışlı) -->
@@ -8451,12 +8451,14 @@ function updateStoryTextPreview(){
   const color = panel.dataset.color;
   const size = panel.dataset.fontsize;
   const bg = panel.dataset.bg === '1';
-  prev.textContent = input.value || 'Yazını gör...';
+  const hasText = !!input.value;
+  prev.textContent = input.value || 'Yazmaya başla...';
+  prev.style.opacity = hasText ? '1' : '.5';
   prev.style.fontFamily = fontDef.css;
   prev.style.fontWeight = fontDef.weight;
   prev.style.color = color;
   prev.style.fontSize = Math.min(48, size*0.9) + 'px';
-  prev.style.background = bg ? 'rgba(0,0,0,.5)' : 'transparent';
+  prev.style.background = (hasText && bg) ? 'rgba(0,0,0,.5)' : 'transparent';
   prev.style.textShadow = bg ? 'none' : '0 2px 10px rgba(0,0,0,.85)';
 }
 /* Paneldeki metni kaydet → overlay olarak ekle/güncelle */
@@ -8679,7 +8681,9 @@ function loadStoryStrip(){
         else { myStoryRing.classList.remove('has-story'); if(myStoryLabel) myStoryLabel.textContent='Hikaye Ekle'; }
       }
 
-      // SADECE takip ettiklerimi göster, kendi uid hariç, engelli olmayanlar
+      // INSTAGRAM MANTIĞI: Kendi hikayem şeritte avatar olarak GÖRÜNMEZ (uid !== myUid),
+      // sadece soldaki "Hikayem" dairesinde. Başkalarının hikayeleri kendi profil
+      // resimleriyle şeritte görünür; basınca o kişinin hikayesi açılır.
       const otherUids = Object.keys(byUser).filter(uid => 
         uid !== myUid && followingUids.has(uid) && !isMutuallyBlocked(uid)
       );
@@ -8689,20 +8693,9 @@ function loadStoryStrip(){
       Promise.all(otherUids.map(uid =>
         fbDb.ref('users/'+uid).once('value').then(us=>({uid, user:us.val()||{}}))
       )).then(userList=>{
-        // Filtrele: silinmiş + bana ait duplicate hesaplar
-        const visibleUsers = userList.filter(({user}) => {
-          if(user.deleted) return false;
-          const uEmail = (user.email||'').toLowerCase().trim();
-          const uName = (user.username||'').toLowerCase().replace(/^@/,'').trim();
-          const uDisp = (user.displayName||'').toLowerCase().trim();
-          // Aynı email/username/displayName = duplicate hesap
-          if(myEmail && uEmail && uEmail === myEmail) return false;
-          if(myUsernameLower && uName && uName === myUsernameLower) return false;
-          if(myDisplayLower && uDisp && uDisp === myDisplayLower && myDisplayLower.length > 2) return false;
-          // Çok benzer isim varyasyonu (örn: talha vs @talha)
-          if(myUsernameLower && uName && (uName.includes(myUsernameLower) || myUsernameLower.includes(uName)) && uName.length > 2) return false;
-          return true;
-        });
+        // Silinmiş hesapları çıkar (duplicate/kendi hesap filtresi KALDIRILDI —
+        // takip ettiğin herkesin hikayesi profil resmiyle görünür)
+        const visibleUsers = userList.filter(({user}) => !user.deleted);
         if(!visibleUsers.length){ container.innerHTML=''; return; }
         // LocalStorage'da kullanıcının gizlediği UID'leri al
         let hiddenUids = [];
@@ -8713,6 +8706,7 @@ function loadStoryStrip(){
         container.innerHTML = finalUsers.map(({uid,user})=>{
           const stories = byUser[uid].sort((a,b)=>a.ts-b.ts);
           const first = stories[0];
+          // Başkasının hikayesi KENDİ profil resmiyle görünür
           const photo = user.photo || first.userPhoto || 'https://i.pravatar.cc/60?img=68';
           const uname = (user.username||first.username||'@kullanici').replace(/^@/,'').slice(0,10);
           return `<div class="momentStripItem" oncontextmenu="event.preventDefault();hideStoryUser('${uid}','${escapeHtml(uname)}');return false;" onclick="viewUserStories('${uid}')">
