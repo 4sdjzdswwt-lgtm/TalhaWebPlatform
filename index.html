@@ -8681,9 +8681,10 @@ function loadStoryStrip(){
         else { myStoryRing.classList.remove('has-story'); if(myStoryLabel) myStoryLabel.textContent='Hikaye Ekle'; }
       }
 
-      // INSTAGRAM MANTIĞI: Kendi hikayem şeritte avatar olarak GÖRÜNMEZ (uid !== myUid),
-      // sadece soldaki "Hikayem" dairesinde. Başkalarının hikayeleri kendi profil
-      // resimleriyle şeritte görünür; basınca o kişinin hikayesi açılır.
+      // INSTAGRAM MANTIĞI: Kendi hikayem şeritte avatar olarak GÖRÜNMEZ,
+      // sadece soldaki "Hikayem" dairesinde. Başkaları beni kendi profil resmimle
+      // şeritte görür. Kendi uid'imin YANI SIRA aynı email/kullanıcı adına sahip
+      // (kendime ait ikinci) hesapları da kendi ekranımdan gizlerim.
       const otherUids = Object.keys(byUser).filter(uid => 
         uid !== myUid && followingUids.has(uid) && !isMutuallyBlocked(uid)
       );
@@ -8693,9 +8694,20 @@ function loadStoryStrip(){
       Promise.all(otherUids.map(uid =>
         fbDb.ref('users/'+uid).once('value').then(us=>({uid, user:us.val()||{}}))
       )).then(userList=>{
-        // Silinmiş hesapları çıkar (duplicate/kendi hesap filtresi KALDIRILDI —
-        // takip ettiğin herkesin hikayesi profil resmiyle görünür)
-        const visibleUsers = userList.filter(({user}) => !user.deleted);
+        // Silinmiş + KENDİME ait hesapları (email/username/displayName eşleşmesi) çıkar
+        const visibleUsers = userList.filter(({user}) => {
+          if(user.deleted) return false;
+          const uEmail = (user.email||'').toLowerCase().trim();
+          const uName = (user.username||'').toLowerCase().replace(/^@/,'').trim();
+          const uDisp = (user.displayName||'').toLowerCase().trim();
+          // Kendi e-postam → benim hesabım, gizle
+          if(myEmail && uEmail && uEmail === myEmail) return false;
+          // Kendi kullanıcı adım → gizle
+          if(myUsernameLower && uName && uName === myUsernameLower) return false;
+          // Kendi görünen adım (anlamlı uzunluktaysa) → gizle
+          if(myDisplayLower && uDisp && uDisp === myDisplayLower && myDisplayLower.length > 2) return false;
+          return true;
+        });
         if(!visibleUsers.length){ container.innerHTML=''; return; }
         // LocalStorage'da kullanıcının gizlediği UID'leri al
         let hiddenUids = [];
