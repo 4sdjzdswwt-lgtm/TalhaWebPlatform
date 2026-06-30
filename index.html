@@ -125,6 +125,16 @@ input:focus{border-color:var(--accent);}
   box-shadow:var(--glass-shadow), 0 1px 0 var(--glass-shine) inset;
   z-index:9999;align-self:center;
 }
+/* Görünürlük (audience) seçici — herkese açık / takipçiler */
+.audiencePicker{display:flex;gap:8px;}
+.audienceBtn{
+  flex:1;padding:11px 8px;border-radius:14px;cursor:pointer;
+  background:var(--surface-2);border:2px solid transparent;
+  color:var(--text);font-size:13px;font-weight:600;font-family:inherit;
+  transition:all .15s;
+}
+.audienceBtn.active{border-color:var(--accent);background:rgba(139,92,246,.18);}
+.audienceHint{font-size:11.5px;color:var(--muted);margin-top:8px;}
 .island button{
   width:54px;height:54px;border-radius:50%;border:none;background:transparent;
   color:var(--text);display:flex;align-items:center;justify-content:center;cursor:pointer;
@@ -2973,6 +2983,13 @@ tbody tr:hover{background:var(--surface-2);}
       <span class="momentToolHint">Yerleşim şablonu seç · ⟳ döndür · ⛶ sığdır/doldur · ⇄ yerini değiştir</span>
     </div>
     <input type="text" class="momentCaptionInput" id="momentCaptionInput" placeholder="Bir açıklama ekle... (örn. Arkadaşlarla unutulmaz an! 🎉)">
+    <div style="width:100%;max-width:380px;margin:10px auto 0;">
+      <div class="audiencePicker">
+        <button type="button" class="audienceBtn active" data-aud="public" onclick="setMomentAudience('public', this)">🌍 Herkese Açık</button>
+        <button type="button" class="audienceBtn" data-aud="followers" onclick="setMomentAudience('followers', this)">👥 Takipçilerim</button>
+      </div>
+      <div class="audienceHint" id="momentAudienceHint">Herkese açık — Keşfet'te görünür.</div>
+    </div>
   </div>
   <div class="momentPreviewFoot">
     <button class="momentRetakeBtn" onclick="retakeMoment()">Yeniden Çek</button>
@@ -3004,6 +3021,18 @@ tbody tr:hover{background:var(--surface-2);}
       <div style="margin-top:10px;">
         <label style="display:block;font-size:12px;color:var(--muted);margin-bottom:6px;">Konum (opsiyonel)</label>
         <input type="text" class="momentFriendSearch" id="newPostLocation" placeholder="örn. İstanbul, Türkiye">
+      </div>
+      <div style="margin-top:14px;">
+        <label style="display:block;font-size:12px;color:var(--muted);margin-bottom:8px;">Kimler görebilir?</label>
+        <div class="audiencePicker">
+          <button type="button" class="audienceBtn active" data-aud="public" onclick="setNewPostAudience('public', this)">
+            🌍 Herkese Açık
+          </button>
+          <button type="button" class="audienceBtn" data-aud="followers" onclick="setNewPostAudience('followers', this)">
+            👥 Takipçilerim
+          </button>
+        </div>
+        <div class="audienceHint" id="newPostAudienceHint">Herkese açık — Keşfet'te de görünür.</div>
       </div>
       <button class="momentStartBtn" id="newPostPublishBtn" style="margin-top:16px;" disabled onclick="publishNewPost()">Paylaş</button>
     </div>
@@ -5912,6 +5941,11 @@ function openNewPostComposer(){
   `;
   document.getElementById('newPostDropzone').classList.remove('has-img');
   document.getElementById('newPostPublishBtn').disabled = true;
+  // Görünürlük varsayılana (herkese açık) dön
+  newPostAudience = 'public';
+  document.querySelectorAll('#newPostOverlay .audienceBtn').forEach(b=> b.classList.toggle('active', b.dataset.aud === 'public'));
+  const aHint = document.getElementById('newPostAudienceHint');
+  if(aHint) aHint.textContent = "Herkese açık — Keşfet'te de görünür.";
   document.getElementById('newPostOverlay').classList.remove('hidden');
   document.body.classList.add('modal-open');
 }
@@ -5920,6 +5954,28 @@ function closeNewPostComposer(){
   document.body.classList.remove('modal-open');
 }
 /* DUPLICATE removed: onNewPostFileChosen */
+
+let newPostAudience = 'public'; // 'public' (herkese açık) | 'followers' (takipçiler)
+let momentAudience = 'public'; // anı paylaşımı görünürlüğü
+function setMomentAudience(aud, btn){
+  momentAudience = aud;
+  const picker = btn.closest('.audiencePicker');
+  if(picker) picker.querySelectorAll('.audienceBtn').forEach(b=> b.classList.toggle('active', b===btn));
+  const hint = document.getElementById('momentAudienceHint');
+  if(hint) hint.textContent = aud === 'public'
+    ? "Herkese açık — Keşfet'te görünür."
+    : "Sadece takipçilerin görür — Keşfet'te görünmez.";
+}
+function setNewPostAudience(aud, btn){
+  newPostAudience = aud;
+  document.querySelectorAll('#newPostPublishBtn').forEach(()=>{});
+  const picker = btn.closest('.audiencePicker');
+  if(picker) picker.querySelectorAll('.audienceBtn').forEach(b=> b.classList.toggle('active', b===btn));
+  const hint = document.getElementById('newPostAudienceHint');
+  if(hint) hint.textContent = aud === 'public'
+    ? "Herkese açık — Keşfet'te de görünür."
+    : "Sadece takipçilerin görür — Keşfet'te görünmez.";
+}
 
 function publishNewPost(){
   if(!requireFirebase() || !fbAuth.currentUser){ showToast('Giriş yapmalısın.'); return; }
@@ -5940,7 +5996,8 @@ function publishNewPost(){
       location, media: mediaUrl ? [mediaUrl] : [],
       mediaType: newPostMediaType,
       caption, ts: firebase.database.ServerValue.TIMESTAMP,
-      isMoment: false
+      isMoment: false,
+      audience: newPostAudience // 'public' → Keşfet'e düşer, 'followers' → sadece takipçiler
     }).then(()=>{
       fbDb.ref('users/' + uid + '/postsCount').transaction(n => (n||0) + 1);
       btn.disabled = false; btn.textContent = 'Paylaş';
@@ -6725,6 +6782,12 @@ function openMomentPreview(session, captures){
   momentCollageOwners = owners;
   momentCollageBg = '#1a1a2e'; // TEK arka plan/çerçeve rengi
   momentCollageHasColor = false; // başlangıçta renk yok → boşluksuz
+  momentAudience = 'public'; // varsayılan herkese açık
+  setTimeout(()=>{
+    document.querySelectorAll('#momentPreviewOverlay .audienceBtn, .momentPreviewBody .audienceBtn').forEach(b=> b.classList.toggle('active', b.dataset.aud === 'public'));
+    const mHint = document.getElementById('momentAudienceHint');
+    if(mHint) mHint.textContent = "Herkese açık — Keşfet'te görünür.";
+  }, 0);
   momentLayoutVariant = 0; // varsayılan yerleşim şablonu
   const bgInput = document.getElementById('momentBgColorInput');
   const bgSwatch = document.getElementById('momentBgSwatch');
@@ -7173,7 +7236,8 @@ function doPublishMoment(btn){
       ts: firebase.database.ServerValue.TIMESTAMP,
       isMoment: true,
       momentParticipants: momentSessionPendingParticipants,
-      momentChallenge: momentSessionPendingChallenge || ''
+      momentChallenge: momentSessionPendingChallenge || '',
+      audience: momentAudience // 'public' → Keşfet'e düşer, 'followers' → sadece takipçiler
     };
 
     // KRİTİK: önce postu yaz — bu başarılı olursa anı yayınlanmış sayılır.
@@ -9547,6 +9611,9 @@ function loadExploreGrid(){
     const data = snap.val() || {};
     let items = Object.keys(data).map(id=>({...data[id],id}))
       .filter(p => p.media && p.media[0])
+      // SADECE herkese açık gönderiler Keşfet'te görünür.
+      // audience alanı yoksa (eski gönderiler) herkese açık sayılır.
+      .filter(p => p.audience !== 'followers')
       .filter(p => exploreCurrentTab === 'photo' ? p.mediaType !== 'video' : true)
       .sort(() => Math.random() - .5);
 
