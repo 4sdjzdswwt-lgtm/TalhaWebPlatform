@@ -178,6 +178,26 @@ input:focus{border-color:var(--accent);}
 
 /* ===== APP SHELL ===== */
 #appShell{display:flex;max-width:1000px;margin:0 auto;height:100dvh;position:relative;overflow:hidden;}
+/* Tema rengine göre canlı arka plan ışığı — her şeyin arkasında parıltı.
+   --accent değişkenini kullanır, böylece renk teması değişince ışık da değişir. */
+#appShell::before, #appShell::after{
+  content:'';position:fixed;border-radius:50%;pointer-events:none;z-index:0;
+  filter:blur(80px);opacity:.30;
+  background:radial-gradient(circle, var(--accent), transparent 68%);
+  animation:appGlowFloat 20s ease-in-out infinite alternate;
+}
+#appShell::before{ width:46vw;height:46vw;max-width:480px;max-height:480px;top:-8vh;left:-12vw; }
+#appShell::after{ width:52vw;height:52vw;max-width:540px;max-height:540px;bottom:-12vh;right:-14vw;
+  animation-delay:-10s;animation-duration:26s;opacity:.24; }
+@keyframes appGlowFloat{
+  0%{transform:translate(0,0) scale(1);}
+  50%{transform:translate(4vw,-3vh) scale(1.1);}
+  100%{transform:translate(-3vw,4vh) scale(.94);}
+}
+body.light-mode #appShell::before{opacity:.16;}
+body.light-mode #appShell::after{opacity:.13;}
+/* İçerik ışığın üstünde kalsın */
+#appShell > .screen, #appShell > .island{position:relative;z-index:1;}
 #sidebar{
   width:210px;flex-shrink:0;border-right:1px solid var(--line);padding:20px 14px;
   position:sticky;top:0;height:100vh;
@@ -1197,6 +1217,14 @@ body.light-mode #screenRegister .spam-warning{background:linear-gradient(135deg,
 .chat-photo-time{
   font-size:10px;color:var(--muted);
   text-align:right;padding:2px 6px 0;
+}
+/* GIF kartı — normal fotoğraftan daha küçük, kendi oranında */
+.chat-photo-card.gif-card{
+  width:150px !important;max-width:48vw !important;
+}
+.chat-photo-card.gif-card img{
+  aspect-ratio:auto !important;height:auto !important;
+  object-fit:contain !important;border-radius:16px;
 }
 
 /* ===== MESAJ JESTLERİ: sola kaydır → yanıtla, uzun bas → menü ===== */
@@ -2499,9 +2527,9 @@ tbody tr:hover{background:var(--surface-2);}
           <button onclick="if(confirm('Tüm yetim verileri temizle?\n\nBu işlem geri alınamaz.')) cleanupOrphanedData()" style="background:#ef4444;color:#fff;border:none;border-radius:10px;padding:10px 18px;font-size:13px;font-weight:600;cursor:pointer;">🗑️ Yetim Verileri Temizle</button>
         </div>
         <div class="stats">
-          <div class="stat"><div class="num" id="statTotal">128</div><div class="lbl">Toplam Üye</div></div>
-          <div class="stat"><div class="num">3</div><div class="lbl">Bekleyen Şikayet</div></div>
-          <div class="stat"><div class="num">2</div><div class="lbl">Engelli Üye</div></div>
+          <div class="stat"><div class="num" id="statTotal">0</div><div class="lbl">Toplam Üye</div></div>
+          <div class="stat"><div class="num" id="statReports">0</div><div class="lbl">Bekleyen Şikayet</div></div>
+          <div class="stat"><div class="num" id="statBlocked">0</div><div class="lbl">Engelli Üye</div></div>
         </div>
         <div class="section">
           <div class="section-title">Üyeler Listesi</div>
@@ -2521,7 +2549,7 @@ tbody tr:hover{background:var(--surface-2);}
           <p class="section-sub">Genel akış denetimi ve kullanıcı şikayetleri.</p>
           <div class="report-grid">
             <div class="report-card"><h3>Genel Akış Denetimi</h3><p>Yapay zeka tüm yeni gönderileri otomatik tarar.</p><div class="count countgood">0</div><p style="margin:2px 0 0;color:var(--accent);">bekleyen sorun</p><button onclick="adminRescanFeed()">Akışı Yeniden Tara</button></div>
-            <div class="report-card"><h3>Kullanıcı Şikayetleri</h3><p>Kullanıcıların bildirdiği raporlar.</p><div class="count">3</div><p style="margin:2px 0 0;">incelenmeyi bekliyor</p><button onclick="document.getElementById('flaggedList').scrollIntoView({behavior:'smooth'})">Şikayetleri Görüntüle</button></div>
+            <div class="report-card"><h3>Kullanıcı Şikayetleri</h3><p>Kullanıcıların bildirdiği raporlar.</p><div class="count" id="statReportsCard">0</div><p style="margin:2px 0 0;">incelenmeyi bekliyor</p><button onclick="document.getElementById('flaggedList').scrollIntoView({behavior:'smooth'})">Şikayetleri Görüntüle</button></div>
           </div>
           <div class="flagged-list" id="flaggedList">
             <div id="adminReportsContainer">
@@ -4803,9 +4831,84 @@ function loadAdminUsers(){
           </div></td>
         </tr>`;
     }).join('');
+    // Engelli üye sayısını güncelle
+    const blockedCount = uids.filter(uid => data[uid] && data[uid].blocked && !data[uid].deleted).length;
+    const sb = document.getElementById('statBlocked');
+    if(sb) sb.textContent = blockedCount;
   }).catch(()=>{
     tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:24px 16px;">Liste yüklenirken hata oluştu.</td></tr>';
   });
+}
+
+/* Admin: gerçek kullanıcı şikayetlerini Firebase'den yükle */
+function loadAdminReports(){
+  if(!requireFirebase()) return;
+  fbDb.ref('reports').once('value').then(async (snap)=>{
+    const data = snap.val() || {};
+    const ids = Object.keys(data).sort((a,b)=> (data[b].ts||0) - (data[a].ts||0));
+    // Sayıları güncelle
+    const cnt = ids.length;
+    ['statReports','statReportsCard'].forEach(eid=>{ const el = document.getElementById(eid); if(el) el.textContent = cnt; });
+
+    const container = document.getElementById('adminReportsContainer');
+    if(!container) return;
+    if(!ids.length){
+      container.innerHTML = '<div style="text-align:center;color:var(--muted);padding:30px 16px;font-size:13px;">Henüz şikayet yok.</div>';
+      return;
+    }
+
+    // Şikayet edilen/eden kullanıcı adlarını çek
+    const uidsNeeded = new Set();
+    ids.forEach(id=>{ const r = data[id]; if(r.reportedUid) uidsNeeded.add(r.reportedUid); if(r.reporterUid) uidsNeeded.add(r.reporterUid); });
+    const nameMap = {};
+    await Promise.all([...uidsNeeded].map(uid =>
+      fbDb.ref('users/'+uid+'/username').once('value').then(s=> { nameMap[uid] = s.val() || '@kullanici'; }).catch(()=>{ nameMap[uid] = '@kullanici'; })
+    ));
+
+    container.innerHTML = ids.map(id=>{
+      const r = data[id];
+      const reported = nameMap[r.reportedUid] || '@kullanici';
+      const reporter = nameMap[r.reporterUid] || '@biri';
+      const when = formatPostAge ? formatPostAge(r.ts) : '';
+      const typeLabel = r.type === 'post' ? 'Gönderi' : 'Kullanıcı';
+      return `<div class="flagged-item" data-rid="${id}" style="background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:13px 14px;margin-bottom:10px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;">
+          <span style="font-weight:700;font-size:13px;cursor:pointer;color:var(--accent);" onclick="viewOtherProfile('${r.reportedUid||''}')">${reported}</span>
+          <span style="font-size:11px;color:var(--muted);">${typeLabel} · ${when}</span>
+        </div>
+        <div style="font-size:12.5px;color:var(--text);margin-bottom:6px;">${(r.reason||'(sebep belirtilmemiş)').replace(/</g,'&lt;')}</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">Şikayet eden: ${reporter}</div>
+        <div style="display:flex;gap:8px;">
+          <button class="actbtn danger" style="flex:1;" onclick="adminBlockReported('${r.reportedUid||''}','${id}')">Kullanıcıyı Engelle</button>
+          <button class="actbtn" style="flex:1;" onclick="dismissReport('${id}')">Şikayeti Kapat</button>
+        </div>
+      </div>`;
+    }).join('');
+  }).catch((e)=>{
+    console.error('Şikayetler yüklenemedi:', e);
+  });
+}
+
+/* Şikayeti kapat (sil) */
+function dismissReport(rid){
+  if(!rid || !requireFirebase()) return;
+  fbDb.ref('reports/'+rid).remove().then(()=>{
+    const el = document.querySelector('.flagged-item[data-rid="'+rid+'"]');
+    if(el) el.remove();
+    loadAdminReports();
+    showToast('Şikayet kapatıldı.');
+  }).catch(()=> showToast('İşlem başarısız.'));
+}
+
+/* Şikayet edilen kullanıcıyı engelle + şikayeti kapat */
+function adminBlockReported(uid, rid){
+  if(!uid || !requireFirebase()) return;
+  fbDb.ref('users/'+uid+'/blocked').set(true).then(()=>{
+    if(rid) fbDb.ref('reports/'+rid).remove();
+    showToast('Kullanıcı engellendi.');
+    loadAdminReports();
+    loadAdminUsers();
+  }).catch(()=> showToast('İşlem başarısız.'));
 }
 
 function showToast(msg){
@@ -5711,7 +5814,8 @@ function openChatThread(chatId, peerUid){
         } else {
           const escapedUrl = (m.mediaUrl||'').replace(/'/g, '%27');
           const imgEl = '<img src="'+m.mediaUrl+'" loading="lazy" onclick="openChatImageFullscreen(\''+escapedUrl+'\')" onerror="this.style.opacity=0.3;">';
-          inner = '<div class="msg-media chat-photo-card" style="'+align+'">'+replyHtml+imgEl+'<div class="chat-photo-time">'+t+(isGif?' · GIF':'')+'</div></div>';
+          const cardClass = isGif ? 'msg-media chat-photo-card gif-card' : 'msg-media chat-photo-card';
+          inner = '<div class="'+cardClass+'" style="'+align+'">'+replyHtml+imgEl+'<div class="chat-photo-time">'+t+(isGif?' · GIF':'')+'</div></div>';
         }
         return wrapSwipeMsg(id, m.from, inner, mine);
       }
@@ -9043,7 +9147,7 @@ function goNav(name, btn){
   if(name === 'feed'){ initFeedListener(); initMomentStripListener(); }
   if(name === 'messages') initChatListListener();
   if(name === 'profile'){ renderMyPostsGrid(); loadPrivacyToggleState(); }
-  if(name === 'admin') { if(typeof loadAdminUsers==='function') loadAdminUsers(); }
+  if(name === 'admin') { if(typeof loadAdminUsers==='function') loadAdminUsers(); if(typeof loadAdminReports==='function') loadAdminReports(); }
   if(name === 'explore') initExplore();
   if(name === 'reels' || name === 'momentFeed') initMomentFeed();
 
