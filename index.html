@@ -252,6 +252,20 @@ body.light-mode #appGlow::after{opacity:.08;}
 .island button.active{color:#fff;background:linear-gradient(135deg, var(--grad-1) 0%, var(--grad-2) 55%, var(--grad-3) 100%);transform:scale(1.05);box-shadow:0 4px 14px var(--accent);}
 .island button.pulse{animation:islandPulse .32s ease;}
 .island.chat-fullscreen-hide{display:none;}
+/* Hikaye metin editörü — font ve renk butonları */
+.storyFontBtn{
+  flex-shrink:0;padding:8px 16px;border-radius:10px;cursor:pointer;
+  background:rgba(255,255,255,.12);border:1.5px solid transparent;
+  color:#fff;font-size:14px;font-weight:700;white-space:nowrap;
+}
+.storyFontBtn.active{background:#fff;color:#000;}
+.storyColorBtn{
+  flex-shrink:0;width:32px;height:32px;border-radius:50%;cursor:pointer;
+  border:2.5px solid rgba(255,255,255,.4);padding:0;transition:transform .15s;
+}
+.storyColorBtn.active{border-color:#fff;transform:scale(1.15);box-shadow:0 0 0 2px rgba(0,0,0,.3);}
+#storyBgToggle.active{background:#fff;color:#000;}
+#storyTextEditPreview{transition:none;}
 /* Sohbet duvar kağıdı renk seçici noktaları */
 .wallpaperColors{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;}
 .wpColor{
@@ -2999,6 +3013,51 @@ tbody tr:hover{background:var(--surface-2);}
     <!-- Gizli caption (Instagram'da bu yok ama altta saklı) -->
     <input type="hidden" id="storyCaption" value="">
     <button class="btn btn-primary" id="storyPublishBtn" style="width:100%;background:var(--gradient-vivid);border:none;border-radius:30px;padding:14px;font-size:15px;font-weight:700;color:#fff;cursor:pointer;" onclick="publishStory()" disabled>Hikayeyi Paylaş</button>
+  </div>
+
+  <!-- METİN DÜZENLEME PANELİ (modern editör) -->
+  <div id="storyTextEditPanel" class="hidden" style="position:absolute;inset:0;z-index:20;background:rgba(0,0,0,.78);backdrop-filter:blur(8px);display:flex;flex-direction:column;">
+    <!-- Üst: İptal / Bitti -->
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:16px;padding-top:calc(16px + env(safe-area-inset-top,0px));">
+      <button onclick="closeStoryTextEditor()" style="background:none;border:none;color:#fff;font-size:15px;cursor:pointer;opacity:.85;">İptal</button>
+      <button onclick="saveStoryTextOverlay()" style="background:#fff;border:none;color:#000;font-size:15px;font-weight:700;cursor:pointer;padding:8px 20px;border-radius:20px;">Bitti</button>
+    </div>
+    <!-- Orta: canlı önizleme + giriş -->
+    <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:20px;position:relative;">
+      <div id="storyTextEditPreview" style="position:absolute;pointer-events:none;max-width:88%;text-align:center;word-break:break-word;padding:6px 14px;border-radius:12px;line-height:1.2;">Yazını gör...</div>
+      <textarea id="storyTextEditInput" oninput="updateStoryTextPreview()" rows="2" placeholder="Yazmaya başla..."
+        style="position:absolute;width:88%;height:60%;background:transparent;border:none;outline:none;color:transparent;caret-color:#fff;text-align:center;font-size:24px;resize:none;font-family:inherit;"></textarea>
+    </div>
+    <!-- Boyut slider (yanda dikey değil, altta yatay — daha kullanışlı) -->
+    <div style="display:flex;align-items:center;gap:12px;padding:0 24px 8px;">
+      <span style="color:#fff;font-size:11px;opacity:.7;">Boyut</span>
+      <input type="range" id="storySizeSlider" min="16" max="80" value="34" oninput="setStoryEditSize(this.value)"
+        style="flex:1;accent-color:#fff;height:4px;">
+    </div>
+    <!-- Font stilleri -->
+    <div id="storyFontRow" style="display:flex;gap:8px;overflow-x:auto;padding:8px 16px;-webkit-overflow-scrolling:touch;">
+      <button class="storyFontBtn active" data-font="modern" onclick="setStoryEditFont('modern',this)" style="font-family:'Inter',sans-serif;">Modern</button>
+      <button class="storyFontBtn" data-font="classic" onclick="setStoryEditFont('classic',this)" style="font-family:'Space Grotesk',sans-serif;">Classic</button>
+      <button class="storyFontBtn" data-font="serif" onclick="setStoryEditFont('serif',this)" style="font-family:Georgia,serif;">Zarif</button>
+      <button class="storyFontBtn" data-font="mono" onclick="setStoryEditFont('mono',this)" style="font-family:'Courier New',monospace;">Daktilo</button>
+      <button class="storyFontBtn" data-font="round" onclick="setStoryEditFont('round',this)" style="font-family:'Trebuchet MS',sans-serif;">Yumuşak</button>
+    </div>
+    <!-- Renkler + arka plan toggle -->
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 16px calc(20px + env(safe-area-inset-bottom,0px));overflow-x:auto;-webkit-overflow-scrolling:touch;">
+      <button id="storyBgToggle" onclick="toggleStoryBg()" title="Arka plan" style="flex-shrink:0;background:rgba(255,255,255,.15);border:none;border-radius:8px;width:34px;height:34px;color:#fff;font-size:16px;cursor:pointer;font-weight:700;">A</button>
+      <div id="storyColorRow" style="display:flex;gap:8px;">
+        <button class="storyColorBtn active" data-color="#ffffff" onclick="setStoryEditColor('#ffffff',this)" style="background:#ffffff;"></button>
+        <button class="storyColorBtn" data-color="#000000" onclick="setStoryEditColor('#000000',this)" style="background:#000000;"></button>
+        <button class="storyColorBtn" data-color="#ef4444" onclick="setStoryEditColor('#ef4444',this)" style="background:#ef4444;"></button>
+        <button class="storyColorBtn" data-color="#f59e0b" onclick="setStoryEditColor('#f59e0b',this)" style="background:#f59e0b;"></button>
+        <button class="storyColorBtn" data-color="#fde047" onclick="setStoryEditColor('#fde047',this)" style="background:#fde047;"></button>
+        <button class="storyColorBtn" data-color="#22c55e" onclick="setStoryEditColor('#22c55e',this)" style="background:#22c55e;"></button>
+        <button class="storyColorBtn" data-color="#3b82f6" onclick="setStoryEditColor('#3b82f6',this)" style="background:#3b82f6;"></button>
+        <button class="storyColorBtn" data-color="#38bdf8" onclick="setStoryEditColor('#38bdf8',this)" style="background:#38bdf8;"></button>
+        <button class="storyColorBtn" data-color="#a855f7" onclick="setStoryEditColor('#a855f7',this)" style="background:#a855f7;"></button>
+        <button class="storyColorBtn" data-color="#ec4899" onclick="setStoryEditColor('#ec4899',this)" style="background:#ec4899;"></button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -8311,16 +8370,112 @@ function onStoryFileChosen(ev){
 /* ============================================================
    HİKAYE METİN OVERLAY — Instagram tarzı sürüklenebilir yazı
    ============================================================ */
-let storyTextOverlays = []; // {id, text, x, y, color, fontSize}
+let storyTextOverlays = []; // {id, text, x, y, color, fontSize, font, bg}
 let storyTextIdCounter = 0;
+let editingStoryTextId = null;
 
+const STORY_FONTS = [
+  { key:'modern',  label:'Modern',  css:"'Inter',sans-serif",            weight:'800' },
+  { key:'classic', label:'Classic', css:"'Space Grotesk',sans-serif",    weight:'700' },
+  { key:'serif',   label:'Zarif',   css:"Georgia,'Times New Roman',serif",weight:'700' },
+  { key:'mono',    label:'Daktilo', css:"'Courier New',monospace",        weight:'700' },
+  { key:'round',   label:'Yumuşak', css:"'Trebuchet MS',sans-serif",      weight:'800' }
+];
+const STORY_COLORS = ['#ffffff','#000000','#ef4444','#f59e0b','#fde047','#22c55e','#3b82f6','#38bdf8','#a855f7','#ec4899'];
+
+/* Yeni metin ekleme — modern panel açar */
 function addStoryTextOverlay(){
-  const text = prompt('Hikayene yazı ekle:', '');
-  if(!text || !text.trim()) return;
-  const colors = ['#ffffff','#ef4444','#f59e0b','#10b981','#3b82f6','#a855f7','#ec4899','#000000'];
-  const color = colors[Math.floor(Math.random()*colors.length)];
-  const id = ++storyTextIdCounter;
-  storyTextOverlays.push({id, text:text.trim(), x:50, y:50, color, fontSize:32});
+  editingStoryTextId = null;
+  openStoryTextEditor({ text:'', x:50, y:45, color:'#ffffff', fontSize:34, font:'modern', bg:false });
+}
+
+/* Var olan metni düzenle */
+function editStoryTextOverlay(id){
+  const t = storyTextOverlays.find(o=>o.id===id);
+  if(!t) return;
+  editingStoryTextId = id;
+  openStoryTextEditor(t);
+}
+
+/* Metin düzenleme panelini aç */
+function openStoryTextEditor(data){
+  const panel = document.getElementById('storyTextEditPanel');
+  if(!panel) return;
+  panel.dataset.color = data.color;
+  panel.dataset.font = data.font;
+  panel.dataset.fontsize = data.fontSize;
+  panel.dataset.bg = data.bg ? '1' : '0';
+  const input = document.getElementById('storyTextEditInput');
+  input.value = data.text || '';
+  // Font butonları
+  document.querySelectorAll('#storyFontRow .storyFontBtn').forEach(b=> b.classList.toggle('active', b.dataset.font === data.font));
+  // Renk butonları
+  document.querySelectorAll('#storyColorRow .storyColorBtn').forEach(b=> b.classList.toggle('active', b.dataset.color === data.color));
+  // Boyut slider
+  document.getElementById('storySizeSlider').value = data.fontSize;
+  // Arka plan toggle
+  document.getElementById('storyBgToggle').classList.toggle('active', !!data.bg);
+  updateStoryTextPreview();
+  panel.classList.remove('hidden');
+  setTimeout(()=> input.focus(), 50);
+}
+function closeStoryTextEditor(){
+  document.getElementById('storyTextEditPanel').classList.add('hidden');
+}
+function setStoryEditFont(font, btn){
+  document.getElementById('storyTextEditPanel').dataset.font = font;
+  document.querySelectorAll('#storyFontRow .storyFontBtn').forEach(b=> b.classList.toggle('active', b===btn));
+  updateStoryTextPreview();
+}
+function setStoryEditColor(color, btn){
+  document.getElementById('storyTextEditPanel').dataset.color = color;
+  document.querySelectorAll('#storyColorRow .storyColorBtn').forEach(b=> b.classList.toggle('active', b===btn));
+  updateStoryTextPreview();
+}
+function setStoryEditSize(val){
+  document.getElementById('storyTextEditPanel').dataset.fontsize = val;
+  updateStoryTextPreview();
+}
+function toggleStoryBg(){
+  const panel = document.getElementById('storyTextEditPanel');
+  const on = panel.dataset.bg === '1';
+  panel.dataset.bg = on ? '0' : '1';
+  document.getElementById('storyBgToggle').classList.toggle('active', !on);
+  updateStoryTextPreview();
+}
+function updateStoryTextPreview(){
+  const panel = document.getElementById('storyTextEditPanel');
+  const prev = document.getElementById('storyTextEditPreview');
+  const input = document.getElementById('storyTextEditInput');
+  const fontDef = STORY_FONTS.find(f=>f.key===panel.dataset.font) || STORY_FONTS[0];
+  const color = panel.dataset.color;
+  const size = panel.dataset.fontsize;
+  const bg = panel.dataset.bg === '1';
+  prev.textContent = input.value || 'Yazını gör...';
+  prev.style.fontFamily = fontDef.css;
+  prev.style.fontWeight = fontDef.weight;
+  prev.style.color = color;
+  prev.style.fontSize = Math.min(48, size*0.9) + 'px';
+  prev.style.background = bg ? 'rgba(0,0,0,.5)' : 'transparent';
+  prev.style.textShadow = bg ? 'none' : '0 2px 10px rgba(0,0,0,.85)';
+}
+/* Paneldeki metni kaydet → overlay olarak ekle/güncelle */
+function saveStoryTextOverlay(){
+  const panel = document.getElementById('storyTextEditPanel');
+  const text = document.getElementById('storyTextEditInput').value.trim();
+  if(!text){ closeStoryTextEditor(); return; }
+  const color = panel.dataset.color;
+  const font = panel.dataset.font;
+  const fontSize = parseInt(panel.dataset.fontsize) || 34;
+  const bg = panel.dataset.bg === '1';
+  if(editingStoryTextId){
+    const t = storyTextOverlays.find(o=>o.id===editingStoryTextId);
+    if(t){ t.text=text; t.color=color; t.font=font; t.fontSize=fontSize; t.bg=bg; }
+  } else {
+    const id = ++storyTextIdCounter;
+    storyTextOverlays.push({id, text, x:50, y:45, color, fontSize, font, bg});
+  }
+  closeStoryTextEditor();
   renderStoryTextOverlays();
 }
 
@@ -8328,24 +8483,31 @@ function renderStoryTextOverlays(){
   const container = document.getElementById('storyTextOverlaysContainer');
   if(!container) return;
   container.style.pointerEvents = 'none';
-  container.innerHTML = storyTextOverlays.map(t => `
-    <div class="storyTextItem" data-overlay-id="${t.id}" 
-         style="position:absolute;left:${t.x}%;top:${t.y}%;transform:translate(-50%,-50%);color:${t.color};font-size:${t.fontSize}px;font-weight:700;text-shadow:0 2px 8px rgba(0,0,0,.7);cursor:move;pointer-events:auto;user-select:none;-webkit-user-select:none;padding:6px 12px;max-width:90%;word-break:break-word;text-align:center;background:rgba(0,0,0,.25);border-radius:8px;backdrop-filter:blur(2px);touch-action:none;">
+  container.innerHTML = storyTextOverlays.map(t => {
+    const fontDef = STORY_FONTS.find(f=>f.key===t.font) || STORY_FONTS[0];
+    const bgStyle = t.bg ? 'background:rgba(0,0,0,.5);' : 'background:transparent;';
+    const shadow = t.bg ? 'none' : '0 2px 10px rgba(0,0,0,.85)';
+    return `
+    <div class="storyTextItem" data-overlay-id="${t.id}"
+         style="position:absolute;left:${t.x}%;top:${t.y}%;transform:translate(-50%,-50%);
+                color:${t.color};font-size:${t.fontSize}px;font-family:${fontDef.css};font-weight:${fontDef.weight};
+                text-shadow:${shadow};${bgStyle}cursor:move;pointer-events:auto;user-select:none;-webkit-user-select:none;
+                padding:6px 14px;max-width:88%;word-break:break-word;text-align:center;border-radius:12px;
+                line-height:1.2;touch-action:none;">
       ${escapeHtml(t.text)}
-      <div style="position:absolute;top:-12px;right:-12px;display:flex;gap:4px;">
-        <button onclick="event.stopPropagation();changeStoryTextSize(${t.id}, 1.2)" style="background:#10b981;border:none;border-radius:50%;width:24px;height:24px;color:#fff;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;" title="Büyüt">+</button>
-        <button onclick="event.stopPropagation();changeStoryTextSize(${t.id}, 0.83)" style="background:#3b82f6;border:none;border-radius:50%;width:24px;height:24px;color:#fff;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;" title="Küçült">−</button>
-        <button onclick="event.stopPropagation();removeStoryTextOverlay(${t.id})" style="background:#ef4444;border:none;border-radius:50%;width:24px;height:24px;color:#fff;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;" title="Sil">✕</button>
+      <div class="storyTextTools" style="position:absolute;top:-14px;right:-14px;display:flex;gap:5px;">
+        <button onclick="event.stopPropagation();editStoryTextOverlay(${t.id})" style="background:#3b82f6;border:none;border-radius:50%;width:26px;height:26px;color:#fff;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;" title="Düzenle">✎</button>
+        <button onclick="event.stopPropagation();removeStoryTextOverlay(${t.id})" style="background:#ef4444;border:none;border-radius:50%;width:26px;height:26px;color:#fff;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;" title="Sil">✕</button>
       </div>
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
   container.querySelectorAll('.storyTextItem').forEach(el => bindStoryTextDrag(el));
 }
 
 function changeStoryTextSize(id, factor){
   const overlay = storyTextOverlays.find(t => t.id === id);
   if(!overlay) return;
-  overlay.fontSize = Math.max(14, Math.min(80, overlay.fontSize * factor));
+  overlay.fontSize = Math.max(14, Math.min(90, overlay.fontSize * factor));
   renderStoryTextOverlays();
 }
 
@@ -8358,7 +8520,10 @@ function bindStoryTextDrag(el){
   const id = parseInt(el.dataset.overlayId);
   let startX = 0, startY = 0, startLeftPct = 0, startTopPct = 0;
   let dragging = false;
+  // Pinch (iki parmak) ile büyütme
+  let pinchStartDist = 0, pinchStartSize = 0, pinching = false;
   const container = el.parentElement;
+  const dist = (touches)=> Math.hypot(touches[0].clientX - touches[1].clientX, touches[0].clientY - touches[1].clientY);
 
   const onStart = (clientX, clientY) => {
     dragging = true;
@@ -8381,18 +8546,34 @@ function bindStoryTextDrag(el){
   };
   const onEnd = () => { dragging = false; };
 
-  // Touch
+  // Touch — tek parmak sürükle, iki parmak büyüt
   el.addEventListener('touchstart', e => {
     if(e.target.tagName === 'BUTTON') return;
     e.preventDefault();
-    onStart(e.touches[0].clientX, e.touches[0].clientY);
+    if(e.touches.length === 2){
+      pinching = true; dragging = false;
+      pinchStartDist = dist(e.touches);
+      const overlay = storyTextOverlays.find(t => t.id === id);
+      pinchStartSize = overlay ? overlay.fontSize : 34;
+    } else {
+      onStart(e.touches[0].clientX, e.touches[0].clientY);
+    }
   }, {passive:false});
   el.addEventListener('touchmove', e => {
-    if(!dragging) return;
     e.preventDefault();
-    onMove(e.touches[0].clientX, e.touches[0].clientY);
+    if(pinching && e.touches.length === 2){
+      const overlay = storyTextOverlays.find(t => t.id === id);
+      if(!overlay) return;
+      const scale = dist(e.touches) / pinchStartDist;
+      overlay.fontSize = Math.max(14, Math.min(90, pinchStartSize * scale));
+      el.style.fontSize = overlay.fontSize + 'px';
+    } else if(dragging){
+      onMove(e.touches[0].clientX, e.touches[0].clientY);
+    }
   }, {passive:false});
-  el.addEventListener('touchend', onEnd);
+  el.addEventListener('touchend', e => {
+    if(e.touches.length === 0){ onEnd(); pinching = false; }
+  });
   // Mouse
   el.addEventListener('mousedown', e => {
     if(e.target.tagName === 'BUTTON') return;
@@ -8649,11 +8830,18 @@ function showStoryAtIndex(idx){
   const overlaysContainer = document.getElementById('storyViewerTextOverlays');
   if(overlaysContainer){
     if(s.textOverlays && s.textOverlays.length){
-      overlaysContainer.innerHTML = s.textOverlays.map(t => `
-        <div style="position:absolute;left:${t.x}%;top:${t.y}%;transform:translate(-50%,-50%);color:${t.color||'#fff'};font-size:${t.fontSize||28}px;font-weight:700;text-shadow:0 2px 8px rgba(0,0,0,.7);padding:6px 12px;max-width:80%;word-break:break-word;text-align:center;background:rgba(0,0,0,.25);border-radius:8px;backdrop-filter:blur(2px);pointer-events:none;">
+      const FONTS = {modern:"'Inter',sans-serif",classic:"'Space Grotesk',sans-serif",serif:"Georgia,serif",mono:"'Courier New',monospace",round:"'Trebuchet MS',sans-serif"};
+      const WEIGHTS = {modern:'800',classic:'700',serif:'700',mono:'700',round:'800'};
+      overlaysContainer.innerHTML = s.textOverlays.map(t => {
+        const fam = FONTS[t.font] || FONTS.modern;
+        const wt = WEIGHTS[t.font] || '800';
+        const bg = t.bg ? 'background:rgba(0,0,0,.5);' : 'background:transparent;';
+        const shadow = t.bg ? 'none' : '0 2px 10px rgba(0,0,0,.85)';
+        return `
+        <div style="position:absolute;left:${t.x}%;top:${t.y}%;transform:translate(-50%,-50%);color:${t.color||'#fff'};font-size:${t.fontSize||28}px;font-family:${fam};font-weight:${wt};text-shadow:${shadow};${bg}padding:6px 14px;max-width:88%;word-break:break-word;text-align:center;border-radius:12px;line-height:1.2;pointer-events:none;">
           ${escapeHtml(t.text||'')}
-        </div>
-      `).join('');
+        </div>`;
+      }).join('');
     } else {
       overlaysContainer.innerHTML = '';
     }
