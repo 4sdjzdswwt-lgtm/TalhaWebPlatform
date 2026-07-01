@@ -2228,8 +2228,8 @@ tbody tr:hover{background:var(--surface-2);}
 }
 .momentBadge .ring{width:16px;height:16px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;}
 .momentBadge svg{width:9px;height:9px;}
-.momentPost .post-media{position:relative;aspect-ratio:1/1;max-height:none;}
-.momentPost .post-media img{width:100%;height:100%;max-height:none;object-fit:cover;}
+.momentPost .post-media{position:relative;max-height:none;}
+.momentPost .post-media img{width:100%;height:auto;max-height:none;object-fit:contain;display:block;}
 .momentParticipantStrip{display:flex;align-items:center;gap:0;padding:6px 18px 0;margin-top:-2px;flex-wrap:wrap;}
 .momentParticipantStrip img{width:24px;height:24px;border-radius:50%;border:2px solid var(--surface);object-fit:cover;margin-left:-8px;}
 .momentParticipantStrip img:first-child{margin-left:0;}
@@ -3227,7 +3227,7 @@ tbody tr:hover{background:var(--surface-2);}
   </div>
 
   <!-- MÜZİK SEÇİCİ PANELİ (iTunes gerçek şarkı önizlemeleri) -->
-  <div id="storyMusicPanel" class="hidden" style="position:absolute;inset:0;z-index:20;background:rgba(0,0,0,.92);backdrop-filter:blur(10px);display:flex;flex-direction:column;">
+  <div id="storyMusicPanel" class="hidden" style="position:fixed;inset:0;z-index:10060;background:rgba(0,0,0,.96);backdrop-filter:blur(10px);display:flex;flex-direction:column;">
     <div style="display:flex;justify-content:space-between;align-items:center;padding:16px;padding-top:calc(16px + env(safe-area-inset-top,0px));">
       <button onclick="closeStoryMusicPicker()" style="background:none;border:none;color:#fff;font-size:15px;cursor:pointer;opacity:.85;">İptal</button>
       <span style="color:#fff;font-weight:700;font-size:15px;">🎵 Müzik Ekle</span>
@@ -3253,7 +3253,7 @@ tbody tr:hover{background:var(--surface-2);}
   </div>
 
   <!-- MÜZİK AYAR PANELİ (başlangıç noktası + süre + adı gizle) -->
-  <div id="musicTrimPanel" class="hidden" style="position:absolute;inset:0;z-index:21;background:rgba(0,0,0,.94);backdrop-filter:blur(10px);display:flex;flex-direction:column;">
+  <div id="musicTrimPanel" class="hidden" style="position:fixed;inset:0;z-index:10061;background:rgba(0,0,0,.96);backdrop-filter:blur(10px);display:flex;flex-direction:column;">
     <div style="display:flex;justify-content:space-between;align-items:center;padding:16px;padding-top:calc(16px + env(safe-area-inset-top,0px));">
       <button onclick="closeMusicTrimPanel()" style="background:none;border:none;color:#fff;font-size:15px;cursor:pointer;opacity:.85;">Geri</button>
       <span style="color:#fff;font-weight:700;font-size:15px;">Müziği Ayarla</span>
