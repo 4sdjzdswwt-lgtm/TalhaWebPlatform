@@ -266,11 +266,30 @@ body.light-mode #appGlow::after{opacity:.08;}
 .storyColorBtn.active{border-color:#fff;transform:scale(1.15);box-shadow:0 0 0 2px rgba(0,0,0,.3);}
 #storyBgToggle.active{background:#fff;color:#000;}
 #storyTextEditPreview{transition:none;}
-/* contenteditable boşken placeholder göster */
-#storyTextEditInput:empty:before{
-  content:attr(data-placeholder);
-  opacity:.5;
+/* Müzik seçici — çipler ve sonuç kartları */
+.musicChip{
+  flex-shrink:0;background:rgba(255,255,255,.12);border:none;border-radius:20px;
+  padding:8px 14px;color:#fff;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;
 }
+.musicChip:active{background:rgba(255,255,255,.25);}
+.musicResultItem{
+  display:flex;align-items:center;gap:12px;padding:10px 8px;border-radius:12px;cursor:pointer;
+}
+.musicResultItem:active{background:rgba(255,255,255,.1);}
+.musicResultItem img{width:52px;height:52px;border-radius:8px;object-fit:cover;flex-shrink:0;background:#333;}
+.musicResultItem .mInfo{flex:1;min-width:0;}
+.musicResultItem .mTitle{color:#fff;font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.musicResultItem .mArtist{color:rgba(255,255,255,.6);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.musicResultItem .mPlay{width:34px;height:34px;border-radius:50%;background:var(--gradient-vivid);border:none;color:#fff;font-size:15px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+/* Seçili müzik etiketi (hikaye önizlemede) */
+#storyMusicTag{
+  position:absolute;bottom:16px;left:50%;transform:translateX(-50%);z-index:15;
+  display:none;align-items:center;gap:8px;max-width:80%;
+  background:rgba(0,0,0,.55);backdrop-filter:blur(10px);border-radius:20px;padding:7px 14px 7px 7px;
+}
+#storyMusicTag img{width:30px;height:30px;border-radius:6px;object-fit:cover;flex-shrink:0;}
+#storyMusicTag .smtTxt{color:#fff;font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#storyMusicTag .smtClose{background:rgba(255,255,255,.2);border:none;border-radius:50%;width:22px;height:22px;color:#fff;font-size:12px;cursor:pointer;flex-shrink:0;}
 /* Sohbet duvar kağıdı renk seçici noktaları */
 .wallpaperColors{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;}
 .wpColor{
@@ -2987,8 +3006,12 @@ tbody tr:hover{background:var(--surface-2);}
   <div style="padding:14px 16px;display:flex;justify-content:space-between;align-items:center;background:rgba(0,0,0,.4);z-index:5;">
     <button onclick="closeStoryComposer()" style="background:rgba(255,255,255,.1);border:none;border-radius:50%;width:40px;height:40px;color:#fff;font-size:22px;cursor:pointer;">✕</button>
     <h3 style="color:#fff;font-size:15px;font-weight:700;margin:0;">Hikaye</h3>
-    <!-- Yazı ekleme butonu -->
-    <button onclick="addStoryTextOverlay()" id="addStoryTextBtn" style="background:rgba(255,255,255,.1);border:none;border-radius:50%;width:40px;height:40px;color:#fff;font-size:20px;cursor:pointer;display:none;" title="Yazı Ekle">Aa</button>
+    <div style="display:flex;gap:8px;">
+      <!-- Müzik ekleme butonu -->
+      <button onclick="openStoryMusicPicker()" id="addStoryMusicBtn" style="background:rgba(255,255,255,.1);border:none;border-radius:50%;width:40px;height:40px;color:#fff;font-size:18px;cursor:pointer;display:none;" title="Müzik Ekle">🎵</button>
+      <!-- Yazı ekleme butonu -->
+      <button onclick="addStoryTextOverlay()" id="addStoryTextBtn" style="background:rgba(255,255,255,.1);border:none;border-radius:50%;width:40px;height:40px;color:#fff;font-size:20px;cursor:pointer;display:none;" title="Yazı Ekle">Aa</button>
+    </div>
   </div>
   
   <!-- Ana içerik alanı -->
@@ -3010,6 +3033,13 @@ tbody tr:hover{background:var(--surface-2);}
       
       <!-- Sürüklenebilir metin overlay'leri buraya gelecek -->
       <div id="storyTextOverlaysContainer" style="position:absolute;inset:0;pointer-events:none;"></div>
+
+      <!-- Seçili müzik etiketi -->
+      <div id="storyMusicTag">
+        <img id="storyMusicTagArt" src="">
+        <span class="smtTxt" id="storyMusicTagTxt">Müzik</span>
+        <button class="smtClose" onclick="removeStoryMusic()">✕</button>
+      </div>
     </div>
   </div>
   
@@ -3028,13 +3058,15 @@ tbody tr:hover{background:var(--surface-2);}
       <button onclick="saveStoryTextOverlay()" style="background:#fff;border:none;color:#000;font-size:15px;font-weight:700;cursor:pointer;padding:8px 20px;border-radius:20px;">Bitti</button>
     </div>
     <!-- Orta: canlı önizleme + giriş -->
-    <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:20px;position:relative;" onclick="document.getElementById('storyTextEditInput').focus()">
-      <div id="storyTextEditInput" contenteditable="true" oninput="updateStoryTextPreview()"
-        data-placeholder="Yazmaya başla..."
-        style="max-width:92%;text-align:center;white-space:pre-wrap;word-break:normal;overflow-wrap:break-word;
-               padding:6px 14px;border-radius:12px;line-height:1.25;outline:none;caret-color:#fff;
-               min-width:40px;min-height:1.2em;"></div>
+    <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:20px;position:relative;">
+      <textarea id="storyTextEditInput" oninput="updateStoryTextPreview()" rows="2"
+        placeholder="Yazmaya başla..." autocapitalize="sentences"
+        style="width:92%;max-height:70%;background:transparent;border:none;outline:none;
+               text-align:center;white-space:pre-wrap;word-break:normal;overflow-wrap:break-word;
+               padding:6px 14px;border-radius:12px;line-height:1.25;resize:none;
+               font-family:inherit;caret-color:#fff;overflow:auto;"></textarea>
     </div>
+    <style>#storyTextEditInput::placeholder{color:rgba(255,255,255,.5);}</style>
     <!-- Boyut slider (yanda dikey değil, altta yatay — daha kullanışlı) -->
     <div style="display:flex;align-items:center;gap:12px;padding:0 24px 8px;">
       <span style="color:#fff;font-size:11px;opacity:.7;">Boyut</span>
@@ -3066,9 +3098,35 @@ tbody tr:hover{background:var(--surface-2);}
       </div>
     </div>
   </div>
+
+  <!-- MÜZİK SEÇİCİ PANELİ (iTunes gerçek şarkı önizlemeleri) -->
+  <div id="storyMusicPanel" class="hidden" style="position:absolute;inset:0;z-index:20;background:rgba(0,0,0,.92);backdrop-filter:blur(10px);display:flex;flex-direction:column;">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:16px;padding-top:calc(16px + env(safe-area-inset-top,0px));">
+      <button onclick="closeStoryMusicPicker()" style="background:none;border:none;color:#fff;font-size:15px;cursor:pointer;opacity:.85;">İptal</button>
+      <span style="color:#fff;font-weight:700;font-size:15px;">🎵 Müzik Ekle</span>
+      <span style="width:44px;"></span>
+    </div>
+    <div style="padding:0 16px 12px;">
+      <input type="text" id="storyMusicSearch" placeholder="🔍 Sanatçı veya şarkı adı yaz..."
+        oninput="onStoryMusicSearchInput()" autocomplete="off"
+        style="width:100%;box-sizing:border-box;background:rgba(255,255,255,.14);border:none;border-radius:14px;padding:14px 16px;color:#fff;font-size:16px;outline:none;">
+      <div style="display:flex;gap:8px;overflow-x:auto;margin-top:10px;-webkit-overflow-scrolling:touch;padding-bottom:4px;">
+        <button class="musicChip" onclick="quickMusicSearch('Türkçe Pop')">Türkçe Pop</button>
+        <button class="musicChip" onclick="quickMusicSearch('Türkçe Rap')">Türkçe Rap</button>
+        <button class="musicChip" onclick="quickMusicSearch('Pop')">English</button>
+        <button class="musicChip" onclick="quickMusicSearch('Deutscher Rap')">Almanca</button>
+        <button class="musicChip" onclick="quickMusicSearch('Hip Hop')">Hip Hop</button>
+        <button class="musicChip" onclick="quickMusicSearch('Slow')">Slow</button>
+        <button class="musicChip" onclick="quickMusicSearch('Arabesk')">Arabesk</button>
+      </div>
+    </div>
+    <div id="storyMusicResults" style="flex:1;overflow-y:auto;padding:4px 12px calc(20px + env(safe-area-inset-bottom,0px));-webkit-overflow-scrolling:touch;">
+      <div style="text-align:center;color:rgba(255,255,255,.5);padding:40px 20px;font-size:14px;">Bir şarkı veya sanatçı ara 🎧<br><span style="font-size:12px;">Milyonlarca şarkı — tüm diller ve türler</span></div>
+    </div>
+  </div>
 </div>
 
-<!-- HİKAYE GÖRÜNTÜLEYICI (tam ekran) -->
+
 <div class="storyViewer hidden" id="storyViewer" onclick="advanceStory(event)">
   <div class="storyViewerHeader">
     <img id="storyViewerAvatar" src="https://i.pravatar.cc/60?img=68" style="cursor:pointer;" onclick="event.stopPropagation();goToStoryOwnerProfile()">
@@ -3085,7 +3143,13 @@ tbody tr:hover{background:var(--surface-2);}
   <div id="storyViewerCaption" style="position:absolute;bottom:90px;left:0;right:0;text-align:center;color:#fff;font-size:16px;font-weight:600;text-shadow:0 2px 8px rgba(0,0,0,.7);padding:0 20px;"></div>
   <!-- Sürüklenmiş text overlay'ler (Instagram tarzı) -->
   <div id="storyViewerTextOverlays" style="position:absolute;inset:0;pointer-events:none;"></div>
-  
+
+  <!-- Hikaye müzik etiketi -->
+  <div id="storyViewerMusicTag" style="display:none;position:absolute;bottom:130px;left:50%;transform:translateX(-50%);align-items:center;gap:8px;max-width:80%;background:rgba(0,0,0,.55);backdrop-filter:blur(10px);border-radius:20px;padding:7px 14px 7px 7px;z-index:6;" onclick="event.stopPropagation()">
+    <img id="storyViewerMusicArt" src="" style="width:30px;height:30px;border-radius:6px;object-fit:cover;flex-shrink:0;">
+    <span id="storyViewerMusicTxt" style="color:#fff;font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">🎵</span>
+  </div>
+
   <!-- Alt bar: emoji tepkileri + yanıt kutusu -->
   <div class="storyBottomBar" id="storyBottomBar" onclick="event.stopPropagation()">
     <!-- Emoji tepkileri -->
@@ -8318,6 +8382,9 @@ function openStoryComposer(){
   if(overlaysContainer) overlaysContainer.innerHTML = '';
   const addTextBtn = document.getElementById('addStoryTextBtn');
   if(addTextBtn) addTextBtn.style.display = 'none';
+  const addMusicBtn = document.getElementById('addStoryMusicBtn');
+  if(addMusicBtn) addMusicBtn.style.display = 'none';
+  removeStoryMusic(); // önceki müzik seçimini temizle
   document.getElementById('storyPublishBtn').disabled = true;
   document.getElementById('storyPublishBtn').textContent = 'Hikayeyi Paylaş';
   document.getElementById('storyComposerOverlay').classList.remove('hidden');
@@ -8353,8 +8420,9 @@ function onStoryFileChosen(ev){
       vid.style.display = 'none';
       img.src = storyDataUrl;
     }
-    // Aa butonu görünsün
+    // Aa + müzik butonları görünsün
     document.getElementById('addStoryTextBtn').style.display = 'block';
+    document.getElementById('addStoryMusicBtn').style.display = 'block';
     // Mevcut text overlay'leri temizle
     document.getElementById('storyTextOverlaysContainer').innerHTML = '';
     storyTextOverlays = [];
@@ -8379,6 +8447,117 @@ const STORY_FONTS = [
 ];
 const STORY_COLORS = ['#ffffff','#000000','#ef4444','#f59e0b','#fde047','#22c55e','#3b82f6','#38bdf8','#a855f7','#ec4899'];
 
+/* ============================================================
+   HİKAYE MÜZİĞİ — iTunes Search API (gerçek şarkı 30sn önizlemeleri)
+   Tüm ülkeler/diller/türler; Android + iPhone tarayıcıda çalışır.
+   ============================================================ */
+let selectedStoryMusic = null; // {trackName, artistName, artworkUrl, previewUrl}
+let storyMusicPreviewAudio = null; // çalan önizleme
+let storyMusicSearchTimer = null;
+
+function openStoryMusicPicker(){
+  const panel = document.getElementById('storyMusicPanel');
+  if(panel) panel.classList.remove('hidden');
+  // Arama kutusuna odaklan → klavye açılır, direkt yazmaya hazır
+  const input = document.getElementById('storyMusicSearch');
+  if(input){ input.focus(); requestAnimationFrame(()=>{ try{ input.focus(); }catch(e){} }); }
+}
+function closeStoryMusicPicker(){
+  stopStoryMusicPreview();
+  const panel = document.getElementById('storyMusicPanel');
+  if(panel) panel.classList.add('hidden');
+}
+function onStoryMusicSearchInput(){
+  const q = document.getElementById('storyMusicSearch').value.trim();
+  if(storyMusicSearchTimer) clearTimeout(storyMusicSearchTimer);
+  if(!q){ return; }
+  // Yazma bitince ara (debounce)
+  storyMusicSearchTimer = setTimeout(()=> searchStoryMusic(q), 450);
+}
+function quickMusicSearch(term){
+  const input = document.getElementById('storyMusicSearch');
+  if(input) input.value = term;
+  searchStoryMusic(term);
+}
+function searchStoryMusic(query){
+  const results = document.getElementById('storyMusicResults');
+  results.innerHTML = '<div style="text-align:center;color:rgba(255,255,255,.5);padding:40px;">Aranıyor...</div>';
+  // iTunes Search API — herkese açık, anahtar gerektirmez
+  const url = 'https://itunes.apple.com/search?term=' + encodeURIComponent(query) + '&media=music&entity=song&limit=40';
+  fetch(url)
+    .then(r => r.json())
+    .then(data => {
+      const songs = (data.results || []).filter(s => s.previewUrl);
+      if(!songs.length){
+        results.innerHTML = '<div style="text-align:center;color:rgba(255,255,255,.5);padding:40px;">Sonuç bulunamadı. Başka bir şey dene.</div>';
+        return;
+      }
+      results.innerHTML = songs.map((s, i) => {
+        const art = (s.artworkUrl100 || s.artworkUrl60 || '').replace('100x100','120x120');
+        return `<div class="musicResultItem" onclick="selectStoryMusic(${i})">
+          <img src="${art}" onerror="this.style.opacity=.3">
+          <div class="mInfo">
+            <div class="mTitle">${escapeHtml(s.trackName||'')}</div>
+            <div class="mArtist">${escapeHtml(s.artistName||'')}</div>
+          </div>
+          <button class="mPlay" onclick="event.stopPropagation();toggleMusicPreview(${i},this)">▶</button>
+        </div>`;
+      }).join('');
+      window._storyMusicSongs = songs;
+    })
+    .catch(err => {
+      results.innerHTML = '<div style="text-align:center;color:rgba(255,255,255,.5);padding:40px;">Bağlantı hatası. İnternetini kontrol et.</div>';
+    });
+}
+function toggleMusicPreview(index, btn){
+  const songs = window._storyMusicSongs || [];
+  const song = songs[index];
+  if(!song || !song.previewUrl) return;
+  // Aynı butona tekrar basıldıysa durdur
+  if(storyMusicPreviewAudio && storyMusicPreviewAudio._idx === index && !storyMusicPreviewAudio.paused){
+    stopStoryMusicPreview();
+    btn.textContent = '▶';
+    return;
+  }
+  stopStoryMusicPreview();
+  storyMusicPreviewAudio = new Audio(song.previewUrl);
+  storyMusicPreviewAudio._idx = index;
+  storyMusicPreviewAudio.play().catch(()=>{});
+  btn.textContent = '⏸';
+  storyMusicPreviewAudio.onended = ()=>{ btn.textContent = '▶'; };
+}
+function stopStoryMusicPreview(){
+  if(storyMusicPreviewAudio){
+    try{ storyMusicPreviewAudio.pause(); }catch(e){}
+    storyMusicPreviewAudio = null;
+  }
+  // Tüm play butonlarını sıfırla
+  document.querySelectorAll('#storyMusicResults .mPlay').forEach(b=> b.textContent='▶');
+}
+function selectStoryMusic(index){
+  const songs = window._storyMusicSongs || [];
+  const song = songs[index];
+  if(!song) return;
+  selectedStoryMusic = {
+    trackName: song.trackName || '',
+    artistName: song.artistName || '',
+    artworkUrl: (song.artworkUrl100 || song.artworkUrl60 || '').replace('100x100','120x120'),
+    previewUrl: song.previewUrl || ''
+  };
+  // Önizleme etiketini göster
+  const tag = document.getElementById('storyMusicTag');
+  document.getElementById('storyMusicTagArt').src = selectedStoryMusic.artworkUrl;
+  document.getElementById('storyMusicTagTxt').textContent = selectedStoryMusic.artistName + ' · ' + selectedStoryMusic.trackName;
+  if(tag) tag.style.display = 'flex';
+  closeStoryMusicPicker();
+  showToast('🎵 Müzik eklendi');
+}
+function removeStoryMusic(){
+  selectedStoryMusic = null;
+  const tag = document.getElementById('storyMusicTag');
+  if(tag) tag.style.display = 'none';
+}
+
 /* Yeni metin ekleme — modern panel açar */
 function addStoryTextOverlay(){
   editingStoryTextId = null;
@@ -8402,7 +8581,7 @@ function openStoryTextEditor(data){
   panel.dataset.fontsize = data.fontSize;
   panel.dataset.bg = data.bg ? '1' : '0';
   const input = document.getElementById('storyTextEditInput');
-  input.textContent = data.text || '';
+  input.value = data.text || '';
   // Font butonları
   document.querySelectorAll('#storyFontRow .storyFontBtn').forEach(b=> b.classList.toggle('active', b.dataset.font === data.font));
   // Renk butonları
@@ -8413,7 +8592,11 @@ function openStoryTextEditor(data){
   document.getElementById('storyBgToggle').classList.toggle('active', !!data.bg);
   updateStoryTextPreview();
   panel.classList.remove('hidden');
-  setTimeout(()=> input.focus(), 50);
+  // iOS: klavyenin açılması için focus, kullanıcı dokunuşunun HEMEN ardından
+  // (gecikmesiz) çağrılmalı. setTimeout gecikmesi klavyeyi engelliyordu.
+  input.focus();
+  // Yedek: bazı cihazlarda ikinci deneme
+  requestAnimationFrame(()=>{ try{ input.focus(); }catch(e){} });
 }
 function closeStoryTextEditor(){
   document.getElementById('storyTextEditPanel').classList.add('hidden');
@@ -8446,20 +8629,21 @@ function updateStoryTextPreview(){
   const color = panel.dataset.color;
   const size = panel.dataset.fontsize;
   const bg = panel.dataset.bg === '1';
-  const hasText = !!(input.textContent && input.textContent.trim());
-  // Stili doğrudan yazdığın alana uygula — canlı önizleme = giriş kutusu (tek yazı)
+  const hasText = !!(input.value && input.value.trim());
+  // Stili doğrudan yazdığın alana uygula — canlı önizleme = giriş kutusu (tek yazı).
+  // Not: iOS zoom yapmasın diye font-size en az 16px tutulur.
   input.style.fontFamily = fontDef.css;
   input.style.fontWeight = fontDef.weight;
   input.style.color = color;
   input.style.caretColor = color;
-  input.style.fontSize = Math.min(52, size) + 'px';
+  input.style.fontSize = Math.max(16, Math.min(52, size)) + 'px';
   input.style.background = (hasText && bg) ? 'rgba(0,0,0,.5)' : 'transparent';
   input.style.textShadow = bg ? 'none' : '0 2px 10px rgba(0,0,0,.85)';
 }
 /* Paneldeki metni kaydet → overlay olarak ekle/güncelle */
 function saveStoryTextOverlay(){
   const panel = document.getElementById('storyTextEditPanel');
-  const text = (document.getElementById('storyTextEditInput').textContent || '').trim();
+  const text = (document.getElementById('storyTextEditInput').value || '').trim();
   if(!text){ closeStoryTextEditor(); return; }
   const color = panel.dataset.color;
   const font = panel.dataset.font;
@@ -8607,6 +8791,10 @@ function publishStory(){
     // Text overlay'leri kaydet
     if(overlays.length){
       storyData.textOverlays = overlays;
+    }
+    // Seçili müziği kaydet (varsa)
+    if(selectedStoryMusic && selectedStoryMusic.previewUrl){
+      storyData.music = selectedStoryMusic;
     }
     fbDb.ref('stories').push().set(storyData).then(()=>{
       btn.disabled = false; btn.textContent = 'Hikayeyi Paylaş';
@@ -8934,6 +9122,9 @@ function showStoryAtIndex(idx){
   const bar = document.getElementById('storyProgressBar');
   bar.innerHTML = currentStoryList.map((_,i)=>`<div class="seg ${i<idx?'done':''}"><div class="fill" id="storyProg${i}"></div></div>`).join('');
 
+  // Hikaye müziği — varsa çal + etiket göster
+  playStoryViewerMusic(s.music);
+
   if(storyTimer) clearInterval(storyTimer);
   const duration = s.mediaType === 'video' ? 15000 : 5000;
   let elapsed = 0;
@@ -8962,8 +9153,35 @@ function closeStoryViewer(ev){
   document.getElementById('storyViewer').classList.add('hidden');
   const vid = document.getElementById('storyViewerVid');
   vid.pause(); vid.src = '';
+  stopStoryViewerMusic(); // hikaye müziğini durdur
   // Ada'yı geri göster
   document.getElementById('island').classList.remove('chat-fullscreen-hide');
+}
+
+/* Hikaye görüntülenirken müzik çal + etiket göster */
+let storyViewerMusicAudio = null;
+function playStoryViewerMusic(music){
+  stopStoryViewerMusic();
+  const tag = document.getElementById('storyViewerMusicTag');
+  if(!music || !music.previewUrl){
+    if(tag) tag.style.display = 'none';
+    return;
+  }
+  // Etiketi göster
+  if(tag){
+    document.getElementById('storyViewerMusicArt').src = music.artworkUrl || '';
+    document.getElementById('storyViewerMusicTxt').textContent = (music.artistName||'') + ' · ' + (music.trackName||'');
+    tag.style.display = 'flex';
+  }
+  // Müziği çal (tarayıcı otomatik oynatmaya izin verirse)
+  storyViewerMusicAudio = new Audio(music.previewUrl);
+  storyViewerMusicAudio.play().catch(()=>{ /* otomatik oynatma engelliyse sessiz geç */ });
+}
+function stopStoryViewerMusic(){
+  if(storyViewerMusicAudio){
+    try{ storyViewerMusicAudio.pause(); }catch(e){}
+    storyViewerMusicAudio = null;
+  }
 }
 
 /* ============================================================
