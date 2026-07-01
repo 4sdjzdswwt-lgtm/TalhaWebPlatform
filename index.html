@@ -1513,7 +1513,17 @@ body.modal-open #island{display:none !important;}
   width:58px;height:58px;border-radius:50%;padding:3px;
   background:linear-gradient(135deg, var(--grad-1), var(--grad-2), var(--grad-3));
 }
-.storyAvatarRing.seen{background:var(--line);}
+/* Hikaye izleyen listesi sekmeleri */
+.viewersTab{
+  flex:1;padding:10px;border-radius:12px;border:none;cursor:pointer;
+  background:var(--surface-2);color:var(--muted);font-size:13px;font-weight:600;font-family:inherit;
+}
+.viewersTab.active{background:var(--accent);color:#fff;}
+/* İzlenmiş hikaye → tema renginin SOLUK hali (parıltı gider) */
+.storyAvatarRing.seen{
+  background:color-mix(in srgb, var(--accent) 22%, transparent);
+  opacity:.6;
+}
 .storyAvatarRing img{width:100%;height:100%;border-radius:50%;object-fit:cover;border:2.5px solid var(--bg);display:block;}
 
 /* Tema değiştirme anahtarı (switch) */
@@ -3078,6 +3088,11 @@ tbody tr:hover{background:var(--surface-2);}
   <div style="padding:12px 16px 20px;background:rgba(0,0,0,.4);" id="storyComposerBottomBar">
     <!-- Gizli caption (Instagram'da bu yok ama altta saklı) -->
     <input type="hidden" id="storyCaption" value="">
+    <!-- Görünürlük seçici -->
+    <div class="audiencePicker" style="margin-bottom:10px;">
+      <button type="button" class="audienceBtn active" data-aud="followers" onclick="setStoryAudience('followers', this)">👥 Takipçilerim</button>
+      <button type="button" class="audienceBtn" data-aud="public" onclick="setStoryAudience('public', this)">🌍 Dünya</button>
+    </div>
     <button class="btn btn-primary" id="storyPublishBtn" style="width:100%;background:var(--gradient-vivid);border:none;border-radius:30px;padding:14px;font-size:15px;font-weight:700;color:#fff;cursor:pointer;" onclick="publishStory()" disabled>Hikayeyi Paylaş</button>
   </div>
 
@@ -3239,12 +3254,12 @@ tbody tr:hover{background:var(--surface-2);}
   <div class="storyBottomBar" id="storyBottomBar" onclick="event.stopPropagation()">
     <!-- Emoji tepkileri -->
     <div class="storyReactions">
-      <button class="storyEmojiBtn" onclick="reactToStory('❤️')">❤️</button>
-      <button class="storyEmojiBtn" onclick="reactToStory('🔥')">🔥</button>
-      <button class="storyEmojiBtn" onclick="reactToStory('😂')">😂</button>
-      <button class="storyEmojiBtn" onclick="reactToStory('😍')">😍</button>
-      <button class="storyEmojiBtn" onclick="reactToStory('👏')">👏</button>
-      <button class="storyEmojiBtn" onclick="reactToStory('😮')">😮</button>
+      <button class="storyEmojiBtn" onclick="event.stopPropagation();reactToStory('❤️')">❤️</button>
+      <button class="storyEmojiBtn" onclick="event.stopPropagation();reactToStory('🔥')">🔥</button>
+      <button class="storyEmojiBtn" onclick="event.stopPropagation();reactToStory('😂')">😂</button>
+      <button class="storyEmojiBtn" onclick="event.stopPropagation();reactToStory('😍')">😍</button>
+      <button class="storyEmojiBtn" onclick="event.stopPropagation();reactToStory('👏')">👏</button>
+      <button class="storyEmojiBtn" onclick="event.stopPropagation();reactToStory('😮')">😮</button>
     </div>
     <!-- Yanıt kutusu -->
     <div class="storyReplyRow">
@@ -8458,6 +8473,9 @@ function openStoryComposer(){
   storyFile = null; storyDataUrl = null;
   storyTextOverlays = [];
   document.getElementById('storyCaption').value = '';
+  // Görünürlüğü varsayılana (takipçiler) döndür
+  storyAudience = 'followers';
+  document.querySelectorAll('#storyComposerBottomBar .audienceBtn').forEach(b=> b.classList.toggle('active', b.dataset.aud === 'followers'));
   // Dropzone'u göster, preview'ı gizle
   const dz = document.getElementById('storyDropzone');
   if(dz) dz.style.display = 'flex';
@@ -8951,6 +8969,8 @@ function bindStoryTextDrag(el){
   const id = parseInt(el.dataset.overlayId);
   let startX = 0, startY = 0, startLeftPct = 0, startTopPct = 0;
   let dragging = false;
+  let overTrash = false;
+  let moved = false; // sürükleme oldu mu (dokunma ayrımı için)
   // Pinch (iki parmak) ile büyütme
   let pinchStartDist = 0, pinchStartSize = 0, pinching = false;
   const container = el.parentElement;
@@ -8958,6 +8978,7 @@ function bindStoryTextDrag(el){
 
   const onStart = (clientX, clientY) => {
     dragging = true;
+    moved = false;
     const overlay = storyTextOverlays.find(t => t.id === id);
     if(!overlay) return;
     startX = clientX; startY = clientY;
@@ -8966,8 +8987,6 @@ function bindStoryTextDrag(el){
     const trash = document.getElementById('storyTrashZone');
     if(trash) trash.style.display = 'flex';
   };
-  let overTrash = false;
-  let moved = false; // sürükleme oldu mu (dokunma ayrımı için)
   const checkTrash = (clientX, clientY)=>{
     const trash = document.getElementById('storyTrashZone');
     if(!trash) return;
@@ -9050,6 +9069,12 @@ function bindStoryTextDrag(el){
     document.addEventListener('mouseup', upHandler);
   });
 }
+let storyAudience = 'followers'; // 'followers' | 'public'
+function setStoryAudience(aud, btn){
+  storyAudience = aud;
+  const picker = btn.closest('.audiencePicker');
+  if(picker) picker.querySelectorAll('.audienceBtn').forEach(b=> b.classList.toggle('active', b===btn));
+}
 function publishStory(){
   if(!requireFirebase() || !fbAuth.currentUser) return;
   if(!storyFile && !storyDataUrl){ showToast('Önce bir fotoğraf veya video seç.'); return; }
@@ -9066,7 +9091,8 @@ function publishStory(){
       uid, url: mediaUrl, mediaUrl: mediaUrl, mediaType: storyMediaType,
       caption, username: savedUsername || '@kullanici',
       userPhoto: currentPhoto, ts: Date.now(),
-      expiresAt: Date.now() + 24*60*60*1000
+      expiresAt: Date.now() + 24*60*60*1000,
+      audience: storyAudience // 'followers' (sadece takipçiler) | 'public' (dünya)
     };
     // Text overlay'leri kaydet
     if(overlays.length){
@@ -9102,6 +9128,14 @@ function publishStory(){
   }
 }
 
+
+/* Hikaye görülme takibi (localStorage) — halkanın parlak/soluk olması için */
+function getStorySeenTs(uid){
+  try{ return parseInt(localStorage.getItem('storySeen_'+uid) || '0') || 0; }catch(e){ return 0; }
+}
+function markStorySeen(uid, ts){
+  try{ localStorage.setItem('storySeen_'+uid, String(ts||Date.now())); }catch(e){}
+}
 
 /* Feed'deki story şeridini yükle — takip edilen kullanıcıların 24 saatlik hikayeleri */
 function loadStoryStrip(){
@@ -9190,11 +9224,15 @@ function loadStoryStrip(){
         container.innerHTML = finalUsers.map(({uid,user})=>{
           const stories = byUser[uid].sort((a,b)=>a.ts-b.ts);
           const first = stories[0];
-          // Başkasının hikayesi KENDİ profil resmiyle görünür
           const photo = user.photo || first.userPhoto || 'https://i.pravatar.cc/60?img=68';
           const uname = (user.username||first.username||'@kullanici').replace(/^@/,'').slice(0,10);
+          // Görülme durumu: bu kullanıcının en yeni hikaye ts'si, daha önce
+          // görülen ts'den büyükse → PARLAK (yeni). Değilse → SOLUK (izlendi).
+          const latestTs = Math.max(...stories.map(s=>s.ts||0));
+          const seenTs = getStorySeenTs(uid);
+          const isSeen = seenTs >= latestTs;
           return `<div class="momentStripItem" oncontextmenu="event.preventDefault();hideStoryUser('${uid}','${escapeHtml(uname)}');return false;" onclick="viewUserStories('${uid}')">
-            <div class="storyAvatarRing"><img src="${photo}" onerror="this.src='https://i.pravatar.cc/60?img=68'"></div>
+            <div class="storyAvatarRing ${isSeen?'seen':''}"><img src="${photo}" onerror="this.src='https://i.pravatar.cc/60?img=68'"></div>
             <span class="momentStripLabel">${uname}</span>
           </div>`;
         }).join('');
@@ -9282,6 +9320,9 @@ function viewUserStories(uid){
     if(!currentStoryList.length){ showToast('Bu kullanıcının aktif hikayesi yok.'); return; }
     currentStoryUser = uid;
     currentStoryIdx = 0;
+    // Görülmüş işaretle (en yeni hikaye ts'si) → halka solar
+    const latestTs = Math.max(...currentStoryList.map(s=>s.ts||0));
+    markStorySeen(uid, latestTs);
     // Ada'yı gizle (story tam ekran)
     document.getElementById('island').classList.add('chat-fullscreen-hide');
     showStoryAtIndex(0);
@@ -9289,6 +9330,31 @@ function viewUserStories(uid){
 }
 // Hangi story ID'sini görüntülüyoruz (silme için)
 let currentStoryId = null;
+
+/* Hikaye izleme kaydı — sahibi ben değilsem, izleyen olarak kaydolurum.
+   Takip edip etmediğim de kaydedilir (dünya/takipçi listesi ayrımı için). */
+function recordStoryView(s){
+  if(!s || !s.id || !fbReady || !fbAuth.currentUser) return;
+  const myUid = fbAuth.currentUser.uid;
+  if(s.uid === myUid) return; // kendi hikayemi izlemek sayılmaz
+  // Takip ediyor muyum? (followers/{sahip}/{ben} veya follows/{ben}/{sahip})
+  fbDb.ref('follows/' + myUid + '/' + s.uid).once('value').then(snap=>{
+    const isFollower = snap.exists();
+    fbDb.ref('storyViews/' + s.id + '/' + myUid).set({
+      uid: myUid,
+      username: savedUsername || '@kullanici',
+      photo: savedProfilePhoto || '',
+      isFollower: isFollower,
+      ts: Date.now()
+    }).catch(()=>{});
+  }).catch(()=>{
+    // Takip bilgisi alınamazsa yine de kaydet
+    fbDb.ref('storyViews/' + s.id + '/' + myUid).set({
+      uid: myUid, username: savedUsername || '@kullanici',
+      photo: savedProfilePhoto || '', isFollower: false, ts: Date.now()
+    }).catch(()=>{});
+  });
+}
 
 function showStoryAtIndex(idx){
   if(idx >= currentStoryList.length){ closeStoryViewer(); return; }
@@ -9298,6 +9364,9 @@ function showStoryAtIndex(idx){
   currentStoryFirebaseKey = s.id || null;
   const viewer = document.getElementById('storyViewer');
   viewer.classList.remove('hidden');
+
+  // İZLEYEN KAYDI — bu hikayeyi ben (başkasının hikayesiyse) izledim
+  recordStoryView(s);
 
   document.getElementById('storyViewerAvatar').src = s.userPhoto || 'https://i.pravatar.cc/60?img=68';
   document.getElementById('storyViewerName').textContent = s.username || '@kullanici';
@@ -9338,17 +9407,19 @@ function showStoryAtIndex(idx){
     if(isMyStory){
       // Kendi hikayem: kaç beğeni var göster - tıklayınca liste açılır
       Promise.all([
+        fbDb.ref('storyViews/' + s.id).once('value'),
         fbDb.ref('storyLikes/' + s.id).once('value'),
         fbDb.ref('storyReactions/' + s.id).once('value')
-      ]).then(([likesSnap, reactSnap])=>{
+      ]).then(([viewsSnap, likesSnap, reactSnap])=>{
+        const views = viewsSnap.val() || {};
         const likes = likesSnap.val() || {};
         const reacts = reactSnap.val() || {};
+        const viewCount = new Set([...Object.keys(views), ...Object.keys(likes), ...Object.keys(reacts)]).size;
         const likeCount = Object.keys(likes).length;
         const reactCount = Object.keys(reacts).length;
-        const totalCount = likeCount + reactCount;
         bottomBar.innerHTML = `
           <button onclick="event.stopPropagation();showStoryViewersList('${s.id}')" style="background:rgba(255,255,255,.1);border:none;border-radius:24px;padding:12px 24px;color:#fff;font-size:14px;font-weight:600;cursor:pointer;backdrop-filter:blur(10px);display:flex;align-items:center;gap:8px;margin:0 auto;">
-            ❤️ ${likeCount} beğeni · ✨ ${reactCount} tepki
+            👁 ${viewCount} görüntüleme${likeCount?` · ❤️ ${likeCount}`:''}${reactCount?` · ✨ ${reactCount}`:''}
           </button>
         `;
       });
@@ -9356,12 +9427,12 @@ function showStoryAtIndex(idx){
       // Başkasının hikayesi: kalp + yanıt kutusu
       bottomBar.innerHTML = `
         <div class="storyReactions">
-          <button class="storyEmojiBtn" onclick="reactToStory('❤️')">❤️</button>
-          <button class="storyEmojiBtn" onclick="reactToStory('🔥')">🔥</button>
-          <button class="storyEmojiBtn" onclick="reactToStory('😂')">😂</button>
-          <button class="storyEmojiBtn" onclick="reactToStory('😍')">😍</button>
-          <button class="storyEmojiBtn" onclick="reactToStory('👏')">👏</button>
-          <button class="storyEmojiBtn" onclick="reactToStory('😮')">😮</button>
+          <button class="storyEmojiBtn" onclick="event.stopPropagation();reactToStory('❤️')">❤️</button>
+          <button class="storyEmojiBtn" onclick="event.stopPropagation();reactToStory('🔥')">🔥</button>
+          <button class="storyEmojiBtn" onclick="event.stopPropagation();reactToStory('😂')">😂</button>
+          <button class="storyEmojiBtn" onclick="event.stopPropagation();reactToStory('😍')">😍</button>
+          <button class="storyEmojiBtn" onclick="event.stopPropagation();reactToStory('👏')">👏</button>
+          <button class="storyEmojiBtn" onclick="event.stopPropagation();reactToStory('😮')">😮</button>
         </div>
         <div class="storyReplyRow">
           <input type="text" id="storyReplyInput" placeholder="Mesaj yaz..." onclick="event.stopPropagation();pauseStoryTimer()" onkeydown="if(event.key==='Enter'){event.stopPropagation();sendStoryReply();}">
@@ -9469,6 +9540,8 @@ function closeStoryViewer(ev){
   stopStoryViewerMusic(); // hikaye müziğini durdur
   // Ada'yı geri göster
   document.getElementById('island').classList.remove('chat-fullscreen-hide');
+  // Şeridi tazele → izlenen halka solar
+  if(typeof loadStoryStrip === 'function') loadStoryStrip();
 }
 
 /* Hikaye görüntülenirken müzik çal + etiket göster */
@@ -9505,13 +9578,33 @@ function playStoryViewerMusic(music){
   // Müziği çal — seçilen başlangıçtan, seçilen süre kadar
   const startAt = Math.max(0, music.startTime || 0);
   const dur = music.duration || 15;
-  storyViewerMusicAudio = new Audio(music.previewUrl);
-  storyViewerMusicAudio.currentTime = startAt;
-  storyViewerMusicAudio.play().catch(()=>{ /* otomatik oynatma engelliyse sessiz geç */ });
+  const audio = new Audio(music.previewUrl);
+  audio.preload = 'auto';
+  storyViewerMusicAudio = audio;
+  // currentTime metadata yüklenince ayarlanabilir
+  const seekAndPlay = ()=>{
+    try{ if(audio.currentTime < startAt) audio.currentTime = startAt; }catch(e){}
+    const p = audio.play();
+    if(p && p.catch){
+      p.catch(()=>{
+        // Otomatik oynatma engellendi → bir sonraki ekran dokunuşunda başlat
+        const resume = ()=>{
+          try{ audio.currentTime = startAt; }catch(e){}
+          audio.play().catch(()=>{});
+          document.removeEventListener('touchstart', resume);
+          document.removeEventListener('click', resume);
+        };
+        document.addEventListener('touchstart', resume, { once:true });
+        document.addEventListener('click', resume, { once:true });
+      });
+    }
+  };
+  if(audio.readyState >= 1){ seekAndPlay(); }
+  else { audio.addEventListener('loadedmetadata', seekAndPlay, { once:true }); audio.load(); }
   // Süre dolunca durdur
-  storyViewerMusicAudio._stopWatcher = setInterval(()=>{
+  audio._stopWatcher = setInterval(()=>{
     if(!storyViewerMusicAudio){ return; }
-    if(storyViewerMusicAudio.currentTime >= startAt + dur){
+    if(audio.currentTime >= startAt + dur){
       stopStoryViewerMusic();
     }
   }, 250);
@@ -10841,8 +10934,7 @@ function reactToStory(emoji){
   
   // Güzel animasyon
   showToast(emoji + ' tepkisi gönderildi!');
-  // Timer'ı devam ettir
-  showStoryAtIndex(currentStoryIdx);
+  // Hikaye kaldığı yerden devam eder (başa sarma YOK)
 }
 
 function sendStoryReply(){
@@ -11804,55 +11896,81 @@ function goToStoryOwnerProfile(){
 
 function showStoryViewersList(storyId){
   if(!fbReady || !storyId) return;
-  // Beğenenler + tepki verenleri birlikte getir
+  // İzleyenler + beğeniler + tepkileri birlikte getir
   Promise.all([
+    fbDb.ref('storyViews/' + storyId).once('value'),
     fbDb.ref('storyLikes/' + storyId).once('value'),
     fbDb.ref('storyReactions/' + storyId).once('value')
-  ]).then(([likesSnap, reactSnap])=>{
+  ]).then(([viewsSnap, likesSnap, reactSnap])=>{
+    const views = viewsSnap.val() || {};
     const likes = likesSnap.val() || {};
     const reacts = reactSnap.val() || {};
-    const allUids = new Set([...Object.keys(likes), ...Object.keys(reacts)]);
-    
+    // Tüm izleyen uid'leri (view + beğeni + tepki verenlerin hepsi izlemiştir)
+    const allUids = new Set([...Object.keys(views), ...Object.keys(likes), ...Object.keys(reacts)]);
     if(!allUids.size){
-      showToast('Henüz kimse beğenmemiş veya tepki vermemiş');
+      showToast('Henüz kimse görüntülemedi');
       return;
     }
-    
-    // Kullanıcı bilgilerini topla
     Promise.all(Array.from(allUids).map(uid =>
       fbDb.ref('users/' + uid).once('value').then(s => ({uid, user: s.val() || {}}))
     )).then(userList => {
-      const overlay = document.createElement('div');
-      overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:700;display:flex;align-items:flex-end;justify-content:center;';
-      overlay.onclick = (e) => { if(e.target === overlay) overlay.remove(); };
-      
-      const rows = userList.filter(({user}) => !user.deleted).map(({uid, user}) => {
+      const valid = userList.filter(({user}) => !user.deleted);
+      // Takipçi / dünya ayrımı: view kaydındaki isFollower
+      const followers = [], world = [];
+      valid.forEach(item=>{
+        const v = views[item.uid];
+        const isFollower = v ? !!v.isFollower : false;
+        (isFollower ? followers : world).push(item);
+      });
+
+      const rowHtml = (item)=>{
+        const {uid, user} = item;
         const liked = !!likes[uid];
         const reaction = reacts[uid] ? reacts[uid].emoji : '';
         const photo = user.photo || 'https://i.pravatar.cc/60?img=68';
         const username = user.username || '@kullanici';
-        return `<div onclick="event.stopPropagation();viewOtherProfile('${uid}');document.querySelectorAll('[data-viewers-overlay]').forEach(el=>el.remove());" style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--line);cursor:pointer;">
+        const extra = (liked ? '❤️' : '') + (reaction ? ' '+reaction : '');
+        return `<div onclick="event.stopPropagation();document.querySelectorAll('[data-viewers-overlay]').forEach(el=>el.remove());viewOtherProfile('${uid}');" style="display:flex;align-items:center;gap:12px;padding:11px 16px;border-bottom:1px solid var(--line);cursor:pointer;">
           <img src="${photo}" style="width:42px;height:42px;border-radius:50%;object-fit:cover;" onerror="this.src='https://i.pravatar.cc/60?img=68'">
-          <div style="flex:1;">
-            <div style="font-weight:600;font-size:14px;color:var(--text);">${escapeHtml(username)}</div>
-            <div style="font-size:11.5px;color:var(--muted);">${liked ? '❤️ Beğendi' : ''}${liked && reaction ? ' · ' : ''}${reaction ? reaction + ' Tepki verdi' : ''}</div>
-          </div>
+          <div style="flex:1;min-width:0;"><div style="font-weight:600;font-size:14px;color:var(--text);">${escapeHtml(username)}</div></div>
+          <div style="font-size:15px;">${extra}</div>
         </div>`;
-      }).join('');
-      
+      };
+
+      const followersHtml = followers.length ? followers.map(rowHtml).join('') : '<div style="text-align:center;color:var(--muted);padding:30px;font-size:13px;">Takipçilerinden izleyen yok</div>';
+      const worldHtml = world.length ? world.map(rowHtml).join('') : '<div style="text-align:center;color:var(--muted);padding:30px;font-size:13px;">Dünyadan izleyen yok</div>';
+
+      const overlay = document.createElement('div');
       overlay.setAttribute('data-viewers-overlay', '1');
+      overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:700;display:flex;align-items:flex-end;justify-content:center;';
+      overlay.onclick = (e) => { if(e.target === overlay) overlay.remove(); };
       overlay.innerHTML = `
-        <div style="width:100%;max-width:480px;background:var(--surface);border-radius:24px 24px 0 0;max-height:70vh;display:flex;flex-direction:column;">
-          <div style="padding:16px 20px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;">
-            <h3 style="margin:0;font-size:16px;color:var(--text);">Etkileşimler</h3>
+        <div style="width:100%;max-width:480px;background:var(--surface);border-radius:24px 24px 0 0;max-height:75vh;display:flex;flex-direction:column;">
+          <div style="padding:16px 20px 10px;display:flex;align-items:center;justify-content:space-between;">
+            <h3 style="margin:0;font-size:16px;color:var(--text);">👁 ${allUids.size} görüntüleme</h3>
             <button onclick="document.querySelectorAll('[data-viewers-overlay]').forEach(el=>el.remove())" style="background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;">✕</button>
           </div>
-          <div style="overflow-y:auto;flex:1;">${rows || '<div style="text-align:center;color:var(--muted);padding:30px;">Henüz etkileşim yok</div>'}</div>
-        </div>
-      `;
+          <div style="display:flex;gap:8px;padding:0 16px 12px;">
+            <button id="viewersTabFollowers" onclick="switchViewersTab('followers')" class="viewersTab active">👥 Takipçiler (${followers.length})</button>
+            <button id="viewersTabWorld" onclick="switchViewersTab('world')" class="viewersTab">🌍 Dünya (${world.length})</button>
+          </div>
+          <div id="viewersListFollowers" style="overflow-y:auto;flex:1;">${followersHtml}</div>
+          <div id="viewersListWorld" style="overflow-y:auto;flex:1;display:none;">${worldHtml}</div>
+        </div>`;
       document.body.appendChild(overlay);
     });
   });
+}
+function switchViewersTab(tab){
+  const fB = document.getElementById('viewersTabFollowers');
+  const wB = document.getElementById('viewersTabWorld');
+  const fL = document.getElementById('viewersListFollowers');
+  const wL = document.getElementById('viewersListWorld');
+  const isF = tab === 'followers';
+  if(fB) fB.classList.toggle('active', isF);
+  if(wB) wB.classList.toggle('active', !isF);
+  if(fL) fL.style.display = isF ? 'block' : 'none';
+  if(wL) wL.style.display = isF ? 'none' : 'block';
 }
 
 /* ============================================================
