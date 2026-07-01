@@ -8930,10 +8930,6 @@ function renderStoryTextOverlays(){
                 padding:6px 14px;white-space:nowrap;text-align:center;border-radius:12px;
                 line-height:1.25;touch-action:none;">
       ${escapeHtml(t.text)}
-      <div class="storyTextTools" style="position:absolute;top:-14px;right:-14px;display:flex;gap:5px;">
-        <button onclick="event.stopPropagation();editStoryTextOverlay(${t.id})" style="background:#3b82f6;border:none;border-radius:50%;width:26px;height:26px;color:#fff;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;" title="Düzenle">✎</button>
-        <button onclick="event.stopPropagation();removeStoryTextOverlay(${t.id})" style="background:#ef4444;border:none;border-radius:50%;width:26px;height:26px;color:#fff;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;" title="Sil">✕</button>
-      </div>
     </div>`;
   }).join('');
   container.querySelectorAll('.storyTextItem').forEach(el => bindStoryTextDrag(el));
@@ -8971,6 +8967,7 @@ function bindStoryTextDrag(el){
     if(trash) trash.style.display = 'flex';
   };
   let overTrash = false;
+  let moved = false; // sürükleme oldu mu (dokunma ayrımı için)
   const checkTrash = (clientX, clientY)=>{
     const trash = document.getElementById('storyTrashZone');
     if(!trash) return;
@@ -8991,6 +8988,7 @@ function bindStoryTextDrag(el){
     const dyPct = ((clientY - startY) / rect.height) * 100;
     overlay.x = Math.max(5, Math.min(95, startLeftPct + dxPct));
     overlay.y = Math.max(5, Math.min(95, startTopPct + dyPct));
+    if(Math.abs(dxPct) > 1.5 || Math.abs(dyPct) > 1.5) moved = true;
     el.style.left = overlay.x + '%';
     el.style.top = overlay.y + '%';
     checkTrash(clientX, clientY);
@@ -9002,6 +9000,9 @@ function bindStoryTextDrag(el){
     if(overTrash){
       // Çöp kutusunda bırakıldı → yazıyı sil
       removeStoryTextOverlay(id);
+    } else if(!moved){
+      // Sürüklenmedi, sadece dokunuldu → düzenle
+      editStoryTextOverlay(id);
     }
     overTrash = false;
   };
@@ -9405,7 +9406,12 @@ function showStoryAtIndex(idx){
   playStoryViewerMusic(s.music);
 
   if(storyTimer) clearInterval(storyTimer);
-  const duration = s.mediaType === 'video' ? 15000 : 5000;
+  // Foto 8sn (Instagram gibi daha rahat), video 15sn.
+  // Müzik varsa, seçilen müzik süresi kadar (min 8sn).
+  let duration = s.mediaType === 'video' ? 15000 : 8000;
+  if(s.music && s.music.duration){
+    duration = Math.max(8000, s.music.duration * 1000);
+  }
   let elapsed = 0;
   storyTimer = setInterval(()=>{
     elapsed += 100;
@@ -9418,12 +9424,40 @@ function showStoryAtIndex(idx){
 /* DUPLICATE removed: deleteCurrentStory */
 
 function advanceStory(ev){
-  if(ev && (ev.target.closest('.storyViewerHeader') || ev.target.tagName === 'BUTTON')) return;
+  if(ev && (ev.target.closest('.storyViewerHeader') || ev.target.closest('.storyBottomBar') || ev.target.tagName === 'BUTTON' || ev.target.tagName === 'INPUT')) return;
+
+  // Dokunulan tarafa göre yön belirle: sol kısım = geri, sağ kısım = ileri
+  let goBack = false;
+  if(ev && ev.clientX != null){
+    const w = window.innerWidth;
+    if(ev.clientX < w * 0.32) goBack = true; // sol %32 → geri
+  }
+
   if(storyTimer) clearInterval(storyTimer);
+
+  if(goBack){
+    // Geri git
+    if(currentStoryIdx > 0){
+      showStoryAtIndex(currentStoryIdx - 1);
+    } else {
+      // İlk hikayedeyiz → baştan başlat (başa sar)
+      showStoryAtIndex(0);
+    }
+    return;
+  }
+
+  // İleri git
   if(currentStoryIdx + 1 < currentStoryList.length){
     showStoryAtIndex(currentStoryIdx + 1);
   } else {
-    closeStoryViewer();
+    // Son hikaye bitti. Kendi hikayemi izliyorsam → başa sar, kapatma.
+    const myUid = (fbAuth && fbAuth.currentUser) ? fbAuth.currentUser.uid : null;
+    const ownerUid = currentStoryList[0] && currentStoryList[0].uid;
+    if(myUid && ownerUid && myUid === ownerUid){
+      showStoryAtIndex(0); // kendi hikayem → başa dön
+    } else {
+      closeStoryViewer();
+    }
   }
 }
 function closeStoryViewer(ev){
