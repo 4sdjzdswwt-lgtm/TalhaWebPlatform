@@ -8504,36 +8504,59 @@ function searchStoryMusic(query){
   const results = document.getElementById('storyMusicResults');
   results.innerHTML = '<div style="text-align:center;color:rgba(255,255,255,.5);padding:40px;">Aranıyor...</div>';
 
-  const apiPath = 'itunes.apple.com/search?term=' + encodeURIComponent(query) + '&media=music&entity=song&limit=40&country=TR';
-  const apiUrl = 'https://' + apiPath;
+  const apiUrl = 'https://itunes.apple.com/search?term=' + encodeURIComponent(query) +
+                 '&media=music&entity=song&limit=40';
+  let settled = false;
 
-  // Birden çok erişim yöntemini SIRAYLA dene. Biri çalışınca dur.
-  // 1) Doğrudan fetch  2-4) çeşitli CORS proxy'leri
-  const attempts = [
-    apiUrl,
-    'https://corsproxy.io/?url=' + encodeURIComponent(apiUrl),
-    'https://api.allorigins.win/raw?url=' + encodeURIComponent(apiUrl),
-    'https://thingproxy.freeboard.io/fetch/' + apiUrl
-  ];
+  const finish = (songs)=>{
+    if(settled) return;
+    settled = true;
+    renderStoryMusicResults(songs);
+  };
 
-  const tryFetch = (i)=>{
-    if(i >= attempts.length){
-      results.innerHTML = '<div style="text-align:center;color:rgba(255,255,255,.5);padding:40px;">Şu an müzik servisine ulaşılamıyor. Biraz sonra tekrar dene.</div>';
+  // --- Yöntem A: JSONP (iTunes'un resmi desteklediği, CORS'suz yol) ---
+  const cbName = 'itunesJP_' + Math.random().toString(36).slice(2);
+  const script = document.createElement('script');
+  let jsonpTimer = null;
+  const cleanupJsonp = ()=>{
+    try{ delete window[cbName]; }catch(e){ window[cbName] = undefined; }
+    if(script.parentNode) script.parentNode.removeChild(script);
+    if(jsonpTimer){ clearTimeout(jsonpTimer); jsonpTimer = null; }
+  };
+  window[cbName] = (data)=>{
+    cleanupJsonp();
+    const songs = (data && data.results) ? data.results : [];
+    finish(songs);
+  };
+  script.src = apiUrl + '&callback=' + cbName;
+  script.onerror = ()=>{ cleanupJsonp(); tryProxies(0); };
+  document.body.appendChild(script);
+  // JSONP 6 saniyede yanıt vermezse proxy'lere geç
+  jsonpTimer = setTimeout(()=>{ if(!settled){ cleanupJsonp(); tryProxies(0); } }, 6000);
+
+  // --- Yöntem B: CORS proxy'leri (JSONP başarısızsa) ---
+  function tryProxies(i){
+    if(settled) return;
+    const proxies = [
+      'https://api.allorigins.win/raw?url=' + encodeURIComponent(apiUrl),
+      'https://corsproxy.io/?url=' + encodeURIComponent(apiUrl),
+      'https://api.codetabs.com/v1/proxy/?quest=' + encodeURIComponent(apiUrl)
+    ];
+    if(i >= proxies.length){
+      if(!settled) results.innerHTML = '<div style="text-align:center;color:rgba(255,255,255,.5);padding:40px;">Şu an müzik servisine ulaşılamıyor. Biraz sonra tekrar dene.</div>';
       return;
     }
-    fetch(attempts[i], { cache:'no-store' })
-      .then(r => { if(!r.ok) throw new Error('http'); return r.json(); })
-      .then(data => {
-        // allorigins bazen {contents:"..."} döndürür
-        let d = data;
+    fetch(proxies[i], { cache:'no-store' })
+      .then(r => r.text())
+      .then(txt => {
+        let d; try{ d = JSON.parse(txt); }catch(e){ throw new Error('parse'); }
         if(d && typeof d.contents === 'string'){ try{ d = JSON.parse(d.contents); }catch(e){} }
         const songs = (d && d.results) ? d.results : [];
-        if(!songs.length && i < attempts.length-1){ tryFetch(i+1); return; }
-        renderStoryMusicResults(songs);
+        if(!songs.length && i < proxies.length-1){ tryProxies(i+1); return; }
+        finish(songs);
       })
-      .catch(()=> tryFetch(i+1));
-  };
-  tryFetch(0);
+      .catch(()=> tryProxies(i+1));
+  }
 }
 function toggleMusicPreview(index, btn){
   const songs = window._storyMusicSongs || [];
