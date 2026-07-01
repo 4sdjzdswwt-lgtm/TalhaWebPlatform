@@ -1519,6 +1519,31 @@ body.modal-open #island{display:none !important;}
   background:var(--surface-2);color:var(--muted);font-size:13px;font-weight:600;font-family:inherit;
 }
 .viewersTab.active{background:var(--accent);color:#fff;}
+/* Çıkartmalar paneli */
+.stickerGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;}
+#customStickerGrid{grid-template-columns:repeat(4,1fr);}
+.stickerOpt{
+  padding:14px 10px;border-radius:14px;border:none;cursor:pointer;
+  background:rgba(255,255,255,.1);color:#fff;font-size:15px;font-weight:600;
+  display:flex;align-items:center;justify-content:center;gap:6px;text-align:center;
+}
+.stickerOpt:active{background:rgba(255,255,255,.22);}
+#customStickerGrid .stickerOpt{font-size:24px;padding:12px;}
+/* Yerleştirilmiş çıkartma öğesi */
+.storyStickerItem{
+  position:absolute;transform:translate(-50%,-50%);pointer-events:auto;cursor:move;
+  user-select:none;-webkit-user-select:none;touch-action:none;
+  display:flex;align-items:center;justify-content:center;
+}
+.stickerChip{
+  background:rgba(255,255,255,.95);color:#111;border-radius:14px;padding:8px 14px;
+  font-weight:700;font-size:16px;display:flex;align-items:center;gap:7px;white-space:nowrap;
+  box-shadow:0 3px 12px rgba(0,0,0,.3);
+}
+.stickerChip.dark{background:rgba(0,0,0,.6);color:#fff;backdrop-filter:blur(6px);}
+.stickerEmojiBig{font-size:64px;text-shadow:0 3px 12px rgba(0,0,0,.4);}
+.stickerClockAnalog{width:90px;height:90px;border-radius:50%;background:rgba(255,255,255,.95);position:relative;box-shadow:0 3px 12px rgba(0,0,0,.3);}
+.stickerEmojiSlider{background:rgba(0,0,0,.55);backdrop-filter:blur(8px);border-radius:20px;padding:14px 18px;min-width:180px;box-shadow:0 3px 12px rgba(0,0,0,.35);}
 /* İzlenmiş hikaye → tema renginin SOLUK hali (parıltı gider) */
 .storyAvatarRing.seen{
   background:color-mix(in srgb, var(--accent) 22%, transparent);
@@ -3045,6 +3070,8 @@ tbody tr:hover{background:var(--surface-2);}
     <button onclick="closeStoryComposer()" style="background:rgba(255,255,255,.1);border:none;border-radius:50%;width:40px;height:40px;color:#fff;font-size:22px;cursor:pointer;">✕</button>
     <h3 style="color:#fff;font-size:15px;font-weight:700;margin:0;">Hikaye</h3>
     <div style="display:flex;gap:8px;">
+      <!-- Çıkartmalar butonu -->
+      <button onclick="openStickerPicker()" id="addStickerBtn" style="background:rgba(255,255,255,.1);border:none;border-radius:50%;width:40px;height:40px;color:#fff;font-size:18px;cursor:pointer;display:none;" title="Çıkartmalar">😀</button>
       <!-- Müzik ekleme butonu -->
       <button onclick="openStoryMusicPicker()" id="addStoryMusicBtn" style="background:rgba(255,255,255,.1);border:none;border-radius:50%;width:40px;height:40px;color:#fff;font-size:18px;cursor:pointer;display:none;" title="Müzik Ekle">🎵</button>
       <!-- Yazı ekleme butonu -->
@@ -3071,6 +3098,8 @@ tbody tr:hover{background:var(--surface-2);}
       
       <!-- Sürüklenebilir metin overlay'leri buraya gelecek -->
       <div id="storyTextOverlaysContainer" style="position:absolute;inset:0;pointer-events:none;"></div>
+      <!-- Çıkartma (sticker) katmanı -->
+      <div id="storyStickerContainer" style="position:absolute;inset:0;pointer-events:none;"></div>
 
       <!-- Yazıyı silmek için çöp kutusu (aşağı sürükleyince görünür) -->
       <div id="storyTrashZone" style="display:none;position:absolute;bottom:24px;left:50%;transform:translateX(-50%);z-index:16;width:60px;height:60px;border-radius:50%;background:rgba(0,0,0,.55);backdrop-filter:blur(8px);align-items:center;justify-content:center;font-size:26px;pointer-events:none;transition:transform .15s,background .15s;">🗑️</div>
@@ -3218,6 +3247,41 @@ tbody tr:hover{background:var(--surface-2);}
     </div>
   </div>
 
+  <!-- ÇIKARTMALAR PANELİ -->
+  <div id="stickerPanel" class="hidden" style="position:absolute;inset:0;z-index:21;background:rgba(0,0,0,.92);backdrop-filter:blur(10px);display:flex;flex-direction:column;">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:16px;padding-top:calc(16px + env(safe-area-inset-top,0px));">
+      <span style="width:44px;"></span>
+      <span style="color:#fff;font-weight:700;font-size:15px;">Çıkartmalar</span>
+      <button onclick="closeStickerPicker()" style="background:none;border:none;color:#fff;font-size:15px;cursor:pointer;opacity:.85;">Kapat</button>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:8px 16px calc(20px + env(safe-area-inset-bottom,0px));-webkit-overflow-scrolling:touch;">
+      <div class="stickerGrid">
+        <button class="stickerOpt" onclick="addStickerMention()">📍 Konum</button>
+        <button class="stickerOpt" onclick="addStickerMention('mention')">@ Bahsetme</button>
+        <button class="stickerOpt" onclick="pickFromStickerMusic()">🎵 Müzik</button>
+        <button class="stickerOpt" onclick="addStickerClock('digital')">🕐 Dijital Saat</button>
+        <button class="stickerOpt" onclick="addStickerClock('analog')">⏰ Analog Saat</button>
+        <button class="stickerOpt" onclick="addStickerDate()">📅 Tarih</button>
+        <button class="stickerOpt" onclick="addStickerDay()">📆 Gün</button>
+        <button class="stickerOpt" onclick="addStickerTemp()">🌡️ Derece</button>
+        <button class="stickerOpt" onclick="addStickerLink()">🔗 Bağlantı</button>
+        <button class="stickerOpt" onclick="addStickerEmojiSlider()">😍 Emoji Kaydırıcı</button>
+        <button class="stickerOpt" onclick="addStickerQuickReaction()">⚡ Hızlı Tepki</button>
+      </div>
+      <div style="color:rgba(255,255,255,.55);font-size:12px;margin:18px 0 10px;">Kendi çıkartmaların</div>
+      <div class="stickerGrid" id="customStickerGrid">
+        <button class="stickerOpt" onclick="addCustomSticker('🔥')">🔥</button>
+        <button class="stickerOpt" onclick="addCustomSticker('❤️')">❤️</button>
+        <button class="stickerOpt" onclick="addCustomSticker('😎')">😎</button>
+        <button class="stickerOpt" onclick="addCustomSticker('✨')">✨</button>
+        <button class="stickerOpt" onclick="addCustomSticker('👑')">👑</button>
+        <button class="stickerOpt" onclick="addCustomSticker('🎉')">🎉</button>
+        <button class="stickerOpt" onclick="addCustomSticker('💯')">💯</button>
+        <button class="stickerOpt" onclick="addCustomSticker('🌟')">🌟</button>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 
@@ -3237,6 +3301,7 @@ tbody tr:hover{background:var(--surface-2);}
   <div id="storyViewerCaption" style="position:absolute;bottom:90px;left:0;right:0;text-align:center;color:#fff;font-size:16px;font-weight:600;text-shadow:0 2px 8px rgba(0,0,0,.7);padding:0 20px;"></div>
   <!-- Sürüklenmiş text overlay'ler (Instagram tarzı) -->
   <div id="storyViewerTextOverlays" style="position:absolute;inset:0;pointer-events:none;"></div>
+  <div id="storyViewerStickers" style="position:absolute;inset:0;pointer-events:none;"></div>
 
   <!-- Hikaye müzik etiketi -->
   <div id="storyViewerMusicTag" style="display:none;position:absolute;bottom:130px;left:50%;transform:translateX(-50%);align-items:center;gap:8px;max-width:80%;background:rgba(0,0,0,.55);backdrop-filter:blur(10px);border-radius:20px;padding:7px 14px 7px 7px;z-index:6;" onclick="event.stopPropagation()">
@@ -8472,6 +8537,7 @@ let storyTimer = null;
 function openStoryComposer(){
   storyFile = null; storyDataUrl = null;
   storyTextOverlays = [];
+  storyStickers = []; // çıkartmaları temizle
   document.getElementById('storyCaption').value = '';
   // Görünürlüğü varsayılana (takipçiler) döndür
   storyAudience = 'followers';
@@ -8526,6 +8592,7 @@ function onStoryFileChosen(ev){
     // Aa + müzik butonları görünsün
     document.getElementById('addStoryTextBtn').style.display = 'block';
     document.getElementById('addStoryMusicBtn').style.display = 'block';
+    document.getElementById('addStickerBtn').style.display = 'block';
     // Mevcut text overlay'leri temizle
     document.getElementById('storyTextOverlaysContainer').innerHTML = '';
     storyTextOverlays = [];
@@ -8538,6 +8605,210 @@ function onStoryFileChosen(ev){
    HİKAYE METİN OVERLAY — Instagram tarzı sürüklenebilir yazı
    ============================================================ */
 let storyTextOverlays = []; // {id, text, x, y, color, fontSize, font, bg}
+
+/* ============================================================
+   HİKAYE ÇIKARTMALARI (STICKER) — konum, saat, tarih, etiket vb.
+   ============================================================ */
+let storyStickers = []; // {id, type, x, y, data}
+let stickerIdCounter = 0;
+
+function openStickerPicker(){ document.getElementById('stickerPanel').classList.remove('hidden'); }
+function closeStickerPicker(){ document.getElementById('stickerPanel').classList.add('hidden'); }
+
+function addStickerBase(type, data){
+  const id = ++stickerIdCounter;
+  storyStickers.push({ id, type, x:50, y:45, data: data||{} });
+  closeStickerPicker();
+  renderStoryStickers();
+  return id;
+}
+
+/* Konum / @bahsetme — kullanıcıdan metin ister */
+function addStickerMention(mode){
+  if(mode === 'mention'){
+    openMentionPicker(); // aşağıda: kullanıcı seçici
+  } else {
+    const loc = prompt('Konum yaz:', '');
+    if(loc && loc.trim()) addStickerBase('location', { text: loc.trim() });
+  }
+}
+function pickFromStickerMusic(){ closeStickerPicker(); openStoryMusicPicker(); }
+
+function addStickerClock(kind){ addStickerBase('clock', { kind: kind||'digital' }); }
+function addStickerDate(){ addStickerBase('date', {}); }
+function addStickerDay(){ addStickerBase('day', {}); }
+function addStickerTemp(){
+  // Konumdan derece almak API ister; kullanıcı elle girsin (basit + güvenilir)
+  const t = prompt('Sıcaklık (°C):', '18');
+  if(t !== null) addStickerBase('temp', { value: (t||'18').replace(/[^0-9\-]/g,'') || '18' });
+}
+function addStickerLink(){
+  const url = prompt('Bağlantı (link) yapıştır:', 'https://');
+  if(url && url.trim().length > 5) addStickerBase('link', { url: url.trim() });
+}
+function addStickerEmojiSlider(){
+  const q = prompt('Soru/başlık (opsiyonel):', 'Bunu ne kadar sevdin?');
+  addStickerBase('emojiSlider', { question: q||'', emoji:'😍' });
+}
+function addStickerQuickReaction(){ addStickerBase('quickReaction', { emojis:['❤️','🔥','👏','😍','😮','😂'] }); }
+function addCustomSticker(emoji){ addStickerBase('emoji', { emoji }); }
+
+function removeStorySticker(id){
+  storyStickers = storyStickers.filter(s => s.id !== id);
+  renderStoryStickers();
+}
+
+/* Çıkartma içeriğini HTML olarak üret */
+function stickerInnerHtml(s){
+  const now = new Date();
+  const days = ['Pazar','Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi'];
+  const months = ['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'];
+  switch(s.type){
+    case 'location': return `<div class="stickerChip">📍 ${escapeHtml(s.data.text||'')}</div>`;
+    case 'mention': return `<div class="stickerChip">@${escapeHtml((s.data.username||'').replace(/^@/,''))}</div>`;
+    case 'emoji': return `<div class="stickerEmojiBig">${s.data.emoji||'⭐'}</div>`;
+    case 'clock':
+      if(s.data.kind === 'analog'){
+        return `<div class="stickerClockAnalog">
+          <div style="position:absolute;left:50%;top:50%;width:3px;height:28px;background:#111;transform-origin:bottom;transform:translate(-50%,-100%) rotate(${(now.getHours()%12)*30 + now.getMinutes()*0.5}deg);border-radius:2px;"></div>
+          <div style="position:absolute;left:50%;top:50%;width:2px;height:38px;background:#111;transform-origin:bottom;transform:translate(-50%,-100%) rotate(${now.getMinutes()*6}deg);border-radius:2px;"></div>
+          <div style="position:absolute;left:50%;top:50%;width:8px;height:8px;background:#111;border-radius:50%;transform:translate(-50%,-50%);"></div>
+        </div>`;
+      }
+      return `<div class="stickerChip">🕐 ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}</div>`;
+    case 'date': return `<div class="stickerChip">📅 ${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}</div>`;
+    case 'day': return `<div class="stickerChip">${days[now.getDay()]}</div>`;
+    case 'temp': return `<div class="stickerChip">🌡️ ${s.data.value||'18'}°C</div>`;
+    case 'link': return `<div class="stickerChip dark">🔗 Bağlantı</div>`;
+    case 'emojiSlider':
+      return `<div class="stickerEmojiSlider">
+        ${s.data.question ? `<div style="color:#fff;font-size:14px;font-weight:600;margin-bottom:10px;text-align:center;">${escapeHtml(s.data.question)}</div>` : ''}
+        <div style="height:8px;background:rgba(255,255,255,.25);border-radius:4px;position:relative;">
+          <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:26px;">${s.data.emoji||'😍'}</div>
+        </div>
+      </div>`;
+    case 'quickReaction':
+      return `<div class="stickerChip" style="gap:4px;">${(s.data.emojis||[]).map(e=>`<span style="font-size:20px;">${e}</span>`).join('')}</div>`;
+    default: return `<div class="stickerChip">⭐</div>`;
+  }
+}
+
+function renderStoryStickers(){
+  const container = document.getElementById('storyStickerContainer');
+  if(!container) return;
+  container.style.pointerEvents = 'none';
+  container.innerHTML = storyStickers.map(s => `
+    <div class="storyStickerItem" data-sticker-id="${s.id}" style="left:${s.x}%;top:${s.y}%;">
+      ${stickerInnerHtml(s)}
+    </div>`).join('');
+  container.querySelectorAll('.storyStickerItem').forEach(el => bindStickerDrag(el));
+}
+
+/* Çıkartma sürükleme + pinch büyütme + çöp kutusuyla silme */
+function bindStickerDrag(el){
+  const id = parseInt(el.dataset.stickerId);
+  const container = el.parentElement;
+  let startX=0, startY=0, sLeft=0, sTop=0, dragging=false, moved=false, overTrash=false;
+  let pinchDist=0, startScale=1;
+  const dist = (t)=> Math.hypot(t[0].clientX-t[1].clientX, t[0].clientY-t[1].clientY);
+  const getS = ()=> storyStickers.find(x=>x.id===id);
+
+  const checkTrash = (x,y)=>{
+    const trash = document.getElementById('storyTrashZone');
+    if(!trash) return;
+    const r = trash.getBoundingClientRect();
+    overTrash = x>r.left-30 && x<r.right+30 && y>r.top-30 && y<r.bottom+30;
+    trash.style.transform = overTrash ? 'translateX(-50%) scale(1.35)' : 'translateX(-50%) scale(1)';
+    trash.style.background = overTrash ? 'rgba(239,68,68,.85)' : 'rgba(0,0,0,.55)';
+    el.style.opacity = overTrash ? '0.4' : '1';
+  };
+  const start = (x,y)=>{ const s=getS(); if(!s) return; dragging=true; moved=false; startX=x; startY=y; sLeft=s.x; sTop=s.y;
+    const trash=document.getElementById('storyTrashZone'); if(trash) trash.style.display='flex'; };
+  const move = (x,y)=>{ const s=getS(); if(!s||!dragging) return; const rect=container.getBoundingClientRect();
+    const dx=((x-startX)/rect.width)*100, dy=((y-startY)/rect.height)*100;
+    if(Math.abs(dx)>1.5||Math.abs(dy)>1.5) moved=true;
+    s.x=Math.max(3,Math.min(97,sLeft+dx)); s.y=Math.max(3,Math.min(97,sTop+dy));
+    el.style.left=s.x+'%'; el.style.top=s.y+'%'; checkTrash(x,y); };
+  const end = ()=>{ dragging=false; const trash=document.getElementById('storyTrashZone');
+    if(trash){ trash.style.display='none'; trash.style.transform='translateX(-50%) scale(1)'; }
+    if(overTrash){ removeStorySticker(id); } else if(!moved){ handleStickerTap(id); }
+    overTrash=false; };
+
+  el.addEventListener('touchstart', e=>{
+    e.preventDefault();
+    if(e.touches.length===2){ dragging=false; pinchDist=dist(e.touches);
+      const s=getS(); startScale = s && s.data.scale ? s.data.scale : 1;
+    } else start(e.touches[0].clientX, e.touches[0].clientY);
+  }, {passive:false});
+  el.addEventListener('touchmove', e=>{
+    e.preventDefault();
+    if(e.touches.length===2){ const s=getS(); if(!s) return;
+      s.data.scale = Math.max(0.5, Math.min(3, startScale * (dist(e.touches)/pinchDist)));
+      el.style.transform = `translate(-50%,-50%) scale(${s.data.scale})`;
+    } else if(dragging) move(e.touches[0].clientX, e.touches[0].clientY);
+  }, {passive:false});
+  el.addEventListener('touchend', e=>{ if(e.touches.length===0) end(); });
+  // Mouse
+  el.addEventListener('mousedown', e=>{ e.preventDefault(); start(e.clientX,e.clientY);
+    const mm=ev=>move(ev.clientX,ev.clientY); const mu=()=>{ end(); document.removeEventListener('mousemove',mm); document.removeEventListener('mouseup',mu); };
+    document.addEventListener('mousemove',mm); document.addEventListener('mouseup',mu); });
+  // Kayıtlı scale uygula
+  const s=getS(); if(s && s.data.scale) el.style.transform = `translate(-50%,-50%) scale(${s.data.scale})`;
+}
+
+/* Çıkartmaya dokununca (düzenlenebilir olanlar) */
+function handleStickerTap(id){
+  const s = storyStickers.find(x=>x.id===id);
+  if(!s) return;
+  if(s.type === 'location'){ const v=prompt('Konum:', s.data.text||''); if(v!==null){ s.data.text=v.trim(); renderStoryStickers(); } }
+  else if(s.type === 'temp'){ const v=prompt('Sıcaklık (°C):', s.data.value||'18'); if(v!==null){ s.data.value=(v||'').replace(/[^0-9\-]/g,'')||'18'; renderStoryStickers(); } }
+  else if(s.type === 'link'){ const v=prompt('Bağlantı:', s.data.url||'https://'); if(v!==null){ s.data.url=v.trim(); renderStoryStickers(); } }
+  else if(s.type === 'emojiSlider'){ const v=prompt('Soru:', s.data.question||''); if(v!==null){ s.data.question=v.trim(); renderStoryStickers(); } }
+}
+
+/* @bahsetme — takip/takipçi arasından kullanıcı seç */
+function openMentionPicker(){
+  closeStickerPicker();
+  if(!fbReady || !fbAuth.currentUser) return;
+  const myUid = fbAuth.currentUser.uid;
+  // Takip ettiklerim + takipçilerim
+  Promise.all([
+    fbDb.ref('follows/' + myUid).once('value'),
+    fbDb.ref('followers/' + myUid).once('value')
+  ]).then(([fSnap, frSnap])=>{
+    const uids = new Set([...Object.keys(fSnap.val()||{}), ...Object.keys(frSnap.val()||{})]);
+    if(!uids.size){ showToast('Etiketlenecek kişi yok.'); return; }
+    Promise.all([...uids].map(uid => fbDb.ref('users/'+uid).once('value').then(s=>({uid,user:s.val()||{}}))))
+      .then(list=>{
+        const valid = list.filter(x=>!x.user.deleted);
+        const overlay = document.createElement('div');
+        overlay.setAttribute('data-mention-overlay','1');
+        overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:800;display:flex;align-items:flex-end;justify-content:center;';
+        overlay.onclick=(e)=>{ if(e.target===overlay) overlay.remove(); };
+        const rows = valid.map(({uid,user})=>{
+          const photo=user.photo||'https://i.pravatar.cc/60?img=68';
+          const uname=user.username||'@kullanici';
+          return `<div onclick="event.stopPropagation();selectMention('${uid}','${escapeHtml(uname)}','${photo}')" style="display:flex;align-items:center;gap:12px;padding:11px 16px;border-bottom:1px solid var(--line);cursor:pointer;">
+            <img src="${photo}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;" onerror="this.src='https://i.pravatar.cc/60?img=68'">
+            <div style="font-weight:600;font-size:14px;color:var(--text);">${escapeHtml(uname)}</div>
+          </div>`;
+        }).join('');
+        overlay.innerHTML=`<div style="width:100%;max-width:480px;background:var(--surface);border-radius:24px 24px 0 0;max-height:70vh;display:flex;flex-direction:column;">
+          <div style="padding:16px 20px;display:flex;align-items:center;justify-content:space-between;">
+            <h3 style="margin:0;font-size:16px;color:var(--text);">Birini etiketle</h3>
+            <button onclick="document.querySelectorAll('[data-mention-overlay]').forEach(el=>el.remove())" style="background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;">✕</button>
+          </div>
+          <div style="overflow-y:auto;flex:1;">${rows}</div>
+        </div>`;
+        document.body.appendChild(overlay);
+      });
+  });
+}
+function selectMention(uid, username, photo){
+  document.querySelectorAll('[data-mention-overlay]').forEach(el=>el.remove());
+  addStickerBase('mention', { uid, username, photo });
+}
+
 let storyTextIdCounter = 0;
 let editingStoryTextId = null;
 
@@ -8831,6 +9102,7 @@ function onStoryPreviewTap(e){
   // Yazıya, butona, müzik etiketine ya da resmin dışına dokunulduysa yeni yazı açma
   const t = e.target;
   if(t.closest('.storyTextItem')) return;      // mevcut yazıyı düzenleme kendi işi
+  if(t.closest('.storyStickerItem')) return;    // çıkartma kendi işi
   if(t.closest('#storyMusicTag')) return;       // müzik etiketi
   if(t.tagName === 'BUTTON') return;
   addStoryTextOverlay();
@@ -9102,11 +9374,28 @@ function publishStory(){
     if(selectedStoryMusic && selectedStoryMusic.previewUrl){
       storyData.music = selectedStoryMusic;
     }
-    fbDb.ref('stories').push().set(storyData).then(()=>{
+    // Çıkartmaları kaydet (varsa)
+    if(storyStickers.length){
+      storyData.stickers = storyStickers.slice();
+    }
+    const storyRef = fbDb.ref('stories').push();
+    const newStoryId = storyRef.key;
+    storyRef.set(storyData).then(()=>{
       btn.disabled = false; btn.textContent = 'Hikayeyi Paylaş';
       closeStoryComposer();
       showToast('Hikayen paylaşıldı 🎉');
       loadStoryStrip();
+      // Etiketlenen kullanıcılara bildirim gönder
+      (storyData.stickers||[]).filter(s=>s.type==='mention' && s.data && s.data.uid).forEach(s=>{
+        const targetUid = s.data.uid;
+        if(targetUid === uid) return; // kendini etiketleme
+        fbDb.ref('notifications/' + targetUid).push({
+          text: '<b>' + (savedUsername||'@kullanici') + '</b> seni bir hikayede etiketledi',
+          photo: savedProfilePhoto || '',
+          targetUid: uid, storyId: newStoryId,
+          ts: Date.now(), type: 'storyMention'
+        }).catch(()=>{});
+      });
     }).catch(err=>{
       btn.disabled = false; btn.textContent = 'Hikayeyi Paylaş';
       console.error('Story save error:', err);
@@ -9394,6 +9683,24 @@ function showStoryAtIndex(idx){
     }
   }
 
+  // Çıkartmalar (sticker) — salt okunur render
+  const stickerCont = document.getElementById('storyViewerStickers');
+  if(stickerCont){
+    if(s.stickers && s.stickers.length){
+      stickerCont.innerHTML = s.stickers.map(st=>{
+        const scale = (st.data && st.data.scale) ? st.data.scale : 1;
+        // mention'a tıklanınca profile git
+        const clickable = (st.type==='mention' && st.data && st.data.uid)
+          ? `onclick="event.stopPropagation();viewOtherProfile('${st.data.uid}')" style="pointer-events:auto;cursor:pointer;`
+          : (st.type==='link' && st.data && st.data.url)
+          ? `onclick="event.stopPropagation();window.open('${(st.data.url||'').replace(/"/g,'')}','_blank')" style="pointer-events:auto;cursor:pointer;`
+          : `style="pointer-events:none;`;
+        return `<div ${clickable}position:absolute;left:${st.x}%;top:${st.y}%;transform:translate(-50%,-50%) scale(${scale});">${stickerInnerHtml(st)}</div>`;
+      }).join('');
+    } else {
+      stickerCont.innerHTML = '';
+    }
+  }
   // Sil butonu — sadece kendi hikayemizde göster
   const delBtn = document.getElementById('storyDeleteBtn');
   const bottomBar = document.getElementById('storyBottomBar');
