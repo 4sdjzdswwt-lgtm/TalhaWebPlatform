@@ -11698,39 +11698,37 @@ function reshareFromChat(ownerUid, storyId){
   }).catch(()=> showToast('Hikaye bulunamadı'));
 }
 
-/* Sohbette paylaşılan gönderiye tıklayınca aç */
+/* Sohbette paylaşılan gönderiye tıklayınca TAM EKRAN aç (beğeni/yorum çalışır) */
 function scrollToSharedPost(postId, ownerUid){
-  if(!postId && !ownerUid){ showToast('Gönderi bulunamadı'); return; }
-  // Önce ana akışta var mı diye bak
-  goNav('home');
-  setTimeout(()=>{
-    const el = document.querySelector('.post[data-post-id="'+postId+'"]');
-    if(el){
-      el.scrollIntoView({behavior:'smooth', block:'center'});
-      el.style.transition='box-shadow .3s'; el.style.boxShadow='0 0 0 3px var(--accent)';
-      setTimeout(()=>el.style.boxShadow='',1500);
-      return;
-    }
-    // Akışta yok → gönderinin gerçekten var olup olmadığını Firebase'den kontrol et
-    if(fbReady && postId){
-      fbDb.ref('posts/' + postId).once('value').then(snap=>{
-        const p = snap.val();
-        const targetUid = ownerUid || (p && p.uid);
-        if(targetUid){
-          viewOtherProfile(targetUid);
-        } else {
-          showToast('Gönderi artık mevcut değil');
-        }
-      }).catch(()=>{
-        if(ownerUid) viewOtherProfile(ownerUid);
-        else showToast('Gönderi açılamadı');
-      });
-    } else if(ownerUid){
-      viewOtherProfile(ownerUid);
-    } else {
-      showToast('Gönderi bulunamadı');
-    }
-  }, 500);
+  if(!postId){ if(ownerUid) viewOtherProfile(ownerUid); else showToast('Gönderi bulunamadı'); return; }
+  if(!fbReady){ showToast('Bağlantı yok'); return; }
+  const myUid = fbAuth.currentUser ? fbAuth.currentUser.uid : null;
+  fbDb.ref('posts/' + postId).once('value').then(snap=>{
+    const p = snap.val();
+    if(!p){ showToast('Gönderi artık mevcut değil'); return; }
+    openSinglePostModal(postId, p, myUid);
+  }).catch(()=>{
+    if(ownerUid) viewOtherProfile(ownerUid);
+    else showToast('Gönderi açılamadı');
+  });
+}
+
+/* Tek gönderiyi tam ekran göster — feed kartının aynısı, beğeni/yorum aktif */
+function openSinglePostModal(id, p, myUid){
+  // Varsa eski modalı kaldır
+  document.querySelectorAll('[data-singlepost-overlay]').forEach(el=>el.remove());
+  const overlay = document.createElement('div');
+  overlay.setAttribute('data-singlepost-overlay','1');
+  overlay.style.cssText = 'position:fixed;inset:0;background:var(--bg);z-index:10002;display:flex;flex-direction:column;';
+  // Üst bar (geri)
+  const cardHtml = renderPostCard(id, p, myUid);
+  overlay.innerHTML = `
+    <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;padding-top:calc(14px + env(safe-area-inset-top,0px));border-bottom:1px solid var(--line);background:var(--surface);">
+      <button onclick="document.querySelectorAll('[data-singlepost-overlay]').forEach(el=>el.remove())" style="background:none;border:none;color:var(--text);font-size:22px;cursor:pointer;">←</button>
+      <span style="font-weight:700;font-size:16px;color:var(--text);">Gönderi</span>
+    </div>
+    <div class="feed" style="flex:1;overflow-y:auto;padding:12px;-webkit-overflow-scrolling:touch;">${cardHtml}</div>`;
+  document.body.appendChild(overlay);
 }
 
 /* Etiketlendiğim bir hikayeyi KENDİ hikayeme yeniden paylaş.
