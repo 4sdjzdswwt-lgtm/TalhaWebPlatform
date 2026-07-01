@@ -290,6 +290,34 @@ body.light-mode #appGlow::after{opacity:.08;}
 #storyMusicTag img{width:30px;height:30px;border-radius:6px;object-fit:cover;flex-shrink:0;}
 #storyMusicTag .smtTxt{color:#fff;font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 #storyMusicTag .smtClose{background:rgba(255,255,255,.2);border:none;border-radius:50%;width:22px;height:22px;color:#fff;font-size:12px;cursor:pointer;flex-shrink:0;}
+/* Müzik ayar paneli — süre butonları ve toggle */
+.trimDurBtn{
+  flex:1;padding:11px 0;border-radius:12px;border:1.5px solid rgba(255,255,255,.2);
+  background:rgba(255,255,255,.08);color:#fff;font-size:14px;font-weight:700;cursor:pointer;
+}
+.trimDurBtn.active{background:#fff;color:#000;border-color:#fff;}
+.trimToggle{
+  width:48px;height:28px;border-radius:16px;border:none;background:rgba(255,255,255,.25);
+  position:relative;cursor:pointer;flex-shrink:0;transition:background .2s;
+}
+.trimToggle .knob{position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:transform .2s;}
+.trimToggle.active{background:#22c55e;}
+.trimToggle.active .knob{transform:translateX(20px);}
+/* Hikaye görüntülemede sol üst KAYAN müzik yazısı */
+#storyViewerMusicMarquee{
+  position:absolute;top:calc(60px + env(safe-area-inset-top,0px));left:14px;z-index:7;
+  max-width:60%;overflow:hidden;display:none;align-items:center;gap:7px;
+  background:rgba(0,0,0,.4);backdrop-filter:blur(8px);border-radius:16px;padding:5px 12px 5px 6px;
+  pointer-events:none;
+}
+#storyViewerMusicMarquee .note{font-size:14px;flex-shrink:0;animation:musicNoteBounce 1s ease-in-out infinite;}
+#storyViewerMusicMarquee .marqueeWrap{overflow:hidden;white-space:nowrap;max-width:180px;}
+#storyViewerMusicMarquee .marqueeTxt{
+  display:inline-block;color:#fff;font-size:12.5px;font-weight:600;white-space:nowrap;
+  padding-left:100%;animation:musicMarquee 8s linear infinite;
+}
+@keyframes musicMarquee{ 0%{transform:translateX(0);} 100%{transform:translateX(-100%);} }
+@keyframes musicNoteBounce{ 0%,100%{transform:translateY(0) rotate(-8deg);} 50%{transform:translateY(-3px) rotate(8deg);} }
 /* Sohbet duvar kağıdı renk seçici noktaları */
 .wallpaperColors{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;}
 .wpColor{
@@ -3124,6 +3152,54 @@ tbody tr:hover{background:var(--surface-2);}
       <div style="text-align:center;color:rgba(255,255,255,.5);padding:40px 20px;font-size:14px;">Bir şarkı veya sanatçı ara 🎧<br><span style="font-size:12px;">Milyonlarca şarkı — tüm diller ve türler</span></div>
     </div>
   </div>
+
+  <!-- MÜZİK AYAR PANELİ (başlangıç noktası + süre + adı gizle) -->
+  <div id="musicTrimPanel" class="hidden" style="position:absolute;inset:0;z-index:21;background:rgba(0,0,0,.94);backdrop-filter:blur(10px);display:flex;flex-direction:column;">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:16px;padding-top:calc(16px + env(safe-area-inset-top,0px));">
+      <button onclick="closeMusicTrimPanel()" style="background:none;border:none;color:#fff;font-size:15px;cursor:pointer;opacity:.85;">Geri</button>
+      <span style="color:#fff;font-weight:700;font-size:15px;">Müziği Ayarla</span>
+      <button onclick="confirmMusicTrim()" style="background:#fff;border:none;color:#000;font-size:15px;font-weight:700;cursor:pointer;padding:8px 20px;border-radius:20px;">Ekle</button>
+    </div>
+    <div style="padding:20px;display:flex;flex-direction:column;gap:22px;">
+      <!-- Şarkı bilgisi -->
+      <div style="display:flex;align-items:center;gap:14px;">
+        <img id="trimArt" src="" style="width:64px;height:64px;border-radius:12px;object-fit:cover;background:#333;">
+        <div style="flex:1;min-width:0;">
+          <div id="trimTitle" style="color:#fff;font-size:16px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>
+          <div id="trimArtist" style="color:rgba(255,255,255,.6);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>
+        </div>
+        <button onclick="previewTrim(this)" style="background:var(--gradient-vivid);border:none;border-radius:20px;color:#fff;font-size:13px;font-weight:600;padding:9px 14px;cursor:pointer;white-space:nowrap;">▶ Dinle</button>
+      </div>
+      <!-- Başlangıç noktası -->
+      <div>
+        <div style="display:flex;justify-content:space-between;color:#fff;font-size:13px;margin-bottom:8px;">
+          <span>Başlangıç noktası</span>
+          <span id="trimStartLabel" style="opacity:.7;">0sn</span>
+        </div>
+        <input type="range" id="trimStart" min="0" max="25" value="0" oninput="setTrimStart(this.value)" style="width:100%;accent-color:#fff;">
+        <div style="font-size:11px;color:rgba(255,255,255,.5);margin-top:4px;">Şarkının hangi saniyesinden başlasın</div>
+      </div>
+      <!-- Süre -->
+      <div>
+        <div style="color:#fff;font-size:13px;margin-bottom:10px;">Süre</div>
+        <div id="trimDurRow" style="display:flex;gap:8px;">
+          <button class="trimDurBtn" data-dur="5" onclick="setTrimDuration(5,this)">5sn</button>
+          <button class="trimDurBtn active" data-dur="15" onclick="setTrimDuration(15,this)">15sn</button>
+          <button class="trimDurBtn" data-dur="20" onclick="setTrimDuration(20,this)">20sn</button>
+          <button class="trimDurBtn" data-dur="30" onclick="setTrimDuration(30,this)">30sn</button>
+        </div>
+      </div>
+      <!-- Adı gizle -->
+      <div style="display:flex;justify-content:space-between;align-items:center;background:rgba(255,255,255,.08);border-radius:14px;padding:14px 16px;">
+        <div>
+          <div style="color:#fff;font-size:14px;font-weight:600;">Şarkı adını gizle</div>
+          <div style="color:rgba(255,255,255,.55);font-size:11.5px;margin-top:2px;">Gizlenince sol üstte kayan yazı olur</div>
+        </div>
+        <button id="trimHideToggle" onclick="toggleTrimHide()" class="trimToggle"><span class="knob"></span></button>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 
@@ -3148,6 +3224,12 @@ tbody tr:hover{background:var(--surface-2);}
   <div id="storyViewerMusicTag" style="display:none;position:absolute;bottom:130px;left:50%;transform:translateX(-50%);align-items:center;gap:8px;max-width:80%;background:rgba(0,0,0,.55);backdrop-filter:blur(10px);border-radius:20px;padding:7px 14px 7px 7px;z-index:6;" onclick="event.stopPropagation()">
     <img id="storyViewerMusicArt" src="" style="width:30px;height:30px;border-radius:6px;object-fit:cover;flex-shrink:0;">
     <span id="storyViewerMusicTxt" style="color:#fff;font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">🎵</span>
+  </div>
+
+  <!-- Sol üst KAYAN müzik yazısı (şarkı adı gizlendiğinde) -->
+  <div id="storyViewerMusicMarquee">
+    <span class="note">🎵</span>
+    <div class="marqueeWrap"><span class="marqueeTxt" id="storyMarqueeTxt"></span></div>
   </div>
 
   <!-- Alt bar: emoji tepkileri + yanıt kutusu -->
@@ -8488,10 +8570,11 @@ function renderStoryMusicResults(songs){
   }
   results.innerHTML = valid.map((s, i) => {
     const art = (s.artworkUrl100 || s.artworkUrl60 || '').replace('100x100','120x120');
+    const src = s.source ? `<span style="font-size:9px;opacity:.4;margin-left:6px;">${s.source}</span>` : '';
     return `<div class="musicResultItem" onclick="selectStoryMusic(${i})">
       <img src="${art}" onerror="this.style.opacity=.3">
       <div class="mInfo">
-        <div class="mTitle">${escapeHtml(s.trackName||'')}</div>
+        <div class="mTitle">${escapeHtml(s.trackName||'')}${src}</div>
         <div class="mArtist">${escapeHtml(s.artistName||'')}</div>
       </div>
       <button class="mPlay" onclick="event.stopPropagation();toggleMusicPreview(${i},this)">▶</button>
@@ -8500,63 +8583,111 @@ function renderStoryMusicResults(songs){
   window._storyMusicSongs = valid;
 }
 
+/* Basit metinle getir (proxy zinciriyle) — JSON döndürür */
+function fetchJsonWithProxies(url){
+  const proxies = [
+    url, // önce doğrudan
+    'https://api.allorigins.win/raw?url=' + encodeURIComponent(url),
+    'https://corsproxy.io/?url=' + encodeURIComponent(url),
+    'https://api.codetabs.com/v1/proxy/?quest=' + encodeURIComponent(url)
+  ];
+  const attempt = (i)=>{
+    if(i >= proxies.length) return Promise.reject('all-failed');
+    return fetch(proxies[i], { cache:'no-store' })
+      .then(r => { if(!r.ok) throw new Error('http'); return r.text(); })
+      .then(txt => {
+        let d; try{ d = JSON.parse(txt); }catch(e){ throw new Error('parse'); }
+        if(d && typeof d.contents === 'string'){ try{ d = JSON.parse(d.contents); }catch(e){} }
+        return d;
+      })
+      .catch(()=> attempt(i+1));
+  };
+  return attempt(0);
+}
+
+/* iTunes araması (JSONP öncelikli) → normalize edilmiş şarkı listesi */
+function searchITunes(query){
+  return new Promise((resolve)=>{
+    const apiUrl = 'https://itunes.apple.com/search?term=' + encodeURIComponent(query) + '&media=music&entity=song&limit=40';
+    let done = false;
+    const cbName = 'itunesJP_' + Math.random().toString(36).slice(2);
+    const script = document.createElement('script');
+    let timer = null;
+    const cleanup = ()=>{ try{ delete window[cbName]; }catch(e){ window[cbName]=undefined; } if(script.parentNode) script.parentNode.removeChild(script); if(timer) clearTimeout(timer); };
+    const norm = (results)=> (results||[]).filter(s=>s.previewUrl).map(s=>({
+      trackName:s.trackName, artistName:s.artistName,
+      artworkUrl100:s.artworkUrl100, previewUrl:s.previewUrl, source:'iTunes'
+    }));
+    window[cbName] = (data)=>{ if(done) return; done=true; cleanup(); resolve(norm(data && data.results)); };
+    script.src = apiUrl + '&callback=' + cbName;
+    script.onerror = ()=>{ if(done) return; cleanup(); fetchJsonWithProxies(apiUrl).then(d=>{ if(!done){done=true; resolve(norm(d&&d.results));} }).catch(()=>{ if(!done){done=true; resolve([]);} }); };
+    document.body.appendChild(script);
+    timer = setTimeout(()=>{ if(done) return; cleanup(); fetchJsonWithProxies(apiUrl).then(d=>{ if(!done){done=true; resolve(norm(d&&d.results));} }).catch(()=>{ if(!done){done=true; resolve([]);} }); }, 5000);
+  });
+}
+
+/* Deezer araması (proxy üzerinden) → normalize edilmiş şarkı listesi */
+function searchDeezer(query){
+  const apiUrl = 'https://api.deezer.com/search?q=' + encodeURIComponent(query) + '&limit=40';
+  return fetchJsonWithProxies(apiUrl).then(d=>{
+    const arr = (d && d.data) ? d.data : [];
+    return arr.filter(t=>t.preview).map(t=>({
+      trackName: t.title,
+      artistName: t.artist ? t.artist.name : '',
+      artworkUrl100: (t.album && (t.album.cover_medium || t.album.cover)) || '',
+      previewUrl: t.preview,
+      source: 'Deezer'
+    }));
+  }).catch(()=> []);
+}
+
 function searchStoryMusic(query){
   const results = document.getElementById('storyMusicResults');
   results.innerHTML = '<div style="text-align:center;color:rgba(255,255,255,.5);padding:40px;">Aranıyor...</div>';
 
-  const apiUrl = 'https://itunes.apple.com/search?term=' + encodeURIComponent(query) +
-                 '&media=music&entity=song&limit=40';
-  let settled = false;
-
-  const finish = (songs)=>{
-    if(settled) return;
-    settled = true;
-    renderStoryMusicResults(songs);
-  };
-
-  // --- Yöntem A: JSONP (iTunes'un resmi desteklediği, CORS'suz yol) ---
-  const cbName = 'itunesJP_' + Math.random().toString(36).slice(2);
-  const script = document.createElement('script');
-  let jsonpTimer = null;
-  const cleanupJsonp = ()=>{
-    try{ delete window[cbName]; }catch(e){ window[cbName] = undefined; }
-    if(script.parentNode) script.parentNode.removeChild(script);
-    if(jsonpTimer){ clearTimeout(jsonpTimer); jsonpTimer = null; }
-  };
-  window[cbName] = (data)=>{
-    cleanupJsonp();
-    const songs = (data && data.results) ? data.results : [];
-    finish(songs);
-  };
-  script.src = apiUrl + '&callback=' + cbName;
-  script.onerror = ()=>{ cleanupJsonp(); tryProxies(0); };
-  document.body.appendChild(script);
-  // JSONP 6 saniyede yanıt vermezse proxy'lere geç
-  jsonpTimer = setTimeout(()=>{ if(!settled){ cleanupJsonp(); tryProxies(0); } }, 6000);
-
-  // --- Yöntem B: CORS proxy'leri (JSONP başarısızsa) ---
-  function tryProxies(i){
-    if(settled) return;
-    const proxies = [
-      'https://api.allorigins.win/raw?url=' + encodeURIComponent(apiUrl),
-      'https://corsproxy.io/?url=' + encodeURIComponent(apiUrl),
-      'https://api.codetabs.com/v1/proxy/?quest=' + encodeURIComponent(apiUrl)
-    ];
-    if(i >= proxies.length){
-      if(!settled) results.innerHTML = '<div style="text-align:center;color:rgba(255,255,255,.5);padding:40px;">Şu an müzik servisine ulaşılamıyor. Biraz sonra tekrar dene.</div>';
+  // iTunes + Deezer'ı PARALEL ara, sonuçları birleştir (daha geniş katalog)
+  Promise.all([
+    searchITunes(query).catch(()=>[]),
+    searchDeezer(query).catch(()=>[])
+  ]).then(([itunes, deezer])=>{
+    // Birleştir + tekilleştir (aynı şarkı+sanatçı iki kez gelmesin)
+    const combined = [];
+    const seen = new Set();
+    // iTunes ve Deezer'ı sırayla harmanla
+    const maxLen = Math.max(itunes.length, deezer.length);
+    for(let i=0;i<maxLen;i++){
+      [itunes[i], deezer[i]].forEach(s=>{
+        if(!s) return;
+        const key = (s.trackName||'').toLowerCase().trim() + '|' + (s.artistName||'').toLowerCase().trim();
+        if(seen.has(key)) return;
+        seen.add(key);
+        combined.push(s);
+      });
+    }
+    if(!combined.length){
+      results.innerHTML = '<div style="text-align:center;color:rgba(255,255,255,.5);padding:40px;">Sonuç bulunamadı. Başka bir şey dene.</div>';
       return;
     }
-    fetch(proxies[i], { cache:'no-store' })
-      .then(r => r.text())
-      .then(txt => {
-        let d; try{ d = JSON.parse(txt); }catch(e){ throw new Error('parse'); }
-        if(d && typeof d.contents === 'string'){ try{ d = JSON.parse(d.contents); }catch(e){} }
-        const songs = (d && d.results) ? d.results : [];
-        if(!songs.length && i < proxies.length-1){ tryProxies(i+1); return; }
-        finish(songs);
-      })
-      .catch(()=> tryProxies(i+1));
-  }
+    // AKILLI SIRALAMA — arama terimine en çok uyanları öne çıkar
+    const q2 = query.toLowerCase().trim();
+    const qWords = q2.split(/\s+/).filter(w=>w.length>1);
+    const score = (s)=>{
+      const title = (s.trackName||'').toLowerCase();
+      const artist = (s.artistName||'').toLowerCase();
+      const hay = title + ' ' + artist;
+      let sc = 0;
+      if(title === q2 || artist === q2) sc += 100;
+      if(title.startsWith(q2) || artist.startsWith(q2)) sc += 50;
+      if(hay.includes(q2)) sc += 25;
+      qWords.forEach(w=>{ if(hay.includes(w)) sc += 6; });
+      if(/karaoke|tribute|made famous|instrumental|8d|sped up|slowed/i.test(title)) sc -= 20;
+      return sc;
+    };
+    combined.sort((a,b)=> score(b) - score(a));
+    renderStoryMusicResults(combined);
+  }).catch(()=>{
+    results.innerHTML = '<div style="text-align:center;color:rgba(255,255,255,.5);padding:40px;">Şu an müzik servisine ulaşılamıyor. Biraz sonra tekrar dene.</div>';
+  });
 }
 function toggleMusicPreview(index, btn){
   const songs = window._storyMusicSongs || [];
@@ -8591,14 +8722,77 @@ function selectStoryMusic(index){
     trackName: song.trackName || '',
     artistName: song.artistName || '',
     artworkUrl: (song.artworkUrl100 || song.artworkUrl60 || '').replace('100x100','120x120'),
-    previewUrl: song.previewUrl || ''
+    previewUrl: song.previewUrl || '',
+    startTime: 0,      // önizleme içinde başlangıç saniyesi (0-25)
+    duration: 15,      // çalma süresi (saniye)
+    hideTitle: false   // şarkı adını gizle → sol üstte kayan yazı
   };
-  // Önizleme etiketini göster
-  const tag = document.getElementById('storyMusicTag');
-  document.getElementById('storyMusicTagArt').src = selectedStoryMusic.artworkUrl;
-  document.getElementById('storyMusicTagTxt').textContent = selectedStoryMusic.artistName + ' · ' + selectedStoryMusic.trackName;
-  if(tag) tag.style.display = 'flex';
+  stopStoryMusicPreview();
   closeStoryMusicPicker();
+  openMusicTrimPanel();
+}
+
+/* Şarkı ayar paneli (başlangıç noktası + süre + adı gizle) */
+function openMusicTrimPanel(){
+  const m = selectedStoryMusic;
+  if(!m) return;
+  document.getElementById('trimArt').src = m.artworkUrl;
+  document.getElementById('trimTitle').textContent = m.trackName;
+  document.getElementById('trimArtist').textContent = m.artistName;
+  document.getElementById('trimStart').value = m.startTime;
+  document.getElementById('trimStartLabel').textContent = m.startTime + 'sn';
+  document.querySelectorAll('#trimDurRow .trimDurBtn').forEach(b=> b.classList.toggle('active', parseInt(b.dataset.dur)===m.duration));
+  document.getElementById('trimHideToggle').classList.toggle('active', !!m.hideTitle);
+  document.getElementById('musicTrimPanel').classList.remove('hidden');
+}
+function closeMusicTrimPanel(){
+  stopStoryMusicPreview();
+  document.getElementById('musicTrimPanel').classList.add('hidden');
+}
+function setTrimStart(val){
+  if(!selectedStoryMusic) return;
+  selectedStoryMusic.startTime = parseInt(val);
+  document.getElementById('trimStartLabel').textContent = val + 'sn';
+}
+function setTrimDuration(sec, btn){
+  if(!selectedStoryMusic) return;
+  selectedStoryMusic.duration = parseInt(sec);
+  document.querySelectorAll('#trimDurRow .trimDurBtn').forEach(b=> b.classList.toggle('active', b===btn));
+}
+function toggleTrimHide(){
+  if(!selectedStoryMusic) return;
+  selectedStoryMusic.hideTitle = !selectedStoryMusic.hideTitle;
+  document.getElementById('trimHideToggle').classList.toggle('active', selectedStoryMusic.hideTitle);
+}
+/* Ayar panelinde seçilen aralığı önizle (dinle) */
+function previewTrim(btn){
+  const m = selectedStoryMusic;
+  if(!m || !m.previewUrl) return;
+  if(storyMusicPreviewAudio && !storyMusicPreviewAudio.paused){
+    stopStoryMusicPreview(); btn.textContent = '▶ Dinle'; return;
+  }
+  stopStoryMusicPreview();
+  storyMusicPreviewAudio = new Audio(m.previewUrl);
+  storyMusicPreviewAudio.currentTime = m.startTime;
+  storyMusicPreviewAudio.play().catch(()=>{});
+  btn.textContent = '⏸ Durdur';
+  const stopAt = m.startTime + m.duration;
+  const watcher = setInterval(()=>{
+    if(!storyMusicPreviewAudio || storyMusicPreviewAudio.paused){ clearInterval(watcher); btn.textContent='▶ Dinle'; return; }
+    if(storyMusicPreviewAudio.currentTime >= stopAt){ stopStoryMusicPreview(); clearInterval(watcher); btn.textContent='▶ Dinle'; }
+  }, 200);
+}
+/* Ayarı onayla → hikaye önizlemesine ekle */
+function confirmMusicTrim(){
+  const m = selectedStoryMusic;
+  if(!m) return;
+  stopStoryMusicPreview();
+  const tag = document.getElementById('storyMusicTag');
+  document.getElementById('storyMusicTagArt').src = m.artworkUrl;
+  document.getElementById('storyMusicTagTxt').textContent = m.artistName + ' · ' + m.trackName;
+  // Etiket gizliyse önizlemede yine küçük göster (kullanıcı görsün), yayında gizlenir
+  if(tag) tag.style.display = 'flex';
+  document.getElementById('musicTrimPanel').classList.add('hidden');
   showToast('🎵 Müzik eklendi');
 }
 function removeStoryMusic(){
@@ -9212,23 +9406,50 @@ let storyViewerMusicAudio = null;
 function playStoryViewerMusic(music){
   stopStoryViewerMusic();
   const tag = document.getElementById('storyViewerMusicTag');
+  const marquee = document.getElementById('storyViewerMusicMarquee');
   if(!music || !music.previewUrl){
     if(tag) tag.style.display = 'none';
+    if(marquee) marquee.style.display = 'none';
     return;
   }
-  // Etiketi göster
-  if(tag){
-    document.getElementById('storyViewerMusicArt').src = music.artworkUrl || '';
-    document.getElementById('storyViewerMusicTxt').textContent = (music.artistName||'') + ' · ' + (music.trackName||'');
-    tag.style.display = 'flex';
+  const label = (music.artistName||'') + ' · ' + (music.trackName||'');
+  const hideTitle = !!music.hideTitle;
+
+  if(hideTitle){
+    // Adı gizli → normal etiket yok, sol üstte KAYAN yazı
+    if(tag) tag.style.display = 'none';
+    if(marquee){
+      document.getElementById('storyMarqueeTxt').textContent = label + '   •   ' + label;
+      marquee.style.display = 'flex';
+    }
+  } else {
+    // Normal alt etiket
+    if(marquee) marquee.style.display = 'none';
+    if(tag){
+      document.getElementById('storyViewerMusicArt').src = music.artworkUrl || '';
+      document.getElementById('storyViewerMusicTxt').textContent = label;
+      tag.style.display = 'flex';
+    }
   }
-  // Müziği çal (tarayıcı otomatik oynatmaya izin verirse)
+
+  // Müziği çal — seçilen başlangıçtan, seçilen süre kadar
+  const startAt = Math.max(0, music.startTime || 0);
+  const dur = music.duration || 15;
   storyViewerMusicAudio = new Audio(music.previewUrl);
+  storyViewerMusicAudio.currentTime = startAt;
   storyViewerMusicAudio.play().catch(()=>{ /* otomatik oynatma engelliyse sessiz geç */ });
+  // Süre dolunca durdur
+  storyViewerMusicAudio._stopWatcher = setInterval(()=>{
+    if(!storyViewerMusicAudio){ return; }
+    if(storyViewerMusicAudio.currentTime >= startAt + dur){
+      stopStoryViewerMusic();
+    }
+  }, 250);
 }
 function stopStoryViewerMusic(){
   if(storyViewerMusicAudio){
     try{ storyViewerMusicAudio.pause(); }catch(e){}
+    if(storyViewerMusicAudio._stopWatcher) clearInterval(storyViewerMusicAudio._stopWatcher);
     storyViewerMusicAudio = null;
   }
 }
