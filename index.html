@@ -9323,6 +9323,10 @@ function setTrimStart(val){
   if(!selectedStoryMusic) return;
   selectedStoryMusic.startTime = parseInt(val);
   document.getElementById('trimStartLabel').textContent = val + 'sn';
+  // Şu an önizleme çalıyorsa, hemen yeni başlangıç noktasına atla
+  if(storyMusicPreviewAudio && !storyMusicPreviewAudio.paused){
+    try{ storyMusicPreviewAudio.currentTime = parseInt(val); }catch(e){}
+  }
 }
 function setTrimDuration(sec, btn){
   if(!selectedStoryMusic) return;
@@ -9334,7 +9338,7 @@ function toggleTrimHide(){
   selectedStoryMusic.hideTitle = !selectedStoryMusic.hideTitle;
   document.getElementById('trimHideToggle').classList.toggle('active', selectedStoryMusic.hideTitle);
 }
-/* Ayar panelinde seçilen aralığı önizle (dinle) */
+/* Ayar panelinde seçilen aralığı önizle (dinle) — seçilen başlangıçtan çalar */
 function previewTrim(btn){
   const m = selectedStoryMusic;
   if(!m || !m.previewUrl) return;
@@ -9342,15 +9346,27 @@ function previewTrim(btn){
     stopStoryMusicPreview(); btn.textContent = '▶ Dinle'; return;
   }
   stopStoryMusicPreview();
-  storyMusicPreviewAudio = new Audio(m.previewUrl);
-  storyMusicPreviewAudio.currentTime = m.startTime;
-  storyMusicPreviewAudio.play().catch(()=>{});
-  btn.textContent = '⏸ Durdur';
-  const stopAt = m.startTime + m.duration;
-  const watcher = setInterval(()=>{
-    if(!storyMusicPreviewAudio || storyMusicPreviewAudio.paused){ clearInterval(watcher); btn.textContent='▶ Dinle'; return; }
-    if(storyMusicPreviewAudio.currentTime >= stopAt){ stopStoryMusicPreview(); clearInterval(watcher); btn.textContent='▶ Dinle'; }
-  }, 200);
+  const audio = new Audio(m.previewUrl);
+  audio.preload = 'auto';
+  storyMusicPreviewAudio = audio;
+  const startAt = m.startTime || 0;
+  const beginPlay = ()=>{
+    try{ audio.currentTime = startAt; }catch(e){}
+    audio.play().catch(()=>{});
+    btn.textContent = '⏸ Durdur';
+    const watcher = setInterval(()=>{
+      if(!storyMusicPreviewAudio || storyMusicPreviewAudio.paused){ clearInterval(watcher); btn.textContent='▶ Dinle'; return; }
+      // Süre, o an seçili başlangıç + süreye göre (kullanıcı slider'ı oynatırken değiştirebilir)
+      const curStart = (selectedStoryMusic && selectedStoryMusic.startTime) || 0;
+      const dur = (selectedStoryMusic && selectedStoryMusic.duration) || 15;
+      if(storyMusicPreviewAudio.currentTime >= curStart + dur){
+        stopStoryMusicPreview(); clearInterval(watcher); btn.textContent='▶ Dinle';
+      }
+    }, 200);
+  };
+  // currentTime metadata yüklenince güvenilir ayarlanır
+  if(audio.readyState >= 1){ beginPlay(); }
+  else { audio.addEventListener('loadedmetadata', beginPlay, { once:true }); audio.load(); }
 }
 /* Ayarı onayla → hikaye önizlemesine ekle */
 function confirmMusicTrim(){
@@ -11684,6 +11700,8 @@ function reshareFromChat(ownerUid, storyId){
 
 /* Sohbette paylaşılan gönderiye tıklayınca aç */
 function scrollToSharedPost(postId, ownerUid){
+  if(!postId && !ownerUid){ showToast('Gönderi bulunamadı'); return; }
+  // Önce ana akışta var mı diye bak
   goNav('home');
   setTimeout(()=>{
     const el = document.querySelector('.post[data-post-id="'+postId+'"]');
@@ -11691,13 +11709,28 @@ function scrollToSharedPost(postId, ownerUid){
       el.scrollIntoView({behavior:'smooth', block:'center'});
       el.style.transition='box-shadow .3s'; el.style.boxShadow='0 0 0 3px var(--accent)';
       setTimeout(()=>el.style.boxShadow='',1500);
+      return;
+    }
+    // Akışta yok → gönderinin gerçekten var olup olmadığını Firebase'den kontrol et
+    if(fbReady && postId){
+      fbDb.ref('posts/' + postId).once('value').then(snap=>{
+        const p = snap.val();
+        const targetUid = ownerUid || (p && p.uid);
+        if(targetUid){
+          viewOtherProfile(targetUid);
+        } else {
+          showToast('Gönderi artık mevcut değil');
+        }
+      }).catch(()=>{
+        if(ownerUid) viewOtherProfile(ownerUid);
+        else showToast('Gönderi açılamadı');
+      });
     } else if(ownerUid){
-      // Akışta yoksa (takip etmiyorsan/eski) sahibin profiline git
       viewOtherProfile(ownerUid);
     } else {
       showToast('Gönderi bulunamadı');
     }
-  }, 400);
+  }, 500);
 }
 
 /* Etiketlendiğim bir hikayeyi KENDİ hikayeme yeniden paylaş.
