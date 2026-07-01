@@ -8482,32 +8482,52 @@ function quickMusicSearch(term){
 function searchStoryMusic(query){
   const results = document.getElementById('storyMusicResults');
   results.innerHTML = '<div style="text-align:center;color:rgba(255,255,255,.5);padding:40px;">Aranıyor...</div>';
-  // iTunes Search API — herkese açık, anahtar gerektirmez
-  const url = 'https://itunes.apple.com/search?term=' + encodeURIComponent(query) + '&media=music&entity=song&limit=40';
-  fetch(url)
-    .then(r => r.json())
-    .then(data => {
-      const songs = (data.results || []).filter(s => s.previewUrl);
-      if(!songs.length){
-        results.innerHTML = '<div style="text-align:center;color:rgba(255,255,255,.5);padding:40px;">Sonuç bulunamadı. Başka bir şey dene.</div>';
-        return;
-      }
-      results.innerHTML = songs.map((s, i) => {
-        const art = (s.artworkUrl100 || s.artworkUrl60 || '').replace('100x100','120x120');
-        return `<div class="musicResultItem" onclick="selectStoryMusic(${i})">
-          <img src="${art}" onerror="this.style.opacity=.3">
-          <div class="mInfo">
-            <div class="mTitle">${escapeHtml(s.trackName||'')}</div>
-            <div class="mArtist">${escapeHtml(s.artistName||'')}</div>
-          </div>
-          <button class="mPlay" onclick="event.stopPropagation();toggleMusicPreview(${i},this)">▶</button>
-        </div>`;
-      }).join('');
-      window._storyMusicSongs = songs;
-    })
-    .catch(err => {
-      results.innerHTML = '<div style="text-align:center;color:rgba(255,255,255,.5);padding:40px;">Bağlantı hatası. İnternetini kontrol et.</div>';
-    });
+
+  // iTunes Search API doğrudan fetch ile CORS'a takılır. JSONP ile çağırıyoruz:
+  // API 'callback' parametresini destekler, sonucu bir fonksiyona sarar → CORS bypass.
+  const cbName = '_itunesCb_' + Date.now();
+  let done = false;
+
+  const cleanup = (script)=>{
+    try{ delete window[cbName]; }catch(e){ window[cbName] = undefined; }
+    if(script && script.parentNode) script.parentNode.removeChild(script);
+  };
+
+  window[cbName] = (data)=>{
+    done = true;
+    const songs = (data && data.results ? data.results : []).filter(s => s.previewUrl);
+    if(!songs.length){
+      results.innerHTML = '<div style="text-align:center;color:rgba(255,255,255,.5);padding:40px;">Sonuç bulunamadı. Başka bir şey dene.</div>';
+      return;
+    }
+    results.innerHTML = songs.map((s, i) => {
+      const art = (s.artworkUrl100 || s.artworkUrl60 || '').replace('100x100','120x120');
+      return `<div class="musicResultItem" onclick="selectStoryMusic(${i})">
+        <img src="${art}" onerror="this.style.opacity=.3">
+        <div class="mInfo">
+          <div class="mTitle">${escapeHtml(s.trackName||'')}</div>
+          <div class="mArtist">${escapeHtml(s.artistName||'')}</div>
+        </div>
+        <button class="mPlay" onclick="event.stopPropagation();toggleMusicPreview(${i},this)">▶</button>
+      </div>`;
+    }).join('');
+    window._storyMusicSongs = songs;
+  };
+
+  const script = document.createElement('script');
+  script.src = 'https://itunes.apple.com/search?term=' + encodeURIComponent(query) +
+               '&media=music&entity=song&limit=40&callback=' + cbName;
+  script.onerror = ()=>{
+    if(!done) results.innerHTML = '<div style="text-align:center;color:rgba(255,255,255,.5);padding:40px;">Bağlantı hatası. İnternetini kontrol et.</div>';
+    cleanup(script);
+  };
+  // Yükleme sonrası temizlik
+  const origCb = window[cbName];
+  window[cbName] = (data)=>{ origCb(data); cleanup(script); };
+  // Zaman aşımı (10sn)
+  setTimeout(()=>{ if(!done){ results.innerHTML = '<div style="text-align:center;color:rgba(255,255,255,.5);padding:40px;">Yanıt gelmedi, tekrar dene.</div>'; cleanup(script); } }, 10000);
+
+  document.body.appendChild(script);
 }
 function toggleMusicPreview(index, btn){
   const songs = window._storyMusicSongs || [];
