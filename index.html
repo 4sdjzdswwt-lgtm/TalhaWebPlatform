@@ -266,6 +266,11 @@ body.light-mode #appGlow::after{opacity:.08;}
 .storyColorBtn.active{border-color:#fff;transform:scale(1.15);box-shadow:0 0 0 2px rgba(0,0,0,.3);}
 #storyBgToggle.active{background:#fff;color:#000;}
 #storyTextEditPreview{transition:none;}
+/* contenteditable boşken placeholder göster */
+#storyTextEditInput:empty:before{
+  content:attr(data-placeholder);
+  opacity:.5;
+}
 /* Sohbet duvar kağıdı renk seçici noktaları */
 .wallpaperColors{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;}
 .wpColor{
@@ -3023,10 +3028,12 @@ tbody tr:hover{background:var(--surface-2);}
       <button onclick="saveStoryTextOverlay()" style="background:#fff;border:none;color:#000;font-size:15px;font-weight:700;cursor:pointer;padding:8px 20px;border-radius:20px;">Bitti</button>
     </div>
     <!-- Orta: canlı önizleme + giriş -->
-    <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:20px;position:relative;">
-      <div id="storyTextEditPreview" style="position:absolute;pointer-events:none;max-width:92%;text-align:center;white-space:pre-wrap;word-break:break-word;padding:6px 14px;border-radius:12px;line-height:1.2;opacity:.55;z-index:1;">Yazmaya başla...</div>
-      <textarea id="storyTextEditInput" oninput="updateStoryTextPreview()" rows="3"
-        style="position:absolute;inset:0;width:100%;height:100%;background:transparent;border:none;outline:none;color:transparent;caret-color:#fff;text-align:center;font-size:1px;resize:none;font-family:inherit;padding:0;z-index:2;"></textarea>
+    <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:20px;position:relative;" onclick="document.getElementById('storyTextEditInput').focus()">
+      <div id="storyTextEditInput" contenteditable="true" oninput="updateStoryTextPreview()"
+        data-placeholder="Yazmaya başla..."
+        style="max-width:92%;text-align:center;white-space:pre-wrap;word-break:normal;overflow-wrap:break-word;
+               padding:6px 14px;border-radius:12px;line-height:1.25;outline:none;caret-color:#fff;
+               min-width:40px;min-height:1.2em;"></div>
     </div>
     <!-- Boyut slider (yanda dikey değil, altta yatay — daha kullanışlı) -->
     <div style="display:flex;align-items:center;gap:12px;padding:0 24px 8px;">
@@ -8395,7 +8402,7 @@ function openStoryTextEditor(data){
   panel.dataset.fontsize = data.fontSize;
   panel.dataset.bg = data.bg ? '1' : '0';
   const input = document.getElementById('storyTextEditInput');
-  input.value = data.text || '';
+  input.textContent = data.text || '';
   // Font butonları
   document.querySelectorAll('#storyFontRow .storyFontBtn').forEach(b=> b.classList.toggle('active', b.dataset.font === data.font));
   // Renk butonları
@@ -8434,26 +8441,25 @@ function toggleStoryBg(){
 }
 function updateStoryTextPreview(){
   const panel = document.getElementById('storyTextEditPanel');
-  const prev = document.getElementById('storyTextEditPreview');
   const input = document.getElementById('storyTextEditInput');
   const fontDef = STORY_FONTS.find(f=>f.key===panel.dataset.font) || STORY_FONTS[0];
   const color = panel.dataset.color;
   const size = panel.dataset.fontsize;
   const bg = panel.dataset.bg === '1';
-  const hasText = !!input.value;
-  prev.textContent = input.value || 'Yazmaya başla...';
-  prev.style.opacity = hasText ? '1' : '.5';
-  prev.style.fontFamily = fontDef.css;
-  prev.style.fontWeight = fontDef.weight;
-  prev.style.color = color;
-  prev.style.fontSize = Math.min(48, size*0.9) + 'px';
-  prev.style.background = (hasText && bg) ? 'rgba(0,0,0,.5)' : 'transparent';
-  prev.style.textShadow = bg ? 'none' : '0 2px 10px rgba(0,0,0,.85)';
+  const hasText = !!(input.textContent && input.textContent.trim());
+  // Stili doğrudan yazdığın alana uygula — canlı önizleme = giriş kutusu (tek yazı)
+  input.style.fontFamily = fontDef.css;
+  input.style.fontWeight = fontDef.weight;
+  input.style.color = color;
+  input.style.caretColor = color;
+  input.style.fontSize = Math.min(52, size) + 'px';
+  input.style.background = (hasText && bg) ? 'rgba(0,0,0,.5)' : 'transparent';
+  input.style.textShadow = bg ? 'none' : '0 2px 10px rgba(0,0,0,.85)';
 }
 /* Paneldeki metni kaydet → overlay olarak ekle/güncelle */
 function saveStoryTextOverlay(){
   const panel = document.getElementById('storyTextEditPanel');
-  const text = document.getElementById('storyTextEditInput').value.trim();
+  const text = (document.getElementById('storyTextEditInput').textContent || '').trim();
   if(!text){ closeStoryTextEditor(); return; }
   const color = panel.dataset.color;
   const font = panel.dataset.font;
@@ -8483,8 +8489,8 @@ function renderStoryTextOverlays(){
          style="position:absolute;left:${t.x}%;top:${t.y}%;transform:translate(-50%,-50%);
                 color:${t.color};font-size:${t.fontSize}px;font-family:${fontDef.css};font-weight:${fontDef.weight};
                 text-shadow:${shadow};${bgStyle}cursor:move;pointer-events:auto;user-select:none;-webkit-user-select:none;
-                padding:6px 14px;white-space:pre;text-align:center;border-radius:12px;
-                line-height:1.2;touch-action:none;">
+                padding:6px 14px;white-space:nowrap;text-align:center;border-radius:12px;
+                line-height:1.25;touch-action:none;">
       ${escapeHtml(t.text)}
       <div class="storyTextTools" style="position:absolute;top:-14px;right:-14px;display:flex;gap:5px;">
         <button onclick="event.stopPropagation();editStoryTextOverlay(${t.id})" style="background:#3b82f6;border:none;border-radius:50%;width:26px;height:26px;color:#fff;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;" title="Düzenle">✎</button>
@@ -8842,7 +8848,7 @@ function showStoryAtIndex(idx){
         const bg = t.bg ? 'background:rgba(0,0,0,.5);' : 'background:transparent;';
         const shadow = t.bg ? 'none' : '0 2px 10px rgba(0,0,0,.85)';
         return `
-        <div style="position:absolute;left:${t.x}%;top:${t.y}%;transform:translate(-50%,-50%);color:${t.color||'#fff'};font-size:${t.fontSize||28}px;font-family:${fam};font-weight:${wt};text-shadow:${shadow};${bg}padding:6px 14px;white-space:pre;text-align:center;border-radius:12px;line-height:1.2;pointer-events:none;">
+        <div style="position:absolute;left:${t.x}%;top:${t.y}%;transform:translate(-50%,-50%);color:${t.color||'#fff'};font-size:${t.fontSize||28}px;font-family:${fam};font-weight:${wt};text-shadow:${shadow};${bg}padding:6px 14px;white-space:nowrap;text-align:center;border-radius:12px;line-height:1.25;pointer-events:none;">
           ${escapeHtml(t.text||'')}
         </div>`;
       }).join('');
