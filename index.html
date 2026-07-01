@@ -3055,12 +3055,15 @@ tbody tr:hover{background:var(--surface-2);}
     <input type="file" id="storyFileInput" accept="image/*,video/*" onchange="onStoryFileChosen(event)" style="position:absolute;opacity:0;width:1px;height:1px;">
     
     <!-- Seçilen fotoğraf preview'ı (gizli, fotoğraf seçince görünür) -->
-    <div id="storyMediaPreview" style="display:none;width:100%;height:100%;position:relative;">
+    <div id="storyMediaPreview" style="display:none;width:100%;height:100%;position:relative;" onclick="onStoryPreviewTap(event)">
       <img id="storyPreviewImg" src="" style="width:100%;height:100%;object-fit:contain;">
       <video id="storyPreviewVid" style="width:100%;height:100%;object-fit:contain;display:none;" autoplay loop muted playsinline></video>
       
       <!-- Sürüklenebilir metin overlay'leri buraya gelecek -->
       <div id="storyTextOverlaysContainer" style="position:absolute;inset:0;pointer-events:none;"></div>
+
+      <!-- Yazıyı silmek için çöp kutusu (aşağı sürükleyince görünür) -->
+      <div id="storyTrashZone" style="display:none;position:absolute;bottom:24px;left:50%;transform:translateX(-50%);z-index:16;width:60px;height:60px;border-radius:50%;background:rgba(0,0,0,.55);backdrop-filter:blur(8px);align-items:center;justify-content:center;font-size:26px;pointer-events:none;transition:transform .15s,background .15s;">🗑️</div>
 
       <!-- Seçili müzik etiketi -->
       <div id="storyMusicTag">
@@ -8554,7 +8557,7 @@ function onStoryMusicSearchInput(){
   if(storyMusicSearchTimer) clearTimeout(storyMusicSearchTimer);
   if(!q){ return; }
   // Yazma bitince ara (debounce)
-  storyMusicSearchTimer = setTimeout(()=> searchStoryMusic(q), 450);
+  storyMusicSearchTimer = setTimeout(()=> searchStoryMusic(q), 250);
 }
 function quickMusicSearch(term){
   const input = document.getElementById('storyMusicSearch');
@@ -8622,7 +8625,7 @@ function searchITunes(query){
     script.src = apiUrl + '&callback=' + cbName;
     script.onerror = ()=>{ if(done) return; cleanup(); fetchJsonWithProxies(apiUrl).then(d=>{ if(!done){done=true; resolve(norm(d&&d.results));} }).catch(()=>{ if(!done){done=true; resolve([]);} }); };
     document.body.appendChild(script);
-    timer = setTimeout(()=>{ if(done) return; cleanup(); fetchJsonWithProxies(apiUrl).then(d=>{ if(!done){done=true; resolve(norm(d&&d.results));} }).catch(()=>{ if(!done){done=true; resolve([]);} }); }, 5000);
+    timer = setTimeout(()=>{ if(done) return; cleanup(); fetchJsonWithProxies(apiUrl).then(d=>{ if(!done){done=true; resolve(norm(d&&d.results));} }).catch(()=>{ if(!done){done=true; resolve([]);} }); }, 3000);
   });
 }
 
@@ -8645,49 +8648,47 @@ function searchStoryMusic(query){
   const results = document.getElementById('storyMusicResults');
   results.innerHTML = '<div style="text-align:center;color:rgba(255,255,255,.5);padding:40px;">Aranıyor...</div>';
 
-  // iTunes + Deezer'ı PARALEL ara, sonuçları birleştir (daha geniş katalog)
-  Promise.all([
-    searchITunes(query).catch(()=>[]),
-    searchDeezer(query).catch(()=>[])
-  ]).then(([itunes, deezer])=>{
-    // Birleştir + tekilleştir (aynı şarkı+sanatçı iki kez gelmesin)
-    const combined = [];
-    const seen = new Set();
-    // iTunes ve Deezer'ı sırayla harmanla
-    const maxLen = Math.max(itunes.length, deezer.length);
-    for(let i=0;i<maxLen;i++){
-      [itunes[i], deezer[i]].forEach(s=>{
-        if(!s) return;
-        const key = (s.trackName||'').toLowerCase().trim() + '|' + (s.artistName||'').toLowerCase().trim();
-        if(seen.has(key)) return;
-        seen.add(key);
-        combined.push(s);
-      });
-    }
-    if(!combined.length){
+  const reqId = (window._musicReqId = (window._musicReqId||0) + 1); // eski aramaları yok say
+  const q2 = query.toLowerCase().trim();
+  const qWords = q2.split(/\s+/).filter(w=>w.length>1);
+  const score = (s)=>{
+    const title = (s.trackName||'').toLowerCase();
+    const artist = (s.artistName||'').toLowerCase();
+    const hay = title + ' ' + artist;
+    let sc = 0;
+    if(title === q2 || artist === q2) sc += 100;
+    if(title.startsWith(q2) || artist.startsWith(q2)) sc += 50;
+    if(hay.includes(q2)) sc += 25;
+    qWords.forEach(w=>{ if(hay.includes(w)) sc += 6; });
+    if(/karaoke|tribute|made famous|instrumental|8d|sped up|slowed/i.test(title)) sc -= 20;
+    return sc;
+  };
+
+  const seen = new Set();
+  let pool = [];
+  let anyDone = false, allDone = 0;
+
+  const mergeAndRender = (list)=>{
+    if(reqId !== window._musicReqId) return; // daha yeni arama başladıysa iptal
+    (list||[]).forEach(s=>{
+      const key = (s.trackName||'').toLowerCase().trim() + '|' + (s.artistName||'').toLowerCase().trim();
+      if(seen.has(key)) return;
+      seen.add(key); pool.push(s);
+    });
+    pool.sort((a,b)=> score(b) - score(a));
+    if(pool.length){ anyDone = true; renderStoryMusicResults(pool); }
+  };
+
+  const oneFinished = ()=>{
+    allDone++;
+    if(allDone >= 2 && !anyDone && reqId === window._musicReqId){
       results.innerHTML = '<div style="text-align:center;color:rgba(255,255,255,.5);padding:40px;">Sonuç bulunamadı. Başka bir şey dene.</div>';
-      return;
     }
-    // AKILLI SIRALAMA — arama terimine en çok uyanları öne çıkar
-    const q2 = query.toLowerCase().trim();
-    const qWords = q2.split(/\s+/).filter(w=>w.length>1);
-    const score = (s)=>{
-      const title = (s.trackName||'').toLowerCase();
-      const artist = (s.artistName||'').toLowerCase();
-      const hay = title + ' ' + artist;
-      let sc = 0;
-      if(title === q2 || artist === q2) sc += 100;
-      if(title.startsWith(q2) || artist.startsWith(q2)) sc += 50;
-      if(hay.includes(q2)) sc += 25;
-      qWords.forEach(w=>{ if(hay.includes(w)) sc += 6; });
-      if(/karaoke|tribute|made famous|instrumental|8d|sped up|slowed/i.test(title)) sc -= 20;
-      return sc;
-    };
-    combined.sort((a,b)=> score(b) - score(a));
-    renderStoryMusicResults(combined);
-  }).catch(()=>{
-    results.innerHTML = '<div style="text-align:center;color:rgba(255,255,255,.5);padding:40px;">Şu an müzik servisine ulaşılamıyor. Biraz sonra tekrar dene.</div>';
-  });
+  };
+
+  // İki kaynağı paralel başlat — HANGİSİ ÖNCE GELİRSE hemen göster, diğeri sonra eklenir.
+  searchITunes(query).then(r=>{ mergeAndRender(r); }).catch(()=>{}).finally(oneFinished);
+  searchDeezer(query).then(r=>{ mergeAndRender(r); }).catch(()=>{}).finally(oneFinished);
 }
 function toggleMusicPreview(index, btn){
   const songs = window._storyMusicSongs || [];
@@ -8805,6 +8806,16 @@ function removeStoryMusic(){
 function addStoryTextOverlay(){
   editingStoryTextId = null;
   openStoryTextEditor({ text:'', x:50, y:45, color:'#ffffff', fontSize:34, font:'modern', bg:false });
+}
+
+/* Fotoğrafın boş alanına dokununca yeni yazı ekle (klavye açılır) */
+function onStoryPreviewTap(e){
+  // Yazıya, butona, müzik etiketine ya da resmin dışına dokunulduysa yeni yazı açma
+  const t = e.target;
+  if(t.closest('.storyTextItem')) return;      // mevcut yazıyı düzenleme kendi işi
+  if(t.closest('#storyMusicTag')) return;       // müzik etiketi
+  if(t.tagName === 'BUTTON') return;
+  addStoryTextOverlay();
 }
 
 /* Var olan metni düzenle */
@@ -8955,6 +8966,21 @@ function bindStoryTextDrag(el){
     if(!overlay) return;
     startX = clientX; startY = clientY;
     startLeftPct = overlay.x; startTopPct = overlay.y;
+    // Çöp kutusunu göster
+    const trash = document.getElementById('storyTrashZone');
+    if(trash) trash.style.display = 'flex';
+  };
+  let overTrash = false;
+  const checkTrash = (clientX, clientY)=>{
+    const trash = document.getElementById('storyTrashZone');
+    if(!trash) return;
+    const r = trash.getBoundingClientRect();
+    // Çöp kutusuna yakınsa (biraz geniş alan)
+    const near = clientX > r.left-30 && clientX < r.right+30 && clientY > r.top-30 && clientY < r.bottom+30;
+    overTrash = near;
+    trash.style.transform = near ? 'translateX(-50%) scale(1.35)' : 'translateX(-50%) scale(1)';
+    trash.style.background = near ? 'rgba(239,68,68,.85)' : 'rgba(0,0,0,.55)';
+    if(el) el.style.opacity = near ? '0.4' : '1';
   };
   const onMove = (clientX, clientY) => {
     if(!dragging) return;
@@ -8967,8 +8993,18 @@ function bindStoryTextDrag(el){
     overlay.y = Math.max(5, Math.min(95, startTopPct + dyPct));
     el.style.left = overlay.x + '%';
     el.style.top = overlay.y + '%';
+    checkTrash(clientX, clientY);
   };
-  const onEnd = () => { dragging = false; };
+  const onEnd = () => {
+    dragging = false;
+    const trash = document.getElementById('storyTrashZone');
+    if(trash){ trash.style.display = 'none'; trash.style.transform = 'translateX(-50%) scale(1)'; }
+    if(overTrash){
+      // Çöp kutusunda bırakıldı → yazıyı sil
+      removeStoryTextOverlay(id);
+    }
+    overTrash = false;
+  };
 
   // Touch — tek parmak sürükle, iki parmak büyüt
   el.addEventListener('touchstart', e => {
