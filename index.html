@@ -1762,6 +1762,18 @@ tbody tr:hover{background:var(--surface-2);}
   font-family:'Space Grotesk',sans-serif;transition:all .15s;
 }
 .momentShotBtn.active{border-color:transparent;background:var(--gradient-vivid);color:#fff;transform:scale(1.05);box-shadow:0 4px 12px rgba(124,58,237,.4);}
+/* Kolaj şablonu seçici */
+.collageTemplateRow{display:flex;gap:10px;overflow-x:auto;padding-bottom:8px;margin-bottom:16px;-webkit-overflow-scrolling:touch;}
+.collageTemplateBtn{
+  flex-shrink:0;width:70px;height:90px;border-radius:12px;border:2px solid var(--line);
+  background:var(--surface-2);cursor:pointer;overflow:hidden;position:relative;padding:0;
+  display:flex;align-items:center;justify-content:center;
+}
+.collageTemplateBtn.active{border-color:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 40%,transparent);}
+.collageTemplateBtn img{width:100%;height:100%;object-fit:cover;}
+.collageTemplateBtn .ctLabel{position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,.6);color:#fff;font-size:9px;padding:2px;text-align:center;}
+.collageTemplateBtn .ctNone{font-size:11px;color:var(--muted);font-weight:600;}
+.collageTemplateBtn .ctUpload{font-size:22px;color:var(--accent);}
 
 .momentFriendSearch{
   background:var(--surface-2);border:1px solid var(--line);border-radius:12px;
@@ -3389,6 +3401,13 @@ tbody tr:hover{background:var(--surface-2);}
         <button class="momentShotBtn" data-shots="5" onclick="setMomentShotCount(5, this)">5</button>
         <button class="momentShotBtn" data-shots="6" onclick="setMomentShotCount(6, this)">6</button>
       </div>
+
+      <!-- KOLAJ ŞABLONU SEÇİCİ -->
+      <label style="display:block;font-size:12px;color:var(--muted);margin-bottom:8px;">Kolaj şablonu (süslü çerçeve)</label>
+      <div class="collageTemplateRow" id="collageTemplateRow">
+        <!-- JS ile doldurulur -->
+      </div>
+      <input type="file" id="collageTemplateUpload" accept="image/*" style="display:none;" onchange="onCollageTemplateUpload(this)">
 
       <label style="display:block;font-size:12px;color:var(--muted);margin-bottom:8px;">Kimleri davet edeceksin? (en fazla 6 kişi)</label>
       <input type="text" class="momentFriendSearch" id="momentFriendSearch" placeholder="Takip ettiklerinde ara..." oninput="renderMomentFriendList()">
@@ -6961,6 +6980,206 @@ let momentCountdownStarted = false;
 let momentSessionPendingChallenge = '';
 let momentInviteListenerRef = null;
 
+/* ============================================================
+   KOLAJ ŞABLONLARI (süslü çerçeveler)
+   Her şablon: kaç foto (shots), çerçeve görseli (frameUrl),
+   foto kutuları (boxes: {x,y,w,h} yüzde 0-1). Çerçeve fotoğrafların ÜSTÜNE çizilir.
+   frameUrl boşsa sadece kutulara foto yerleşir (basit ızgara).
+   ============================================================ */
+let COLLAGE_TEMPLATES = [
+  // Şablonsuz (klasik ızgara) — her sayı için geçerli
+  { id:'none', name:'Klasik', shots:0, frameUrl:'', boxes:null },
+];
+// Kullanıcının yüklediği özel şablonlar (bu oturumda)
+let userCollageTemplates = [];
+let selectedCollageTemplate = null; // seçili şablon nesnesi
+
+/* Şablon seçici satırını çiz — mevcut kare sayısına uygun şablonları göster */
+function renderCollageTemplates(){
+  const row = document.getElementById('collageTemplateRow');
+  if(!row) return;
+  const shots = momentSelectedShotCount;
+  // Bu kare sayısına uyan şablonlar (shots===0 → her sayıya uyar)
+  const all = [...COLLAGE_TEMPLATES, ...userCollageTemplates]
+    .filter(t => t.shots === 0 || t.shots === shots);
+  let html = '';
+  all.forEach(t=>{
+    const active = (selectedCollageTemplate && selectedCollageTemplate.id === t.id) ? 'active' : '';
+    if(t.id === 'none'){
+      html += `<button class="collageTemplateBtn ${active}" onclick="selectCollageTemplate('none')"><span class="ctNone">Klasik<br>ızgara</span></button>`;
+    } else {
+      const isUser = t.id.indexOf('user_')===0;
+      const editHint = (isUser && active) ? '<span style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);border-radius:8px;padding:1px 4px;font-size:9px;color:#fff;">✏️ düzenle</span>' : '';
+      html += `<button class="collageTemplateBtn ${active}" onclick="selectCollageTemplate('${t.id}')">
+        <img src="${t.frameUrl}" onerror="this.style.opacity=.3">
+        ${editHint}
+        <span class="ctLabel">${escapeHtml(t.name||'')}</span>
+      </button>`;
+    }
+  });
+  // Kendi şablonunu yükle butonu
+  html += `<button class="collageTemplateBtn" onclick="document.getElementById('collageTemplateUpload').click()"><span class="ctUpload">+</span></button>`;
+  row.innerHTML = html;
+  // İlk açılışta klasik seçili
+  if(!selectedCollageTemplate) selectedCollageTemplate = COLLAGE_TEMPLATES[0];
+}
+
+function selectCollageTemplate(id){
+  const all = [...COLLAGE_TEMPLATES, ...userCollageTemplates];
+  const tpl = all.find(t=>t.id===id) || COLLAGE_TEMPLATES[0];
+  // Zaten seçili olan kullanıcı şablonuna tekrar basılırsa → kutu editörünü aç
+  if(selectedCollageTemplate && selectedCollageTemplate.id === id && id.indexOf('user_')===0){
+    openBoxEditor(tpl);
+    return;
+  }
+  selectedCollageTemplate = tpl;
+  renderCollageTemplates();
+}
+
+/* Kullanıcı kendi şablon PNG'sini yükler → boş kutuları otomatik algılamak zor,
+   bu yüzden yüklenen şablonu "tam çerçeve" olarak kaydedip kare sayısına göre
+   standart kutu düzeni uygularız (kullanıcı fotoğrafları o düzene oturur). */
+function onCollageTemplateUpload(input){
+  const file = input.files && input.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (e)=>{
+    const id = 'user_' + Date.now();
+    const tpl = {
+      id, name:'Benim', shots: momentSelectedShotCount,
+      frameUrl: e.target.result,
+      boxes: defaultBoxesForShots(momentSelectedShotCount)
+    };
+    userCollageTemplates.push(tpl);
+    selectedCollageTemplate = tpl;
+    renderCollageTemplates();
+    // Kutuları şablona göre ayarlamak için editörü aç
+    openBoxEditor(tpl);
+  };
+  reader.readAsDataURL(file);
+  input.value = '';
+}
+
+/* Kare sayısına göre varsayılan kutu düzeni (yüzde 0-1) */
+function defaultBoxesForShots(n){
+  const layouts = {
+    1: [[0.08,0.08,0.84,0.84]],
+    2: [[0.08,0.08,0.84,0.42],[0.08,0.52,0.84,0.42]],
+    3: [[0.08,0.06,0.84,0.29],[0.08,0.37,0.84,0.29],[0.08,0.68,0.84,0.29]],
+    4: [[0.06,0.06,0.44,0.44],[0.52,0.06,0.42,0.44],[0.06,0.52,0.44,0.42],[0.52,0.52,0.42,0.42]],
+    5: [[0.06,0.06,0.44,0.30],[0.52,0.06,0.42,0.30],[0.06,0.38,0.44,0.30],[0.52,0.38,0.42,0.30],[0.28,0.70,0.44,0.26]],
+    6: [[0.06,0.06,0.44,0.29],[0.52,0.06,0.42,0.29],[0.06,0.37,0.44,0.29],[0.52,0.37,0.42,0.29],[0.06,0.68,0.44,0.28],[0.52,0.68,0.42,0.28]]
+  };
+  return (layouts[n] || layouts[1]).map(b=>({x:b[0],y:b[1],w:b[2],h:b[3]}));
+}
+
+/* ============================================================
+   KUTU EDİTÖRÜ — şablon üzerinde fotoğraf kutularını konumlandır
+   Kutular yüzde (0-1). Parmakla taşı, köşeden boyutlandır.
+   ============================================================ */
+let _boxEditorTpl = null;
+function openBoxEditor(tpl){
+  _boxEditorTpl = tpl;
+  let overlay = document.getElementById('boxEditorOverlay');
+  if(overlay) overlay.remove();
+  overlay = document.createElement('div');
+  overlay.id = 'boxEditorOverlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:10050;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;';
+  overlay.innerHTML = `
+    <div style="color:#fff;text-align:center;margin-bottom:12px;">
+      <div style="font-size:16px;font-weight:700;">Fotoğraf kutularını ayarla</div>
+      <div style="font-size:12px;color:rgba(255,255,255,.7);margin-top:4px;">Kutuları sürükle · köşeden boyutlandır · her kutu bir fotoğraf</div>
+    </div>
+    <div id="boxEditorStage" style="position:relative;width:min(88vw,360px);height:min(88vw,360px);background:#111;border-radius:8px;overflow:hidden;touch-action:none;">
+      <img src="${tpl.frameUrl}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;pointer-events:none;">
+    </div>
+    <div style="display:flex;gap:10px;margin-top:16px;">
+      <button onclick="closeBoxEditor(false)" style="padding:12px 20px;border-radius:20px;background:rgba(255,255,255,.15);border:none;color:#fff;font-size:14px;font-weight:600;cursor:pointer;">İptal</button>
+      <button onclick="closeBoxEditor(true)" style="padding:12px 24px;border-radius:20px;background:var(--gradient-vivid);border:none;color:#fff;font-size:14px;font-weight:700;cursor:pointer;">Kaydet ✓</button>
+    </div>`;
+  document.body.appendChild(overlay);
+  renderEditorBoxes();
+}
+
+function renderEditorBoxes(){
+  const stage = document.getElementById('boxEditorStage');
+  if(!stage || !_boxEditorTpl) return;
+  // Eski kutuları temizle (img hariç)
+  stage.querySelectorAll('.editorBox').forEach(b=>b.remove());
+  const W = stage.clientWidth, H = stage.clientHeight;
+  _boxEditorTpl.boxes.forEach((box, idx)=>{
+    const el = document.createElement('div');
+    el.className = 'editorBox';
+    el.dataset.idx = idx;
+    el.style.cssText = `position:absolute;left:${box.x*W}px;top:${box.y*H}px;width:${box.w*W}px;height:${box.h*H}px;border:2px solid #fff;background:rgba(124,58,237,.35);box-sizing:border-box;cursor:move;border-radius:4px;`;
+    el.innerHTML = `<div style="position:absolute;top:2px;left:4px;color:#fff;font-size:13px;font-weight:700;text-shadow:0 1px 3px #000;">${idx+1}</div>
+      <div class="boxResize" style="position:absolute;right:-8px;bottom:-8px;width:22px;height:22px;background:#fff;border-radius:50%;cursor:nwse-resize;box-shadow:0 1px 4px rgba(0,0,0,.5);"></div>`;
+    stage.appendChild(el);
+    bindEditorBox(el);
+  });
+}
+
+function bindEditorBox(el){
+  const stage = document.getElementById('boxEditorStage');
+  const idx = parseInt(el.dataset.idx);
+  const resize = el.querySelector('.boxResize');
+  let mode = null, startX, startY, startBox;
+
+  const getPt = (e)=>{ const t = e.touches ? e.touches[0] : e; return {x:t.clientX, y:t.clientY}; };
+
+  const onStart = (e, m)=>{
+    e.preventDefault(); e.stopPropagation();
+    mode = m;
+    const p = getPt(e);
+    startX = p.x; startY = p.y;
+    const box = _boxEditorTpl.boxes[idx];
+    startBox = {...box};
+    document.addEventListener('touchmove', onMove, {passive:false});
+    document.addEventListener('touchend', onEnd);
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onEnd);
+  };
+  const onMove = (e)=>{
+    if(!mode) return;
+    e.preventDefault();
+    const W = stage.clientWidth, H = stage.clientHeight;
+    const p = getPt(e);
+    const dx = (p.x - startX)/W, dy = (p.y - startY)/H;
+    const box = _boxEditorTpl.boxes[idx];
+    if(mode==='move'){
+      box.x = Math.max(0, Math.min(1-box.w, startBox.x + dx));
+      box.y = Math.max(0, Math.min(1-box.h, startBox.y + dy));
+    } else {
+      box.w = Math.max(0.1, Math.min(1-box.x, startBox.w + dx));
+      box.h = Math.max(0.1, Math.min(1-box.y, startBox.h + dy));
+    }
+    el.style.left = (box.x*W)+'px'; el.style.top = (box.y*H)+'px';
+    el.style.width = (box.w*W)+'px'; el.style.height = (box.h*H)+'px';
+  };
+  const onEnd = ()=>{
+    mode = null;
+    document.removeEventListener('touchmove', onMove);
+    document.removeEventListener('touchend', onEnd);
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', onEnd);
+  };
+  el.addEventListener('touchstart', (e)=>{ if(e.target===resize) return; onStart(e,'move'); }, {passive:false});
+  el.addEventListener('mousedown', (e)=>{ if(e.target===resize) return; onStart(e,'move'); });
+  resize.addEventListener('touchstart', (e)=>onStart(e,'resize'), {passive:false});
+  resize.addEventListener('mousedown', (e)=>onStart(e,'resize'));
+}
+
+function closeBoxEditor(save){
+  const overlay = document.getElementById('boxEditorOverlay');
+  if(overlay) overlay.remove();
+  if(save){
+    showToast('Şablon hazır ✓');
+    renderCollageTemplates();
+  }
+  _boxEditorTpl = null;
+}
+
+
 /* ---------- 1) BAŞLATMA MODALI ---------- */
 function openMomentStart(){
   if(!requireFirebase() || !fbAuth.currentUser){ showToast('Anı Yakala için giriş yapmalısın.'); return; }
@@ -6978,6 +7197,8 @@ function openMomentStart(){
   document.querySelectorAll('.momentChallengeChip').forEach(c=>c.classList.remove('active'));
   document.querySelector('.momentChallengeChip[data-c=""]').classList.add('active');
   document.getElementById('momentFriendSearch').value = '';
+  selectedCollageTemplate = COLLAGE_TEMPLATES[0]; // klasik varsayılan
+  renderCollageTemplates();
   document.getElementById('momentStartOverlay').classList.remove('hidden');
   document.body.classList.add('moment-active'); // alt navigasyon adasını gizle
   loadMomentFriendCandidates();
@@ -7007,6 +7228,11 @@ function setMomentShotCount(n, btn){
   momentSelectedShotCount = n;
   document.querySelectorAll('.momentShotBtn').forEach(b=>b.classList.remove('active'));
   if(btn) btn.classList.add('active');
+  // Kare sayısı değişti → seçili şablon uymuyorsa sıfırla + listeyi yenile
+  if(selectedCollageTemplate && selectedCollageTemplate.shots !== 0 && selectedCollageTemplate.shots !== n){
+    selectedCollageTemplate = COLLAGE_TEMPLATES[0];
+  }
+  renderCollageTemplates();
 }
 document.addEventListener('click', (e)=>{
   const chip = e.target.closest('.momentChallengeChip');
@@ -7961,22 +8187,27 @@ function layoutBoxes(n, v){
 function renderCollageToCanvas(){
   const canvas = document.getElementById('momentCollageCanvas');
   const ctx = canvas.getContext('2d');
-  const SIZE = 800, GAP = 0; // her zaman boşluksuz, fotoğraflar bitişik
+  const SIZE = 800, GAP = 0;
   canvas.width = SIZE; canvas.height = SIZE;
-  // TEK arka plan/çerçeve rengi — tüm tuvali boyar, kareler arası boşlukta görünür
   ctx.fillStyle = momentCollageBg || '#1a1a2e';
   ctx.fillRect(0,0,SIZE,SIZE);
 
   const urls = momentCollageUrls;
   const n = Math.min(urls.length || 1, 9);
-  const S = SIZE - GAP*2; // iç alan
+  const S = SIZE - GAP*2;
 
-  // Layout şablonunu (seçili varyant) layoutBoxes'tan al — önizleme ile BİREBİR aynı
-  let L = layoutBoxes(n, momentLayoutVariant);
-  if(!L || !L.length){
-    // Yedek: eşit grid
-    const cols = Math.ceil(Math.sqrt(n)), rows = Math.ceil(n/cols);
-    L = urls.slice(0,n).map((_,i)=>[(i%cols)/cols, Math.floor(i/cols)/rows, 1/cols, 1/rows]);
+  // Seçili şablon kutuları varsa onları kullan, yoksa klasik layoutBoxes
+  const tpl = selectedCollageTemplate;
+  const useTemplate = tpl && tpl.id !== 'none' && tpl.boxes && tpl.boxes.length >= n;
+  let L;
+  if(useTemplate){
+    L = tpl.boxes.slice(0, n).map(b => [b.x, b.y, b.w, b.h]);
+  } else {
+    L = layoutBoxes(n, momentLayoutVariant);
+    if(!L || !L.length){
+      const cols = Math.ceil(Math.sqrt(n)), rows = Math.ceil(n/cols);
+      L = urls.slice(0,n).map((_,i)=>[(i%cols)/cols, Math.floor(i/cols)/rows, 1/cols, 1/rows]);
+    }
   }
 
   const loadImg = (src)=> new Promise((res)=>{
@@ -7985,12 +8216,13 @@ function renderCollageToCanvas(){
     img.onload=()=>res(img); img.onerror=()=>res(null); img.src=src;
   });
 
-  return Promise.all(urls.slice(0,9).map(loadImg)).then(imgs=>{
+  // Fotoğrafları kutulara çizen fonksiyon
+  const drawPhotos = (imgs)=>{
     imgs.forEach((img,i)=>{
       if(!L[i]) return;
       const x = GAP + L[i][0]*S, y = GAP + L[i][1]*S;
       const w = L[i][2]*S - GAP, h = L[i][3]*S - GAP;
-      const r = 0;
+      const r = useTemplate ? 4 : 0;
       ctx.save();
       ctx.beginPath();
       ctx.moveTo(x+r,y);
@@ -8000,14 +8232,10 @@ function renderCollageToCanvas(){
       ctx.arcTo(x,y,x+w,y,r);
       ctx.closePath();
       ctx.clip();
-
-      // Fotoğraf — önizlemedeki CSS ile BİREBİR aynı: önce contain/cover oranını
-      // (döndürmeden bağımsız) hesapla, transform'da sonra döndür. Böylece önizleme = yayın.
       if(img){
-        const fit = momentCellFit[i]; // true = contain (sığdır), false = cover (doldur)
+        const fit = momentCellFit[i];
         const zoom = momentCellZoom[i] || 1;
         const rot = (momentCellRotate[i] || 0) * Math.PI / 180;
-        // CSS object-fit ile aynı: contain = en küçük oran, cover = en büyük oran (hücreye göre)
         const baseRatio = fit ? Math.min(w/img.width, h/img.height) : Math.max(w/img.width, h/img.height);
         const ratio = baseRatio * zoom;
         const dw = img.width*ratio, dh = img.height*ratio;
@@ -8016,7 +8244,6 @@ function renderCollageToCanvas(){
         if(cell){ const rect = cell.getBoundingClientRect(); if(rect.width) panRatio = w / rect.width; }
         const px = (momentCellPanX[i]||0) * panRatio;
         const py = (momentCellPanY[i]||0) * panRatio;
-        // Hücre merkezinde döndürerek çiz (CSS: rotate sonra scale ile aynı sıra)
         const cxp = x + w/2 + px, cyp = y + h/2 + py;
         ctx.translate(cxp, cyp);
         if(rot) ctx.rotate(rot);
@@ -8026,6 +8253,19 @@ function renderCollageToCanvas(){
       }
       ctx.restore();
     });
+  };
+
+  return Promise.all(urls.slice(0,9).map(loadImg)).then(imgs=>{
+    if(useTemplate && tpl.frameUrl){
+      // YOL A: Önce şablonu ARKAYA çiz (süslü çerçeve/arka plan), sonra fotoğrafları
+      // kutulara üstüne yerleştir. Böylece foto kutuyu doldurur, süslemeler kenarda kalır.
+      return loadImg(tpl.frameUrl).then(frameImg=>{
+        if(frameImg) ctx.drawImage(frameImg, 0, 0, SIZE, SIZE);
+        drawPhotos(imgs);
+      });
+    } else {
+      drawPhotos(imgs);
+    }
   });
 }
 
