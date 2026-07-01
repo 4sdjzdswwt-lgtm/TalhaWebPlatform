@@ -2020,6 +2020,9 @@ tbody tr:hover{background:var(--surface-2);}
   background-color:transparent;
   touch-action:none;cursor:grab;
 }
+/* Şablon modunda hücreler düz (şablonun kendi çerçevesi var) */
+.momentGrid.has-template .momentGridCell{border-radius:4px;}
+.momentGrid.has-template .cellShapeClip{border-radius:4px;}
 /* Foto VARSAYILAN cover (kareyi tam doldurur). zoom/pan/rotate ile ayarlanır. */
 .momentGridCell img{
   position:absolute;top:50%;left:50%;
@@ -7091,14 +7094,28 @@ function openBoxEditor(tpl){
       <div style="font-size:12px;color:rgba(255,255,255,.7);margin-top:4px;">Kutuları sürükle · köşeden boyutlandır · her kutu bir fotoğraf</div>
     </div>
     <div id="boxEditorStage" style="position:relative;width:min(88vw,360px);height:min(88vw,360px);background:#111;border-radius:8px;overflow:hidden;touch-action:none;">
-      <img src="${tpl.frameUrl}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;pointer-events:none;">
+      <img id="boxEditorImg" src="${tpl.frameUrl}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:fill;pointer-events:none;">
     </div>
     <div style="display:flex;gap:10px;margin-top:16px;">
       <button onclick="closeBoxEditor(false)" style="padding:12px 20px;border-radius:20px;background:rgba(255,255,255,.15);border:none;color:#fff;font-size:14px;font-weight:600;cursor:pointer;">İptal</button>
       <button onclick="closeBoxEditor(true)" style="padding:12px 24px;border-radius:20px;background:var(--gradient-vivid);border:none;color:#fff;font-size:14px;font-weight:700;cursor:pointer;">Kaydet ✓</button>
     </div>`;
   document.body.appendChild(overlay);
-  renderEditorBoxes();
+  // Sahneyi şablonun gerçek oranına göre boyutlandır (çıktı ile birebir aynı)
+  const stage = document.getElementById('boxEditorStage');
+  const probe = new Image();
+  probe.onload = ()=>{
+    const ar = probe.width / probe.height;
+    const maxW = Math.min(window.innerWidth*0.88, 360);
+    const maxH = window.innerHeight*0.6;
+    let w = maxW, h = w/ar;
+    if(h > maxH){ h = maxH; w = h*ar; }
+    stage.style.width = w+'px';
+    stage.style.height = h+'px';
+    renderEditorBoxes();
+  };
+  probe.onerror = ()=> renderEditorBoxes();
+  probe.src = tpl.frameUrl;
 }
 
 function renderEditorBoxes(){
@@ -7938,14 +7955,37 @@ function buildMomentCollageGrid(urls, owners){
   if(!grid) return Promise.resolve();
   owners = owners || momentCollageOwners || [];
   const n = Math.min(urls.length || 1, 9);
-  // Varyant sınır kontrolü
-  const maxV = (MOMENT_LAYOUT_COUNT[n] || 1) - 1;
-  if(momentLayoutVariant > maxV) momentLayoutVariant = 0;
-  grid.className = 'momentGrid cells-' + n + ' layout-' + momentLayoutVariant;
-  grid.style.setProperty('--moment-bg', momentCollageBg);
+
+  // Şablon seçili mi? (kutuları ve arka planı ondan al)
+  const tpl = selectedCollageTemplate;
+  const useTemplate = tpl && tpl.id !== 'none' && tpl.boxes && tpl.boxes.length >= n;
+
+  let boxes;
+  if(useTemplate){
+    // Şablon kutuları [x,y,w,h] formatına çevir
+    boxes = tpl.boxes.slice(0, n).map(b => [b.x, b.y, b.w, b.h]);
+    grid.className = 'momentGrid cells-' + n + ' has-template';
+    // Şablonu arka plana koy + gerçek oranında göster
+    grid.style.background = '#fff';
+    grid.style.backgroundImage = `url("${tpl.frameUrl}")`;
+    grid.style.backgroundSize = '100% 100%';
+    grid.style.backgroundRepeat = 'no-repeat';
+    // Şablonun oranını uygula (kare zorlama yok)
+    const probe = new Image();
+    probe.onload = ()=>{ if(probe.width && probe.height) grid.style.aspectRatio = probe.width + '/' + probe.height; };
+    probe.src = tpl.frameUrl;
+  } else {
+    const maxV = (MOMENT_LAYOUT_COUNT[n] || 1) - 1;
+    if(momentLayoutVariant > maxV) momentLayoutVariant = 0;
+    grid.className = 'momentGrid cells-' + n + ' layout-' + momentLayoutVariant;
+    grid.style.background = '';
+    grid.style.backgroundImage = '';
+    grid.style.aspectRatio = '1/1';
+    grid.style.setProperty('--moment-bg', momentCollageBg);
+    boxes = layoutBoxes(n, momentLayoutVariant);
+  }
   grid.style.setProperty('--moment-gap', '0px');
-  // Layout kutularını al (canvas render ile BİREBİR aynı kaynak) — önizleme=yayın
-  const boxes = layoutBoxes(n, momentLayoutVariant);
+
   momentCellZoom = []; momentCellPanX = []; momentCellPanY = []; momentCellFit = [];
   if(!momentCellRotate.length || momentCellRotate.length !== urls.length) momentCellRotate = urls.map(()=> 0);
   grid.innerHTML = urls.slice(0,9).map((url, i)=>{
@@ -7955,7 +7995,6 @@ function buildMomentCollageGrid(urls, owners){
       ? `<div class="cellTag" onclick="event.stopPropagation();goToTaggedProfile('${ow.uid||''}')">@${(ow.username||'').replace(/^@/,'')}</div>`
       : '';
     const rot = momentCellRotate[i] || 0;
-    // Kutuyu yüzde olarak konumla (mutlak) — hiç boşluk yok
     const b = boxes[i] || [0,0,1,1];
     const pos = `position:absolute;left:${b[0]*100}%;top:${b[1]*100}%;width:${b[2]*100}%;height:${b[3]*100}%;`;
     return `
@@ -7967,10 +8006,11 @@ function buildMomentCollageGrid(urls, owners){
       <button class="cellFitBtn" title="Sığdır / doldur" onclick="event.stopPropagation();toggleCellFit(${i})">⛶</button>
     </div>`;
   }).join('');
-  // Zoom/pan jestlerini bağla
   urls.slice(0,9).forEach((_, i)=> bindCellZoomPan(i));
-  // Layout seçici şeridini oluştur
-  buildLayoutPicker(n);
+  // Şablon modunda layout seçici gizle (şablonun kendi düzeni var)
+  buildLayoutPicker(useTemplate ? 0 : n);
+  const picker = document.getElementById('momentLayoutPicker');
+  if(picker) picker.style.display = useTemplate ? 'none' : '';
   return Promise.resolve();
 }
 
@@ -8187,28 +8227,12 @@ function layoutBoxes(n, v){
 function renderCollageToCanvas(){
   const canvas = document.getElementById('momentCollageCanvas');
   const ctx = canvas.getContext('2d');
-  const SIZE = 800, GAP = 0;
-  canvas.width = SIZE; canvas.height = SIZE;
-  ctx.fillStyle = momentCollageBg || '#1a1a2e';
-  ctx.fillRect(0,0,SIZE,SIZE);
 
   const urls = momentCollageUrls;
   const n = Math.min(urls.length || 1, 9);
-  const S = SIZE - GAP*2;
 
-  // Seçili şablon kutuları varsa onları kullan, yoksa klasik layoutBoxes
   const tpl = selectedCollageTemplate;
   const useTemplate = tpl && tpl.id !== 'none' && tpl.boxes && tpl.boxes.length >= n;
-  let L;
-  if(useTemplate){
-    L = tpl.boxes.slice(0, n).map(b => [b.x, b.y, b.w, b.h]);
-  } else {
-    L = layoutBoxes(n, momentLayoutVariant);
-    if(!L || !L.length){
-      const cols = Math.ceil(Math.sqrt(n)), rows = Math.ceil(n/cols);
-      L = urls.slice(0,n).map((_,i)=>[(i%cols)/cols, Math.floor(i/cols)/rows, 1/cols, 1/rows]);
-    }
-  }
 
   const loadImg = (src)=> new Promise((res)=>{
     const img = new Image();
@@ -8216,12 +8240,12 @@ function renderCollageToCanvas(){
     img.onload=()=>res(img); img.onerror=()=>res(null); img.src=src;
   });
 
-  // Fotoğrafları kutulara çizen fonksiyon
-  const drawPhotos = (imgs)=>{
+  // Kutulara foto çizen fonksiyon (SIZE_W, SIZE_H = canvas boyutu)
+  const drawPhotos = (imgs, L, SW, SH)=>{
     imgs.forEach((img,i)=>{
       if(!L[i]) return;
-      const x = GAP + L[i][0]*S, y = GAP + L[i][1]*S;
-      const w = L[i][2]*S - GAP, h = L[i][3]*S - GAP;
+      const x = L[i][0]*SW, y = L[i][1]*SH;
+      const w = L[i][2]*SW, h = L[i][3]*SH;
       const r = useTemplate ? 4 : 0;
       ctx.save();
       ctx.beginPath();
@@ -8236,7 +8260,11 @@ function renderCollageToCanvas(){
         const fit = momentCellFit[i];
         const zoom = momentCellZoom[i] || 1;
         const rot = (momentCellRotate[i] || 0) * Math.PI / 180;
-        const baseRatio = fit ? Math.min(w/img.width, h/img.height) : Math.max(w/img.width, h/img.height);
+        // Şablon kutusunda DAİMA cover (kutuyu tam doldur, orantılı, taşan kısım kırpılır)
+        // Bu sayede foto orantılı durur, kutuyu boş bırakmaz.
+        const baseRatio = (useTemplate || !fit)
+          ? Math.max(w/img.width, h/img.height)   // cover
+          : Math.min(w/img.width, h/img.height);  // contain (sadece klasik + fit)
         const ratio = baseRatio * zoom;
         const dw = img.width*ratio, dh = img.height*ratio;
         const cell = document.getElementById('momentCell'+i);
@@ -8257,14 +8285,35 @@ function renderCollageToCanvas(){
 
   return Promise.all(urls.slice(0,9).map(loadImg)).then(imgs=>{
     if(useTemplate && tpl.frameUrl){
-      // YOL A: Önce şablonu ARKAYA çiz (süslü çerçeve/arka plan), sonra fotoğrafları
-      // kutulara üstüne yerleştir. Böylece foto kutuyu doldurur, süslemeler kenarda kalır.
+      // Şablonu yükle → oranını al → canvas'ı ŞABLON ORANINDA kur (kırpma yok)
       return loadImg(tpl.frameUrl).then(frameImg=>{
-        if(frameImg) ctx.drawImage(frameImg, 0, 0, SIZE, SIZE);
-        drawPhotos(imgs);
+        let SW = 800, SH = 800;
+        if(frameImg && frameImg.width && frameImg.height){
+          const maxDim = 1000;
+          const ar = frameImg.width / frameImg.height;
+          if(ar >= 1){ SW = maxDim; SH = Math.round(maxDim/ar); }
+          else { SH = maxDim; SW = Math.round(maxDim*ar); }
+        }
+        canvas.width = SW; canvas.height = SH;
+        ctx.fillStyle = momentCollageBg || '#ffffff';
+        ctx.fillRect(0,0,SW,SH);
+        // Şablonu tam kapla (kendi oranında, kırpılmadan)
+        if(frameImg) ctx.drawImage(frameImg, 0, 0, SW, SH);
+        const L = tpl.boxes.slice(0, n).map(b => [b.x, b.y, b.w, b.h]);
+        drawPhotos(imgs, L, SW, SH);
       });
     } else {
-      drawPhotos(imgs);
+      // Klasik: kare tuval
+      const SIZE = 800;
+      canvas.width = SIZE; canvas.height = SIZE;
+      ctx.fillStyle = momentCollageBg || '#1a1a2e';
+      ctx.fillRect(0,0,SIZE,SIZE);
+      let L = layoutBoxes(n, momentLayoutVariant);
+      if(!L || !L.length){
+        const cols = Math.ceil(Math.sqrt(n)), rows = Math.ceil(n/cols);
+        L = urls.slice(0,n).map((_,i)=>[(i%cols)/cols, Math.floor(i/cols)/rows, 1/cols, 1/rows]);
+      }
+      drawPhotos(imgs, L, SIZE, SIZE);
     }
   });
 }
