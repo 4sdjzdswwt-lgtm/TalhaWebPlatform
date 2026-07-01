@@ -1325,6 +1325,12 @@ body.light-mode #screenRegister .spam-warning{background:linear-gradient(135deg,
 .storyShareBubble img{width:100%;height:200px;object-fit:cover;display:block;background:#222;}
 .storyShareBubble .ssbNoThumb{width:100%;height:200px;display:flex;align-items:center;justify-content:center;color:var(--muted);background:#222;}
 .storyShareBubble .ssbHint{padding:7px 10px;font-size:11px;color:var(--muted);text-align:center;}
+/* Etiketli hikaye baloncuğu (Hikayene ekle butonlu) */
+.mentionStoryBubble{
+  width:230px;max-width:64vw;border-radius:14px;overflow:hidden;
+  background:var(--surface-2);border:1px solid var(--line);
+}
+.mentionStoryBubble img{width:100%;max-height:340px;object-fit:cover;background:#222;}
 
 /* ===== MESAJ JESTLERİ: sola kaydır → yanıtla, uzun bas → menü ===== */
 .msgSwipeWrap{position:relative;display:flex;flex-direction:column;width:100%;}
@@ -3305,7 +3311,8 @@ tbody tr:hover{background:var(--surface-2);}
       <div id="storyViewerTime" style="font-size:11px;color:rgba(255,255,255,.7);">2s</div>
     </div>
     <button id="storyDeleteBtn" onclick="deleteCurrentStory(event)" style="display:none;background:rgba(255,0,0,.25);border:1px solid rgba(255,100,100,.4);border-radius:20px;color:#fff;font-size:12px;font-weight:600;padding:5px 12px;cursor:pointer;margin-left:8px;">🗑️ Sil</button>
-    <button onclick="closeStoryViewer(event)" style="margin-left:auto;background:none;border:none;color:#fff;font-size:24px;cursor:pointer;padding:0 4px;">✕</button>
+    <button onclick="event.stopPropagation();openStoryShareSheet()" style="margin-left:auto;background:none;border:none;color:#fff;font-size:20px;cursor:pointer;padding:0 8px;" title="DM ile Gönder">➤</button>
+    <button onclick="closeStoryViewer(event)" style="background:none;border:none;color:#fff;font-size:24px;cursor:pointer;padding:0 4px;">✕</button>
   </div>
   <div class="storyProgressBar" id="storyProgressBar"></div>
   <img id="storyViewerImg" src="" style="width:100%;height:100%;object-fit:contain;">
@@ -3532,9 +3539,9 @@ tbody tr:hover{background:var(--surface-2);}
       <h2>Gönderiyi Paylaş</h2>
     </div>
     <div style="padding:0 18px 18px;display:flex;flex-direction:column;gap:8px;">
-      <button class="share-option" onclick="shareAction('Bağlantı kopyalandı ✅')">🔗 Bağlantıyı Kopyala</button>
-      <button class="share-option" onclick="shareAction('Mesaj olarak paylaşıldı ✅')">💬 Mesajla Paylaş</button>
-      <button class="share-option" onclick="shareAction('Hikayene eklendi ✅')">⭐ Hikayene Ekle</button>
+      <button class="share-option" onclick="copyPostLink()">🔗 Bağlantıyı Kopyala</button>
+      <button class="share-option" onclick="sharePostViaDM()">💬 Mesajla Paylaş</button>
+      <button class="share-option" onclick="addPostToStory()">⭐ Hikayene Ekle</button>
       <button class="share-option" onclick="closeShareSheet()" style="color:var(--muted);">Vazgeç</button>
     </div>
   </div>
@@ -6015,6 +6022,124 @@ function shareAction(message){
   showToast(message);
 }
 
+/* Aktif gönderinin verisini al */
+function getActiveSharePost(){
+  const id = shareSheetActivePostId;
+  if(!id) return null;
+  const data = (window._postsCache && window._postsCache[id]) ? window._postsCache[id] : null;
+  return data ? { id, ...data } : null;
+}
+
+/* Gönderi görselini bul (tek foto veya kolaj ilk karesi) */
+function postThumbUrl(p){
+  if(!p) return '';
+  if(p.image) return p.image;
+  if(p.imageUrl) return p.imageUrl;
+  if(p.collageUrl) return p.collageUrl;
+  if(Array.isArray(p.images) && p.images.length) return p.images[0];
+  if(Array.isArray(p.photos) && p.photos.length) return (typeof p.photos[0]==='string'?p.photos[0]:p.photos[0].url||'');
+  return '';
+}
+
+function copyPostLink(){
+  const p = getActiveSharePost();
+  const url = 'https://4sdjzdswwt-lgtm.github.io/#post-' + (p ? p.id : '');
+  const done = ()=>{ closeShareSheet(); showToast('Bağlantı kopyalandı ✅'); };
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(url).then(done).catch(done);
+  } else {
+    const ta=document.createElement('textarea'); ta.value=url; document.body.appendChild(ta); ta.select();
+    try{ document.execCommand('copy'); }catch(e){} document.body.removeChild(ta); done();
+  }
+}
+
+/* Gönderiyi mesajla paylaş → kişi seç → DM'e gönderi baloncuğu */
+function sharePostViaDM(){
+  const p = getActiveSharePost();
+  if(!p){ showToast('Gönderi bulunamadı'); return; }
+  closeShareSheet();
+  if(!fbReady || !fbAuth.currentUser) return;
+  const myUid = fbAuth.currentUser.uid;
+  Promise.all([
+    fbDb.ref('follows/' + myUid).once('value'),
+    fbDb.ref('followers/' + myUid).once('value')
+  ]).then(([fSnap, frSnap])=>{
+    const uids = new Set([...Object.keys(fSnap.val()||{}), ...Object.keys(frSnap.val()||{})]);
+    if(!uids.size){ showToast('Gönderilecek kişi yok.'); return; }
+    Promise.all([...uids].map(uid => fbDb.ref('users/'+uid).once('value').then(s=>({uid,user:s.val()||{}}))))
+      .then(list=>{
+        const valid = list.filter(x=>!x.user.deleted);
+        const overlay = document.createElement('div');
+        overlay.setAttribute('data-postshare-overlay','1');
+        overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:900;display:flex;align-items:flex-end;justify-content:center;';
+        overlay.onclick=(e)=>{ if(e.target===overlay) overlay.remove(); };
+        const rows = valid.map(({uid,user})=>{
+          const photo=user.photo||'https://i.pravatar.cc/60?img=68';
+          const uname=user.username||'@kullanici';
+          return `<div onclick="event.stopPropagation();sendPostToUser('${uid}','${escapeHtml(uname)}')" style="display:flex;align-items:center;gap:12px;padding:11px 16px;border-bottom:1px solid var(--line);cursor:pointer;">
+            <img src="${photo}" style="width:42px;height:42px;border-radius:50%;object-fit:cover;" onerror="this.src='https://i.pravatar.cc/60?img=68'">
+            <div style="flex:1;font-weight:600;font-size:14px;color:var(--text);">${escapeHtml(uname)}</div>
+            <div style="color:var(--accent);font-size:13px;font-weight:600;">Gönder</div>
+          </div>`;
+        }).join('');
+        overlay.innerHTML=`<div style="width:100%;max-width:480px;background:var(--surface);border-radius:24px 24px 0 0;max-height:70vh;display:flex;flex-direction:column;">
+          <div style="padding:16px 20px;display:flex;align-items:center;justify-content:space-between;">
+            <h3 style="margin:0;font-size:16px;color:var(--text);">Gönderiyi gönder</h3>
+            <button onclick="document.querySelectorAll('[data-postshare-overlay]').forEach(el=>el.remove())" style="background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;">✕</button>
+          </div>
+          <div style="overflow-y:auto;flex:1;">${rows}</div>
+        </div>`;
+        document.body.appendChild(overlay);
+      });
+  });
+}
+
+function sendPostToUser(peerUid, peerName){
+  const p = getActiveSharePost();
+  if(!p || !fbAuth.currentUser) return;
+  const myUid = fbAuth.currentUser.uid;
+  const chatId = [myUid, peerUid].sort().join('_');
+  const ts = Date.now();
+  const thumb = postThumbUrl(p);
+  const doSend = (typeof ensureChatMeta === 'function') ? ensureChatMeta(chatId, peerUid) : Promise.resolve();
+  doSend.then(()=>{
+    return fbDb.ref('chats/' + chatId + '/messages').push().set({
+      from: myUid, ts,
+      postShare: true, postId: p.id || '',
+      postOwnerUid: p.uid || '', postOwnerName: p.username || '@kullanici',
+      postThumb: thumb, text: ''
+    });
+  }).then(()=>{
+    const update = { lastMsg: '📷 Bir gönderi paylaştı', lastTs: ts, lastSenderUid: myUid };
+    update['unreadFor/' + peerUid] = true;
+    fbDb.ref('chatMeta/' + chatId).update(update);
+    document.querySelectorAll('[data-postshare-overlay]').forEach(el=>el.remove());
+    showToast(peerName + ' kişisine gönderildi ✓');
+  }).catch(()=> showToast('Gönderilemedi.'));
+}
+
+/* Gönderiyi kendi hikayene ekle */
+function addPostToStory(){
+  const p = getActiveSharePost();
+  if(!p){ showToast('Gönderi bulunamadı'); return; }
+  closeShareSheet();
+  const thumb = postThumbUrl(p);
+  if(!thumb){ showToast('Bu gönderinin görseli yok'); return; }
+  if(!fbReady || !fbAuth.currentUser) return;
+  const myUid = fbAuth.currentUser.uid;
+  const ts = Date.now();
+  fbDb.ref('stories').push().set({
+    uid: myUid, url: thumb, mediaUrl: thumb, mediaType: 'image',
+    caption: '', username: savedUsername || '@kullanici',
+    userPhoto: savedProfilePhoto || '', ts, expiresAt: ts + 24*60*60*1000,
+    audience: 'followers',
+    resharedFrom: { uid: p.uid || '', username: p.username || '@kullanici' }
+  }).then(()=>{
+    showToast('Hikayene eklendi ✅');
+    if(typeof loadStoryStrip === 'function') loadStoryStrip();
+  }).catch(()=> showToast('Eklenemedi.'));
+}
+
 function toggleCommentBox(el){
   const post = el.closest('.post');
   const box = post.querySelector('.comment-compose');
@@ -6213,6 +6338,36 @@ function openChatThread(chatId, peerUid){
       // Süreli fotoğraf (ephemeral)
       if(m.mediaType === 'ephemeral'){
         return wrapSwipeMsg(id, m.from, renderEphemeralMsg(id, m, mine, t, activeChatId), mine);
+      }
+      // Etiketlendiğin hikaye — "Hikayene ekle" butonlu
+      if(m.mentionStory){
+        const thumb = m.storyThumb || '';
+        const mentionU = escapeHtml(m.mentionUsername || savedUsername || '');
+        const oUid = m.storyOwnerUid || '';
+        const sId = m.storyId || '';
+        // Sadece etiketlenen kişi (=ben, alıcı) butonu görür
+        const canReshare = !mine;
+        const inner = `<div class="mentionStoryBubble">
+          <div style="position:relative;">
+            <img src="${thumb}" onerror="this.style.opacity=.3" style="width:100%;display:block;">
+            <div style="position:absolute;left:50%;top:55%;transform:translate(-50%,-50%);color:#fff;font-weight:700;font-size:16px;text-shadow:0 2px 8px rgba(0,0,0,.8);border-bottom:2px solid #fff;padding-bottom:2px;">@${mentionU}</div>
+            ${canReshare ? `<button onclick="reshareFromChat('${oUid}','${sId}')" style="position:absolute;left:50%;bottom:14px;transform:translateX(-50%);background:rgba(60,60,70,.9);border:none;border-radius:12px;color:#fff;font-size:15px;font-weight:700;padding:12px 28px;cursor:pointer;white-space:nowrap;">Hikayene ekle</button>` : ''}
+          </div>
+          <div class="chat-photo-time" style="position:static;text-align:right;padding:3px 8px 0;">${t}</div>
+        </div>`;
+        return wrapSwipeMsg(id, m.from, inner, mine);
+      }
+      // Paylaşılan gönderi önizlemesi
+      if(m.postShare){
+        const thumb = m.postThumb || '';
+        const owner = escapeHtml(m.postOwnerName || '@kullanici');
+        const inner = `<div class="storyShareBubble" onclick="scrollToSharedPost('${m.postId||''}')">
+          <div class="ssbTop">📷 ${owner} · Gönderi</div>
+          ${thumb ? `<img src="${thumb}" onerror="this.style.opacity=.3">` : '<div class="ssbNoThumb">Gönderi</div>'}
+          <div class="ssbHint">Gönderiyi görüntüle</div>
+          <div class="chat-photo-time" style="position:static;text-align:right;padding:2px 8px 0;">${t}</div>
+        </div>`;
+        return wrapSwipeMsg(id, m.from, inner, mine);
       }
       // Paylaşılan hikaye önizlemesi
       if(m.storyShare){
@@ -6510,6 +6665,7 @@ function initFeedListener(){
   feedPostsRef = fbDb.ref('posts').orderByChild('ts').limitToLast(100);
   feedPostsRef.on('value', (snap)=>{
     const data = snap.val() || {};
+    window._postsCache = data; // paylaş menüsü için erişilebilir cache
     const ids = Object.keys(data).sort((a,b) => (data[b].ts||0) - (data[a].ts||0));
     const myUid = fbAuth.currentUser ? fbAuth.currentUser.uid : null;
 
@@ -9503,15 +9659,36 @@ function publishStory(){
       closeStoryComposer();
       showToast('Hikayen paylaşıldı 🎉');
       loadStoryStrip();
-      // Etiketlenen kullanıcılara bildirim gönder
+      // Etiketlenen kullanıcılara: bildirim + SOHBETE hikaye önizlemesi (Hikayene ekle butonlu)
+      const storyThumb = mediaUrl;
       (storyData.stickers||[]).filter(s=>s.type==='mention' && s.data && s.data.uid).forEach(s=>{
         const targetUid = s.data.uid;
         if(targetUid === uid) return; // kendini etiketleme
+        // Bildirim
         fbDb.ref('notifications/' + targetUid).push({
-          text: '<b>' + (savedUsername||'@kullanici') + '</b> seni bir hikayede etiketledi',
+          text: '<b>' + (savedUsername||'@kullanici') + '</b> hikayesinde senden bahsetti',
           photo: savedProfilePhoto || '',
           targetUid: uid, storyId: newStoryId,
           ts: Date.now(), type: 'storyMention'
+        }).catch(()=>{});
+        // Sohbete hikaye önizlemesi gönder (etiketlenen kişi buradan hikayesinde paylaşabilir)
+        const chatId = [uid, targetUid].sort().join('_');
+        const mts = Date.now();
+        const sendMention = (typeof ensureChatMeta === 'function') ? ensureChatMeta(chatId, targetUid) : Promise.resolve();
+        sendMention.then(()=>{
+          fbDb.ref('chats/' + chatId + '/messages').push().set({
+            from: uid, ts: mts,
+            mentionStory: true,           // özel tip: "Hikayene ekle" butonlu
+            storyId: newStoryId,
+            storyOwnerUid: uid,
+            storyOwnerName: savedUsername || '@kullanici',
+            storyThumb: storyThumb,
+            mentionUsername: s.data.username || '',
+            text: ''
+          });
+          const upd = { lastMsg: '📖 Hikayesinde senden bahsetti', lastTs: mts, lastSenderUid: uid };
+          upd['unreadFor/' + targetUid] = true;
+          fbDb.ref('chatMeta/' + chatId).update(upd);
         }).catch(()=>{});
       });
     }).catch(err=>{
@@ -11406,12 +11583,28 @@ function openStoryShareSheet(){
   if(!fbReady || !fbAuth.currentUser) return;
   pauseStoryTimer(); // paylaşım açıkken hikaye ilerlemesin
   const myUid = fbAuth.currentUser.uid;
+  // Şu anki hikayenin görünürlüğü
+  const curStory = currentStoryList[currentStoryIdx];
+  const isWorld = curStory && curStory.audience === 'public';
+
   Promise.all([
-    fbDb.ref('follows/' + myUid).once('value'),
-    fbDb.ref('followers/' + myUid).once('value')
+    fbDb.ref('follows/' + myUid).once('value'),   // takip ettiklerim
+    fbDb.ref('followers/' + myUid).once('value')  // beni takip edenler
   ]).then(([fSnap, frSnap])=>{
-    const uids = new Set([...Object.keys(fSnap.val()||{}), ...Object.keys(frSnap.val()||{})]);
-    if(!uids.size){ showToast('Paylaşacak kişi yok.'); return; }
+    const following = new Set(Object.keys(fSnap.val()||{}));
+    const followers = new Set(Object.keys(frSnap.val()||{}));
+    let uids;
+    if(isWorld){
+      // Dünya hikayesi → herkese gönderilebilir (takip + takipçi)
+      uids = new Set([...following, ...followers]);
+    } else {
+      // Gizli/takipçilere özel → sadece ORTAK takipçiler (karşılıklı takip)
+      uids = new Set([...following].filter(u => followers.has(u)));
+    }
+    if(!uids.size){
+      showToast(isWorld ? 'Gönderilecek kişi yok.' : 'Sadece karşılıklı takipleştiğin kişilere gönderebilirsin.');
+      return;
+    }
     Promise.all([...uids].map(uid => fbDb.ref('users/'+uid).once('value').then(s=>({uid,user:s.val()||{}}))))
       .then(list=>{
         const valid = list.filter(x=>!x.user.deleted);
@@ -11430,7 +11623,10 @@ function openStoryShareSheet(){
         }).join('');
         overlay.innerHTML=`<div style="width:100%;max-width:480px;background:var(--surface);border-radius:24px 24px 0 0;max-height:70vh;display:flex;flex-direction:column;">
           <div style="padding:16px 20px;display:flex;align-items:center;justify-content:space-between;">
-            <h3 style="margin:0;font-size:16px;color:var(--text);">Hikayeyi paylaş</h3>
+            <div>
+              <h3 style="margin:0;font-size:16px;color:var(--text);">Hikayeyi gönder</h3>
+              <div style="font-size:11.5px;color:var(--muted);margin-top:2px;">${isWorld ? '🌍 Herkese gönderebilirsin' : '👥 Sadece karşılıklı takipler'}</div>
+            </div>
             <button onclick="document.querySelectorAll('[data-storyshare-overlay]').forEach(el=>el.remove())" style="background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;">✕</button>
           </div>
           <div style="overflow-y:auto;flex:1;">${rows}</div>
@@ -11444,6 +11640,50 @@ function openStoryShareSheet(){
 function openSharedStory(ownerUid){
   if(!ownerUid){ showToast('Hikaye artık mevcut değil'); return; }
   viewUserStories(ownerUid);
+}
+
+/* Sohbetteki "Hikayene ekle" — etiketlendiğin hikayeyi kendi hikayene ekle */
+function reshareFromChat(ownerUid, storyId){
+  if(!fbReady || !fbAuth.currentUser){ return; }
+  const myUid = fbAuth.currentUser.uid;
+  // Orijinal hikayeyi bul (hâlâ aktif mi?)
+  fbDb.ref('stories/' + storyId).once('value').then(snap=>{
+    const s = snap.val();
+    if(!s){ showToast('Hikaye artık mevcut değil'); return; }
+    // Gerçekten bu hikayede etiketli miyim?
+    const iAmMentioned = (s.stickers||[]).some(st => st.type==='mention' && st.data && st.data.uid === myUid);
+    if(!iAmMentioned){ showToast('Bu hikayeyi paylaşamazsın'); return; }
+    const mediaSrc = s.url || s.mediaUrl || '';
+    const ts = Date.now();
+    const newStory = {
+      uid: myUid, url: mediaSrc, mediaUrl: mediaSrc,
+      mediaType: s.mediaType || 'image', caption: '',
+      username: savedUsername || '@kullanici', userPhoto: savedProfilePhoto || '',
+      ts, expiresAt: ts + 24*60*60*1000, audience: 'followers',
+      resharedFrom: { uid: s.uid || '', username: s.username || '@kullanici' }
+    };
+    if(s.music) newStory.music = s.music;
+    fbDb.ref('stories').push().set(newStory).then(()=>{
+      showToast('Hikayende paylaşıldı 🎉');
+      if(typeof loadStoryStrip === 'function') loadStoryStrip();
+      if(ownerUid && ownerUid !== myUid){
+        fbDb.ref('notifications/' + ownerUid).push({
+          text: '<b>' + (savedUsername||'@kullanici') + '</b> etiketlediğin hikayeyi paylaştı',
+          photo: savedProfilePhoto || '', targetUid: myUid, ts: Date.now(), type: 'storyReshare'
+        }).catch(()=>{});
+      }
+    }).catch(()=> showToast('Paylaşılamadı.'));
+  }).catch(()=> showToast('Hikaye bulunamadı'));
+}
+
+/* Sohbette paylaşılan gönderiye tıklayınca ana akışa git */
+function scrollToSharedPost(postId){
+  goNav('home');
+  setTimeout(()=>{
+    const el = document.querySelector('.post[data-post-id="'+postId+'"]');
+    if(el){ el.scrollIntoView({behavior:'smooth', block:'center'}); el.style.transition='box-shadow .3s'; el.style.boxShadow='0 0 0 3px var(--accent)'; setTimeout(()=>el.style.boxShadow='',1500); }
+    else showToast('Gönderi akışta bulunamadı');
+  }, 400);
 }
 
 /* Etiketlendiğim bir hikayeyi KENDİ hikayeme yeniden paylaş.
