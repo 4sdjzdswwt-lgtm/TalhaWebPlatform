@@ -1902,15 +1902,15 @@ tbody tr:hover{background:var(--surface-2);}
   border:3px solid var(--bg);display:block;
 }
 .myStoryRing .storyAddPlus{
-  position:absolute;bottom:0;right:0;
-  width:20px;height:20px;border-radius:50%;
+  position:absolute;bottom:-2px;right:-2px;
+  width:22px;height:22px;border-radius:50%;
   background:var(--accent);color:#fff;
-  font-size:14px;font-weight:700;
+  font-size:15px;font-weight:700;
   display:flex;align-items:center;justify-content:center;
-  border:2px solid var(--bg);line-height:1;
+  border:2.5px solid var(--bg);line-height:1;cursor:pointer;z-index:3;
 }
-/* Hikaye var → + ikonu gizle */
-.myStoryRing.has-story .storyAddPlus{display:none;}
+.myStoryRing .storyAddPlus:active{transform:scale(.9);}
+/* + ikonu artık hikaye olsa da görünür (yeni eklemek için) */
 
 /* ============================================================
    KEŞFET SEKMELERİ
@@ -2494,11 +2494,11 @@ tbody tr:hover{background:var(--surface-2);}
       <div class="screen-body">
       <!-- ANI YAKALA — hikaye şeridi (aktif/yakın zamanda biten anılar) -->
       <div class="momentStrip" id="momentStrip">
-        <!-- KEND HİKAYEM — en solda sabit. Hikaye yoksa composer açar, varsa kendi hikayemi gösterir -->
-        <div class="momentStartCircle" id="myStoryCircle" onclick="handleMyStoryClick()" title="Hikayem">
-          <div class="myStoryRing" id="myStoryRing">
+        <!-- KENDİ HİKAYEM — halkaya bas=izle (varsa), köşedeki + = yeni ekle -->
+        <div class="momentStartCircle" id="myStoryCircle" title="Hikayem">
+          <div class="myStoryRing" id="myStoryRing" onclick="handleMyStoryClick()">
             <img id="storyAddAvatar" src="https://i.pravatar.cc/60?img=68" onerror="this.src='https://i.pravatar.cc/60?img=68'">
-            <div class="storyAddPlus" id="myStoryPlusIcon">+</div>
+            <div class="storyAddPlus" id="myStoryPlusIcon" onclick="event.stopPropagation();openStoryComposer()">+</div>
           </div>
           <span class="momentStripLabel" id="myStoryLabel">Hikayem</span>
         </div>
@@ -9869,9 +9869,14 @@ function handleMyStoryClick(){
       .filter(s => s.expiresAt > now && !s.isMoment)
       .sort((a,b)=>a.ts-b.ts);
     if(active.length){
-      // Hikayem var — seçenek sun: Görüntüle veya Yeni Ekle
-      showMyStoryOptions(active);
+      // Hikayem var → DİREKT izle (ara menü yok, Instagram gibi)
+      currentStoryList = active;
+      currentStoryUser = myUid;
+      currentStoryIdx = 0;
+      document.getElementById('island').classList.add('chat-fullscreen-hide');
+      showStoryAtIndex(0);
     } else {
+      // Hikayem yok → direkt yeni hikaye oluşturucu
       openStoryComposer();
     }
   });
