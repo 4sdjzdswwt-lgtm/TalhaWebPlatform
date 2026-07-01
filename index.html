@@ -582,8 +582,11 @@ body.light-mode .regStickyBar{
 .feed{padding:24px;max-width:680px;margin:0 auto;}
 .post{
   background:var(--surface);border:1px solid var(--line);border-radius:24px;
-  margin-bottom:20px;overflow:hidden;
-  box-shadow:0 4px 20px rgba(0,0,0,.18);
+  margin-bottom:20px;overflow:hidden;position:relative;
+  /* Arkadan tema renginde HAFİF ışık (gözü yormayan) + normal gölge */
+  box-shadow:0 4px 20px rgba(0,0,0,.18),
+             0 0 24px color-mix(in srgb, var(--accent) 12%, transparent);
+  border-color:color-mix(in srgb, var(--accent) 18%, var(--line));
 }
 .post-media{border-radius:18px;margin:0 12px;}
 .post .ig-actions{padding-top:14px;}
@@ -774,9 +777,9 @@ body.moment-active #island{display:none !important;}
 /* Giden mesajlar (sağ) — yarı saydam mavi cam */
 .msg.me{
   align-self:flex-end;color:#fff;border-bottom-right-radius:5px;
-  background:linear-gradient(135deg, rgba(99,102,241,.55), rgba(6,182,212,.45));
+  background:linear-gradient(135deg, var(--grad-1), var(--grad-2), var(--grad-3));
   border-color:rgba(255,255,255,.22);
-  box-shadow:0 4px 16px rgba(99,102,241,.28);
+  box-shadow:0 4px 16px color-mix(in srgb, var(--accent) 40%, transparent);
 }
 body.light-mode .msg.them{
   background:rgba(0,0,0,.06);
