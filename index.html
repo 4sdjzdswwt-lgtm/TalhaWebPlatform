@@ -6033,9 +6033,15 @@ function getActiveSharePost(){
 /* Gönderi görselini bul (tek foto veya kolaj ilk karesi) */
 function postThumbUrl(p){
   if(!p) return '';
+  // Asıl gönderiler görseli 'media' dizisinde tutuyor
+  if(Array.isArray(p.media) && p.media.length){
+    const first = p.media[0];
+    return typeof first === 'string' ? first : (first.url || first.src || '');
+  }
   if(p.image) return p.image;
   if(p.imageUrl) return p.imageUrl;
   if(p.collageUrl) return p.collageUrl;
+  if(p.momentUrl) return p.momentUrl;
   if(Array.isArray(p.images) && p.images.length) return p.images[0];
   if(Array.isArray(p.photos) && p.photos.length) return (typeof p.photos[0]==='string'?p.photos[0]:p.photos[0].url||'');
   return '';
@@ -6071,7 +6077,7 @@ function sharePostViaDM(){
         const valid = list.filter(x=>!x.user.deleted);
         const overlay = document.createElement('div');
         overlay.setAttribute('data-postshare-overlay','1');
-        overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:900;display:flex;align-items:flex-end;justify-content:center;';
+        overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:10001;display:flex;align-items:flex-end;justify-content:center;';
         overlay.onclick=(e)=>{ if(e.target===overlay) overlay.remove(); };
         const rows = valid.map(({uid,user})=>{
           const photo=user.photo||'https://i.pravatar.cc/60?img=68';
@@ -6082,7 +6088,7 @@ function sharePostViaDM(){
             <div style="color:var(--accent);font-size:13px;font-weight:600;">Gönder</div>
           </div>`;
         }).join('');
-        overlay.innerHTML=`<div style="width:100%;max-width:480px;background:var(--surface);border-radius:24px 24px 0 0;max-height:70vh;display:flex;flex-direction:column;">
+        overlay.innerHTML=`<div style="width:100%;max-width:480px;background:var(--surface);border-radius:24px 24px 0 0;max-height:70vh;display:flex;flex-direction:column;padding-bottom:calc(90px + env(safe-area-inset-bottom,0px));">
           <div style="padding:16px 20px;display:flex;align-items:center;justify-content:space-between;">
             <h3 style="margin:0;font-size:16px;color:var(--text);">Gönderiyi gönder</h3>
             <button onclick="document.querySelectorAll('[data-postshare-overlay]').forEach(el=>el.remove())" style="background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;">✕</button>
@@ -6361,7 +6367,7 @@ function openChatThread(chatId, peerUid){
       if(m.postShare){
         const thumb = m.postThumb || '';
         const owner = escapeHtml(m.postOwnerName || '@kullanici');
-        const inner = `<div class="storyShareBubble" onclick="scrollToSharedPost('${m.postId||''}')">
+        const inner = `<div class="storyShareBubble" onclick="scrollToSharedPost('${m.postId||''}','${m.postOwnerUid||''}')">
           <div class="ssbTop">📷 ${owner} · Gönderi</div>
           ${thumb ? `<img src="${thumb}" onerror="this.style.opacity=.3">` : '<div class="ssbNoThumb">Gönderi</div>'}
           <div class="ssbHint">Gönderiyi görüntüle</div>
@@ -9057,7 +9063,7 @@ function openMentionPicker(){
         const valid = list.filter(x=>!x.user.deleted);
         const overlay = document.createElement('div');
         overlay.setAttribute('data-mention-overlay','1');
-        overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:800;display:flex;align-items:flex-end;justify-content:center;';
+        overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:10001;display:flex;align-items:flex-end;justify-content:center;';
         overlay.onclick=(e)=>{ if(e.target===overlay) overlay.remove(); };
         const rows = valid.map(({uid,user})=>{
           const photo=user.photo||'https://i.pravatar.cc/60?img=68';
@@ -9067,7 +9073,7 @@ function openMentionPicker(){
             <div style="font-weight:600;font-size:14px;color:var(--text);">${escapeHtml(uname)}</div>
           </div>`;
         }).join('');
-        overlay.innerHTML=`<div style="width:100%;max-width:480px;background:var(--surface);border-radius:24px 24px 0 0;max-height:70vh;display:flex;flex-direction:column;">
+        overlay.innerHTML=`<div style="width:100%;max-width:480px;background:var(--surface);border-radius:24px 24px 0 0;max-height:70vh;display:flex;flex-direction:column;padding-bottom:calc(90px + env(safe-area-inset-bottom,0px));">
           <div style="padding:16px 20px;display:flex;align-items:center;justify-content:space-between;">
             <h3 style="margin:0;font-size:16px;color:var(--text);">Birini etiketle</h3>
             <button onclick="document.querySelectorAll('[data-mention-overlay]').forEach(el=>el.remove())" style="background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;">✕</button>
@@ -11610,7 +11616,7 @@ function openStoryShareSheet(){
         const valid = list.filter(x=>!x.user.deleted);
         const overlay = document.createElement('div');
         overlay.setAttribute('data-storyshare-overlay','1');
-        overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:900;display:flex;align-items:flex-end;justify-content:center;';
+        overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:10001;display:flex;align-items:flex-end;justify-content:center;';
         overlay.onclick=(e)=>{ if(e.target===overlay) overlay.remove(); };
         const rows = valid.map(({uid,user})=>{
           const photo=user.photo||'https://i.pravatar.cc/60?img=68';
@@ -11621,7 +11627,7 @@ function openStoryShareSheet(){
             <div style="color:var(--accent);font-size:13px;font-weight:600;">Gönder</div>
           </div>`;
         }).join('');
-        overlay.innerHTML=`<div style="width:100%;max-width:480px;background:var(--surface);border-radius:24px 24px 0 0;max-height:70vh;display:flex;flex-direction:column;">
+        overlay.innerHTML=`<div style="width:100%;max-width:480px;background:var(--surface);border-radius:24px 24px 0 0;max-height:70vh;display:flex;flex-direction:column;padding-bottom:calc(90px + env(safe-area-inset-bottom,0px));">
           <div style="padding:16px 20px;display:flex;align-items:center;justify-content:space-between;">
             <div>
               <h3 style="margin:0;font-size:16px;color:var(--text);">Hikayeyi gönder</h3>
@@ -11676,13 +11682,21 @@ function reshareFromChat(ownerUid, storyId){
   }).catch(()=> showToast('Hikaye bulunamadı'));
 }
 
-/* Sohbette paylaşılan gönderiye tıklayınca ana akışa git */
-function scrollToSharedPost(postId){
+/* Sohbette paylaşılan gönderiye tıklayınca aç */
+function scrollToSharedPost(postId, ownerUid){
   goNav('home');
   setTimeout(()=>{
     const el = document.querySelector('.post[data-post-id="'+postId+'"]');
-    if(el){ el.scrollIntoView({behavior:'smooth', block:'center'}); el.style.transition='box-shadow .3s'; el.style.boxShadow='0 0 0 3px var(--accent)'; setTimeout(()=>el.style.boxShadow='',1500); }
-    else showToast('Gönderi akışta bulunamadı');
+    if(el){
+      el.scrollIntoView({behavior:'smooth', block:'center'});
+      el.style.transition='box-shadow .3s'; el.style.boxShadow='0 0 0 3px var(--accent)';
+      setTimeout(()=>el.style.boxShadow='',1500);
+    } else if(ownerUid){
+      // Akışta yoksa (takip etmiyorsan/eski) sahibin profiline git
+      viewOtherProfile(ownerUid);
+    } else {
+      showToast('Gönderi bulunamadı');
+    }
   }, 400);
 }
 
@@ -12763,7 +12777,7 @@ function showStoryViewersList(storyId){
 
       const overlay = document.createElement('div');
       overlay.setAttribute('data-viewers-overlay', '1');
-      overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:700;display:flex;align-items:flex-end;justify-content:center;';
+      overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:10001;display:flex;align-items:flex-end;justify-content:center;';
       overlay.onclick = (e) => { if(e.target === overlay) overlay.remove(); };
       overlay.innerHTML = `
         <div style="width:100%;max-width:480px;background:var(--surface);border-radius:24px 24px 0 0;max-height:75vh;display:flex;flex-direction:column;">
