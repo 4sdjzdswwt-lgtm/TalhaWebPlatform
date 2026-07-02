@@ -254,6 +254,16 @@ body.light-mode #appGlow::after{opacity:.08;}
   box-shadow:var(--glass-shadow), 0 1px 0 var(--glass-shine) inset;
   z-index:9999;align-self:center;
 }
+/* Koyu mod: adanın içi belirgin koyu (butonlar beyaz net görünür) */
+body:not(.light-mode) .island{
+  background:rgba(38,38,46,.78);
+  border-color:rgba(255,255,255,.18);
+}
+/* Açık mod: adanın içi belirgin beyaz (butonlar siyah net görünür) */
+body.light-mode .island{
+  background:rgba(255,255,255,.9);
+  border-color:rgba(0,0,0,.1);
+}
 /* Görünürlük (audience) seçici — herkese açık / takipçiler */
 .audiencePicker{display:flex;gap:8px;}
 .audienceBtn{
@@ -266,10 +276,14 @@ body.light-mode #appGlow::after{opacity:.08;}
 .audienceHint{font-size:11.5px;color:var(--muted);margin-top:8px;}
 .island button{
   width:54px;height:54px;border-radius:50%;border:none;background:transparent;
-  color:var(--text);display:flex;align-items:center;justify-content:center;cursor:pointer;
+  color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;
   transform:scale(.88);transition:transform .25s ease, color .2s ease, background .2s ease;
 }
-.island button svg{width:24px;height:24px;}
+.island button svg{width:26px;height:26px;stroke-width:2.4;}
+/* Açık mod: ada beyaz zemin + kalın SİYAH butonlar (Instagram tarzı) */
+body.light-mode .island button{ color:#111; }
+/* Koyu mod: kalın BEYAZ butonlar */
+body:not(.light-mode) .island button{ color:#fff; }
 .island button.active{color:#fff;background:linear-gradient(135deg, var(--grad-1) 0%, var(--grad-2) 55%, var(--grad-3) 100%);transform:scale(1.05);box-shadow:0 4px 14px var(--accent);}
 .island button.pulse{animation:islandPulse .32s ease;}
 .island.chat-fullscreen-hide{display:none;}
@@ -347,11 +361,32 @@ body.light-mode #appGlow::after{opacity:.08;}
 }
 .wpColor:active{transform:scale(.88);}
 .wpColor.active{border-color:var(--accent);transform:scale(1.1);}
-/* messagesBox duvar kağıdı katmanı */
+/* Duvar kağıdı katmanı — TÜM sohbet ekranını kaplar (başlık + mesaj + composer üstte yüzer) */
 #messagesBox{
-  background-color:var(--chat-wp-color, transparent);
+  background-color:transparent;
+  background-image:none;
+}
+.chatcol{
+  position:relative;
+  background-color:var(--chat-wp-color, var(--surface));
   background-image:var(--chat-wp-image, none);
   background-size:cover;background-position:center;background-repeat:no-repeat;
+}
+/* Sohbet başlığı, emoji satırı ve composer duvar kağıdının üstünde saydam yüzer */
+.chatcol .chat-head{
+  background:linear-gradient(180deg, rgba(0,0,0,.45) 0%, rgba(0,0,0,.15) 70%, transparent 100%);
+  border-bottom:none;
+  backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);
+  position:relative;z-index:2;
+}
+.chatcol .chat-head .name{color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.6);}
+.chatcol .chat-head .status{color:rgba(255,255,255,.85) !important;text-shadow:0 1px 3px rgba(0,0,0,.6);}
+.chatcol .chat-head .back-btn{color:#fff;}
+.chatcol .emoji-row{background:transparent;position:relative;z-index:2;}
+.chatcol .composer{
+  background:linear-gradient(0deg, rgba(0,0,0,.4) 0%, rgba(0,0,0,.1) 80%, transparent 100%);
+  border-top:none;
+  position:relative;z-index:2;
 }
 @keyframes islandPulse{0%{transform:scale(1.05);}45%{transform:scale(1.28);}100%{transform:scale(1.05);}}
 
@@ -13286,7 +13321,7 @@ function currentWallpaperKey(){
   return 'next_chat_wp_' + (activeChatId || 'global');
 }
 function applyChatWallpaper(value){
-  const box = document.getElementById('messagesBox');
+  const box = document.querySelector('.chatcol');
   if(!box) return;
   if(!value || value === 'reset'){
     box.style.removeProperty('--chat-wp-color');
