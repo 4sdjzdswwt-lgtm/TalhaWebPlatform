@@ -3158,6 +3158,7 @@ tbody tr:hover{background:var(--surface-2);}
       <div id="storyMusicTag">
         <img id="storyMusicTagArt" src="">
         <span class="smtTxt" id="storyMusicTagTxt">Müzik</span>
+        <button class="smtStyle" onclick="event.stopPropagation();toggleStoryCoverStyle(this)" title="Kapak stili" style="background:rgba(255,255,255,.2);border:none;border-radius:12px;padding:3px 8px;color:#fff;font-size:11px;cursor:pointer;flex-shrink:0;margin-right:4px;">🎵 Küçük</button>
         <button class="smtClose" onclick="removeStoryMusic()">✕</button>
       </div>
     </div>
@@ -3236,6 +3237,7 @@ tbody tr:hover{background:var(--surface-2);}
         oninput="onStoryMusicSearchInput()" autocomplete="off"
         style="width:100%;box-sizing:border-box;background:rgba(255,255,255,.14);border:none;border-radius:14px;padding:14px 16px;color:#fff;font-size:16px;outline:none;">
       <div style="display:flex;gap:8px;overflow-x:auto;margin-top:10px;-webkit-overflow-scrolling:touch;padding-bottom:4px;">
+        <button class="musicChip" onclick="showSavedSongs()" style="background:var(--accent);color:#fff;">⭐ Kaydedilenler</button>
         <button class="musicChip" onclick="quickMusicSearch('Türkçe Pop')">Türkçe Pop</button>
         <button class="musicChip" onclick="quickMusicSearch('Türkçe Rap')">Türkçe Rap</button>
         <button class="musicChip" onclick="quickMusicSearch('Pop')">English</button>
@@ -3359,6 +3361,15 @@ tbody tr:hover{background:var(--surface-2);}
   <div id="storyViewerMusicTag" style="display:none;position:absolute;bottom:130px;left:50%;transform:translateX(-50%);align-items:center;gap:8px;max-width:80%;background:rgba(0,0,0,.55);backdrop-filter:blur(10px);border-radius:20px;padding:7px 14px 7px 7px;z-index:6;" onclick="event.stopPropagation()">
     <img id="storyViewerMusicArt" src="" style="width:30px;height:30px;border-radius:6px;object-fit:cover;flex-shrink:0;">
     <span id="storyViewerMusicTxt" style="color:#fff;font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">🎵</span>
+  </div>
+
+  <!-- Hikaye BÜYÜK müzik kapağı (coverStyle='big') -->
+  <div id="storyViewerMusicBig" style="display:none;position:absolute;bottom:160px;left:50%;transform:translateX(-50%);flex-direction:column;align-items:center;gap:8px;z-index:6;" onclick="event.stopPropagation()">
+    <img id="storyViewerMusicBigArt" src="" style="width:130px;height:130px;border-radius:16px;object-fit:cover;box-shadow:0 6px 24px rgba(0,0,0,.6);">
+    <div style="text-align:center;max-width:200px;">
+      <div id="storyViewerMusicBigTrack" style="color:#fff;font-size:15px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 2px 8px rgba(0,0,0,.8);"></div>
+      <div id="storyViewerMusicBigArtist" style="color:rgba(255,255,255,.9);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 2px 8px rgba(0,0,0,.8);"></div>
+    </div>
   </div>
 
   <!-- Sol üst KAYAN müzik yazısı (şarkı adı gizlendiğinde) -->
@@ -9855,16 +9866,77 @@ function renderStoryMusicResults(songs){
   results.innerHTML = valid.map((s, i) => {
     const art = (s.artworkUrl100 || s.artworkUrl60 || '').replace('100x100','120x120');
     const src = s.source ? `<span style="font-size:9px;opacity:.4;margin-left:6px;">${s.source}</span>` : '';
+    const saved = isSongSaved(s);
     return `<div class="musicResultItem" onclick="selectStoryMusic(${i})">
       <img src="${art}" onerror="this.style.opacity=.3">
       <div class="mInfo">
         <div class="mTitle">${escapeHtml(s.trackName||'')}${src}</div>
         <div class="mArtist">${escapeHtml(s.artistName||'')}</div>
       </div>
+      <button class="mSave" onclick="event.stopPropagation();toggleSaveSong(${i},this)" title="Kaydet" style="background:none;border:none;color:${saved?'var(--accent)':'rgba(255,255,255,.5)'};font-size:20px;cursor:pointer;padding:6px;">${saved?'★':'☆'}</button>
       <button class="mPlay" onclick="event.stopPropagation();toggleMusicPreview(${i},this)">▶</button>
     </div>`;
   }).join('');
   window._storyMusicSongs = valid;
+}
+
+/* ==== ŞARKI KAYDETME ==== */
+function getSavedSongs(){
+  try{ return JSON.parse(localStorage.getItem('savedSongs')||'[]'); }catch(e){ return []; }
+}
+function saveSavedSongs(list){
+  try{ localStorage.setItem('savedSongs', JSON.stringify(list)); }catch(e){}
+}
+function songKey(s){
+  return (s.trackName||'').toLowerCase().trim() + '|' + (s.artistName||'').toLowerCase().trim();
+}
+function isSongSaved(s){
+  const key = songKey(s);
+  return getSavedSongs().some(x => songKey(x) === key);
+}
+function toggleSaveSong(i, btn){
+  const s = (window._storyMusicSongs||[])[i];
+  if(!s) return;
+  let list = getSavedSongs();
+  const key = songKey(s);
+  const exists = list.some(x => songKey(x) === key);
+  if(exists){
+    list = list.filter(x => songKey(x) !== key);
+    if(btn){ btn.textContent = '☆'; btn.style.color = 'rgba(255,255,255,.5)'; }
+    showToast('Kaydedilenlerden çıkarıldı');
+  } else {
+    // Sadece gerekli alanları sakla
+    list.unshift({
+      trackName: s.trackName||'', artistName: s.artistName||'',
+      previewUrl: s.previewUrl||'', artworkUrl60: s.artworkUrl60||'',
+      artworkUrl100: s.artworkUrl100||'', source: s.source||''
+    });
+    if(list.length > 100) list = list.slice(0,100);
+    if(btn){ btn.textContent = '★'; btn.style.color = 'var(--accent)'; }
+    showToast('⭐ Şarkı kaydedildi');
+  }
+  saveSavedSongs(list);
+}
+function showSavedSongs(){
+  const results = document.getElementById('storyMusicResults');
+  const list = getSavedSongs().filter(s => s.previewUrl);
+  if(!list.length){
+    results.innerHTML = '<div style="text-align:center;color:rgba(255,255,255,.5);padding:40px;">Henüz kaydedilen şarkı yok.<br><span style="font-size:12px;">Şarkıların yanındaki ☆ ile kaydet.</span></div>';
+    return;
+  }
+  window._storyMusicSongs = list;
+  results.innerHTML = list.map((s, i) => {
+    const art = (s.artworkUrl100 || s.artworkUrl60 || '').replace('100x100','120x120');
+    return `<div class="musicResultItem" onclick="selectStoryMusic(${i})">
+      <img src="${art}" onerror="this.style.opacity=.3">
+      <div class="mInfo">
+        <div class="mTitle">${escapeHtml(s.trackName||'')}</div>
+        <div class="mArtist">${escapeHtml(s.artistName||'')}</div>
+      </div>
+      <button class="mSave" onclick="event.stopPropagation();toggleSaveSong(${i},this)" title="Çıkar" style="background:none;border:none;color:var(--accent);font-size:20px;cursor:pointer;padding:6px;">★</button>
+      <button class="mPlay" onclick="event.stopPropagation();toggleMusicPreview(${i},this)">▶</button>
+    </div>`;
+  }).join('');
 }
 
 /* Basit metinle getir (proxy zinciriyle) — JSON döndürür */
@@ -10132,11 +10204,21 @@ function confirmMusicTrim(){
     return;
   }
   // Varsayılan: hikaye
+  if(selectedStoryMusic.coverStyle == null) selectedStoryMusic.coverStyle = 'tag';
   const tag = document.getElementById('storyMusicTag');
   document.getElementById('storyMusicTagArt').src = m.artworkUrl;
   document.getElementById('storyMusicTagTxt').textContent = m.artistName + ' · ' + m.trackName;
+  const styleBtn = document.querySelector('#storyMusicTag .smtStyle');
+  if(styleBtn) styleBtn.textContent = selectedStoryMusic.coverStyle === 'big' ? '🖼️ Büyük' : '🎵 Küçük';
   if(tag) tag.style.display = 'flex';
   showToast('🎵 Müzik eklendi');
+}
+/* Hikaye kapak stilini değiştir (küçük etiket <-> büyük kapak) */
+function toggleStoryCoverStyle(btn){
+  if(!selectedStoryMusic) return;
+  selectedStoryMusic.coverStyle = (selectedStoryMusic.coverStyle === 'big') ? 'tag' : 'big';
+  btn.textContent = selectedStoryMusic.coverStyle === 'big' ? '🖼️ Büyük' : '🎵 Küçük';
+  showToast(selectedStoryMusic.coverStyle === 'big' ? 'Büyük kapak' : 'Küçük etiket');
 }
 function removePostMusic(){
   selectedPostMusic = null;
@@ -10994,6 +11076,8 @@ function playStoryViewerMusic(music){
   stopStoryViewerMusic();
   const tag = document.getElementById('storyViewerMusicTag');
   const marquee = document.getElementById('storyViewerMusicMarquee');
+  const bigCover = document.getElementById('storyViewerMusicBig');
+  if(bigCover) bigCover.style.display = 'none';
   if(!music || !music.previewUrl){
     if(tag) tag.style.display = 'none';
     if(marquee) marquee.style.display = 'none';
@@ -11002,15 +11086,25 @@ function playStoryViewerMusic(music){
   const label = (music.artistName||'') + ' · ' + (music.trackName||'');
   const hideTitle = !!music.hideTitle;
 
-  if(hideTitle){
-    // Adı gizli → normal etiket yok, sol üstte KAYAN yazı
+  if(music.coverStyle === 'big' && !hideTitle){
+    // Büyük albüm kapağı
+    if(tag) tag.style.display = 'none';
+    if(marquee) marquee.style.display = 'none';
+    if(bigCover){
+      document.getElementById('storyViewerMusicBigArt').src = music.artworkUrl || '';
+      document.getElementById('storyViewerMusicBigTrack').textContent = music.trackName || '';
+      document.getElementById('storyViewerMusicBigArtist').textContent = music.artistName || '';
+      bigCover.style.display = 'flex';
+    }
+  } else if(hideTitle){
+    // Adı gizli → sol üstte KAYAN yazı
     if(tag) tag.style.display = 'none';
     if(marquee){
       document.getElementById('storyMarqueeTxt').textContent = label + '   •   ' + label;
       marquee.style.display = 'flex';
     }
   } else {
-    // Normal alt etiket
+    // Normal alt etiket (küçük)
     if(marquee) marquee.style.display = 'none';
     if(tag){
       document.getElementById('storyViewerMusicArt').src = music.artworkUrl || '';
@@ -12047,11 +12141,105 @@ function openEphemeralPhoto(msgId, chatId){
     `;
     document.body.appendChild(overlay);
 
+    // === EKRAN GÖRÜNTÜSÜ KORUMASI (native uygulamada tam aktif olur) ===
+    // Native köprüsü varsa ekran kaydını/görüntüsünü engelle (FLAG_SECURE / iOS secure view)
+    enableScreenshotProtection(true);
+    // Web'de algılanabildiği kadarıyla screenshot dinle → karşı tarafa bildir
+    startScreenshotWatch(msgId, chatId, m.senderId || m.uid);
+
     // Kapatma — buton + boş alana tıklama (img hariç)
-    const doClose = () => closeEphemeralAndExpire(msgId, chatId, newCount);
+    const doClose = () => { stopScreenshotWatch(); enableScreenshotProtection(false); closeEphemeralAndExpire(msgId, chatId, newCount); };
     overlay.querySelector('#ephemeralCloseBtn').addEventListener('click', (e)=>{ e.stopPropagation(); doClose(); });
     overlay.addEventListener('click', (e)=>{ if(e.target === overlay) doClose(); });
   });
+}
+
+/* ==== EKRAN GÖRÜNTÜSÜ KORUMASI ====
+   Web tarayıcıda ekran görüntüsü ENGELLENEMEZ (iOS/Android sistem kısıtı).
+   Bu altyapı, uygulama native'e (Capacitor/WebView) çevrildiğinde otomatik aktif olur:
+   - Android: FLAG_SECURE → screenshot/record engellenir, ekran siyah çıkar
+   - iOS: secure text field tekniği ile içerik screenshot'ta gizlenir
+   Native köprü, window.NativeBridge olarak enjekte edilecek. */
+function enableScreenshotProtection(on){
+  try{
+    // Native köprüsü (uygulama sürümünde inject edilir)
+    if(window.NativeBridge && typeof window.NativeBridge.setSecureFlag === 'function'){
+      window.NativeBridge.setSecureFlag(!!on);
+    }
+    // Capacitor eklentisi varsa (privacy-screen / screenshot-block)
+    if(window.Capacitor && window.Capacitor.Plugins){
+      const P = window.Capacitor.Plugins;
+      if(on){
+        if(P.PrivacyScreen && P.PrivacyScreen.enable) P.PrivacyScreen.enable();
+        if(P.ScreenshotBlock && P.ScreenshotBlock.enable) P.ScreenshotBlock.enable();
+      } else {
+        if(P.PrivacyScreen && P.PrivacyScreen.disable) P.PrivacyScreen.disable();
+        if(P.ScreenshotBlock && P.ScreenshotBlock.disable) P.ScreenshotBlock.disable();
+      }
+    }
+  }catch(e){}
+}
+
+let _screenshotWatch = null;
+function startScreenshotWatch(msgId, chatId, senderUid){
+  stopScreenshotWatch();
+  const notify = ()=> reportScreenshotTaken(msgId, chatId, senderUid);
+
+  // 1) Native screenshot olayı (uygulama sürümünde tetiklenir — en güvenilir)
+  const nativeHandler = ()=> notify();
+  window.addEventListener('nativeScreenshot', nativeHandler);
+
+  // 2) iOS/Android web ipuçları (garanti değil, çalıştığı kadar):
+  //    - Ekran görüntüsü sırasında sayfa kısa süre gizlenebilir/geri döner
+  const visHandler = ()=>{ if(document.visibilityState === 'hidden'){ /* olası screenshot/kayıt */ } };
+  document.addEventListener('visibilitychange', visHandler);
+
+  // 3) Klavye kısayolu (masaüstü): PrintScreen / Cmd+Shift
+  const keyHandler = (e)=>{
+    if(e.key === 'PrintScreen' || (e.metaKey && e.shiftKey) || (e.ctrlKey && e.key === 'PrintScreen')){
+      notify();
+    }
+  };
+  document.addEventListener('keyup', keyHandler);
+
+  _screenshotWatch = ()=>{
+    window.removeEventListener('nativeScreenshot', nativeHandler);
+    document.removeEventListener('visibilitychange', visHandler);
+    document.removeEventListener('keyup', keyHandler);
+  };
+}
+function stopScreenshotWatch(){
+  if(_screenshotWatch){ _screenshotWatch(); _screenshotWatch = null; }
+}
+let _lastScreenshotReport = 0;
+function reportScreenshotTaken(msgId, chatId, senderUid){
+  const now = Date.now();
+  if(now - _lastScreenshotReport < 3000) return; // tekrarları engelle
+  _lastScreenshotReport = now;
+  const myUid = fbAuth.currentUser ? fbAuth.currentUser.uid : null;
+  const myName = savedUsername || '@kullanici';
+  showToast('📸 Ekran görüntüsü algılandı — gönderene bildiriliyor');
+  // Sohbete sistem mesajı + gönderene bildirim
+  try{
+    if(chatId){
+      fbDb.ref('chats/'+chatId+'/messages').push({
+        system: true,
+        text: myName + ' bir ekran görüntüsü aldı 📸',
+        senderId: myUid,
+        ts: firebase.database.ServerValue.TIMESTAMP
+      });
+    }
+    if(senderUid && senderUid !== myUid){
+      fbDb.ref('notifications/'+senderUid).push({
+        type: 'screenshot',
+        fromUid: myUid,
+        fromUsername: myName,
+        text: 'süreli fotoğrafının ekran görüntüsünü aldı 📸',
+        ts: firebase.database.ServerValue.TIMESTAMP,
+        read: false
+      });
+    }
+  }catch(e){}
 }
 
 function closeEphemeralAndExpire(msgId, chatId, newCount){
