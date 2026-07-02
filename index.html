@@ -3710,19 +3710,6 @@ tbody tr:hover{background:var(--surface-2);}
 </style>
 
 <script>
-/* GEÇİCİ HATA AYIKLAYICI — herhangi bir JS hatası olursa ekranda göster (siyah ekran yerine) */
-window.addEventListener('error', function(e){
-  try{
-    var box = document.getElementById('__errBox');
-    if(!box){
-      box = document.createElement('div');
-      box.id = '__errBox';
-      box.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:999999;background:#b00020;color:#fff;font:12px monospace;padding:10px;max-height:40vh;overflow:auto;white-space:pre-wrap;';
-      document.body.appendChild(box);
-    }
-    box.textContent += '⚠️ ' + (e.message||'hata') + '\n@ ' + (e.filename||'').split('/').pop() + ':' + (e.lineno||'?') + '\n\n';
-  }catch(_){}
-});
 /* ===== KAYIT AKIŞI ===== */
 /* ============================================================
    ADMIN HESABI — bu e-posta + şifre ile kayıt olan/giriş yapan
@@ -6819,11 +6806,31 @@ let _postMusicObserver = null;
 let _activePostMusicId = null;
 let _postMusicUserWantsSound = false; // kullanıcı sesi açtı mı (kalıcı tercih)
 
+/* Gönderi müziğinin linki ölmüşse: aynı şarkının taze linkini bul,
+   audio'ya koy, çal ve Firebase'de kalıcı güncelle. */
+let _healedPosts = {};
+function tryHealPostMusic(audio, postId){
+  if(_healedPosts[postId]) return; // sonsuz döngü olmasın
+  _healedPosts[postId] = true;
+  const p = (window._postsCache && window._postsCache[postId]) || null;
+  const music = p && p.music;
+  if(!music || !music.trackName){ showToast('🔇 Şarkı çalınamadı'); return; }
+  showToast('🔄 Şarkı bağlantısı yenileniyor...');
+  healAudioAndPlay(audio, music, (newUrl)=>{
+    // Firebase'de kalıcı güncelle (bir daha ölmesin)
+    try{ fbDb.ref('posts/' + postId + '/music/previewUrl').set(newUrl); }catch(e){}
+    if(window._postsCache && window._postsCache[postId] && window._postsCache[postId].music){
+      window._postsCache[postId].music.previewUrl = newUrl;
+    }
+    showToast('🎵 Şarkı yenilendi');
+  });
+}
+
 function togglePostMusic(postId){
   unlockAudioOnce && unlockAudioOnce();
   const audio = document.querySelector('.postMusicAudio[data-post-id="'+postId+'"]');
   const btn = document.querySelector('.postMusicBtn[data-post-id="'+postId+'"]');
-  if(!audio) return;
+  if(!audio){ showToast('Ses bulunamadı'); return; }
   if(audio.muted || audio.paused){
     // Diğer tüm gönderi müziklerini durdur
     document.querySelectorAll('.postMusicAudio').forEach(a=>{ if(a!==audio){ a.pause(); a.muted = true; } });
@@ -6831,9 +6838,20 @@ function togglePostMusic(postId){
     audio.loop = true;
     audio.muted = false;
     audio.volume = 1;
+    // Kaynak henüz yüklenmediyse yüklemeyi tetikle
+    try{ if(audio.readyState < 2) audio.load(); }catch(e){}
     // iOS: kullanıcı dokunuşuna doğrudan bağlı play() — en güvenilir an burası
     const pr = audio.play();
-    if(pr && pr.catch) pr.catch(()=>{ /* yine de sessizce dene */ });
+    if(pr && pr.catch) pr.catch((err)=>{
+      // NotAllowedError = iOS izin sorunu; NotSupportedError/AbortError = link ölmüş olabilir
+      if(err && (err.name === 'NotSupportedError' || err.name === 'AbortError')){
+        tryHealPostMusic(audio, postId);
+      } else {
+        if(btn){ btn.classList.remove('playing'); const ic=btn.querySelector('.pmIcon'); if(ic) ic.textContent='🔇'; }
+      }
+    });
+    // Yükleme/ağ hatası olursa taze link bul
+    audio.onerror = ()=>{ tryHealPostMusic(audio, postId); };
     _postMusicUserWantsSound = true;
     _activePostMusicId = postId;
     if(btn){ btn.classList.add('playing'); const ic=btn.querySelector('.pmIcon'); if(ic) ic.textContent='🔊'; }
@@ -10026,6 +10044,59 @@ function searchDeezer(query){
   }).catch(()=> []);
 }
 
+/* ===== ÖLÜ MÜZİK LİNKİNİ OTOMATİK TAZELE =====
+   Bir şarkının previewUrl'i çalışmazsa, aynı şarkıyı (ad+sanatçı) yeniden
+   arayıp taze bir previewUrl bul. Gönderi/hikaye/anı hepsi için kullanılır. */
+let _urlRefreshCache = {};   // aynı şarkıyı tekrar tekrar aramamak için
+let _urlRefreshTrying = {};  // aynı anda birden fazla deneme olmasın
+function refreshMusicUrl(trackName, artistName){
+  const key = (trackName||'').toLowerCase().trim() + '|' + (artistName||'').toLowerCase().trim();
+  if(_urlRefreshCache[key]) return Promise.resolve(_urlRefreshCache[key]);
+  if(_urlRefreshTrying[key]) return _urlRefreshTrying[key];
+  const query = ((artistName||'') + ' ' + (trackName||'')).trim();
+  if(!query){ return Promise.resolve(null); }
+  const norm = (s)=> (s||'').toLowerCase().replace(/[^a-z0-9ğüşıöç ]/gi,'').trim();
+  const wantT = norm(trackName), wantA = norm(artistName);
+  const pick = (list)=>{
+    if(!list || !list.length) return null;
+    // En iyi eşleşme: hem şarkı hem sanatçı adı tutan
+    let best = list.find(s => norm(s.trackName)===wantT && norm(s.artistName).includes(wantA))
+            || list.find(s => norm(s.trackName).includes(wantT) && norm(s.artistName).includes(wantA))
+            || list.find(s => norm(s.trackName).includes(wantT))
+            || list[0];
+    return best && best.previewUrl ? best.previewUrl : null;
+  };
+  // Önce iTunes (linkleri kalıcı), sonra Deezer
+  const p = searchITunes(query).then(list=>{
+    let url = pick(list);
+    if(url) return url;
+    return searchDeezer(query).then(pick);
+  }).then(url=>{
+    delete _urlRefreshTrying[key];
+    if(url) _urlRefreshCache[key] = url;
+    return url;
+  }).catch(()=>{ delete _urlRefreshTrying[key]; return null; });
+  _urlRefreshTrying[key] = p;
+  return p;
+}
+
+/* Bir <audio> elementinin linki ölmüşse taze linkle değiştirip çal.
+   music: {trackName, artistName, previewUrl}. onFixed(url): yeni url'i kaydetmek için. */
+function healAudioAndPlay(audio, music, onFixed){
+  if(!audio || !music) return;
+  refreshMusicUrl(music.trackName, music.artistName).then(newUrl=>{
+    if(!newUrl){ showToast('🔇 Şarkı bulunamadı'); return; }
+    const wasMuted = audio.muted;
+    audio.src = newUrl;
+    try{ audio.load(); }catch(e){}
+    const startAt = music.startTime || 0;
+    const onMeta = ()=>{ try{ if(startAt) audio.currentTime = startAt; }catch(e){} audio.play().catch(()=>{}); };
+    if(audio.readyState >= 1) onMeta();
+    else audio.addEventListener('loadedmetadata', onMeta, { once:true });
+    if(typeof onFixed === 'function') onFixed(newUrl);
+  });
+}
+
 function searchStoryMusic(query){
   const results = document.getElementById('storyMusicResults');
   results.innerHTML = '<div style="text-align:center;color:rgba(255,255,255,.5);padding:40px;">Aranıyor...</div>';
@@ -11301,7 +11372,21 @@ function playStoryViewerMusic(music){
       });
     }
   };
-  audio.onerror = ()=>{ showToast('🔇 Şarkı yüklenemedi'); };
+  audio.onerror = ()=>{
+    // Link ölmüş → aynı şarkının taze linkini bul
+    if(audio._healed) { showToast('🔇 Şarkı bulunamadı'); return; }
+    audio._healed = true;
+    showToast('🔄 Şarkı bağlantısı yenileniyor...');
+    healAudioAndPlay(audio, music, (newUrl)=>{
+      // Hikaye kaydını Firebase'de güncelle (bir daha ölmesin)
+      try{
+        if(currentStoryId){
+          fbDb.ref('stories/' + currentStoryId + '/music/previewUrl').set(newUrl);
+        }
+      }catch(e){}
+      showToast('🎵 Şarkı yenilendi');
+    });
+  };
   if(audio.readyState >= 1){ seekAndPlay(); }
   else { audio.addEventListener('loadedmetadata', seekAndPlay, { once:true }); audio.load(); }
   // Süre dolunca durdur
