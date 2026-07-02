@@ -142,6 +142,27 @@ body[data-accent="black"]{
 }
 body.light-mode[data-accent="black"]{ --accent:#404040; --accent-dim:#e5e5e5; --grad-1:#262626; --grad-2:#404040; --grad-3:#525252; --glass-border:rgba(64,64,64,.30); }
 
+/* ===== FUTBOL TAKIMI TEMALARI ===== */
+/* — Süper Lig — */
+body[data-accent="gs"]{ --accent:#e0a010; --accent-dim:#4a2f00; --bubble-me:#a83232; --grad-1:#a30d0d; --grad-2:#d4691a; --grad-3:#f6c700; --glass-border:rgba(224,160,16,.4); }
+body[data-accent="fb"]{ --accent:#f6d33c; --accent-dim:#0a1a3f; --bubble-me:#122b6b; --grad-1:#0a2472; --grad-2:#123499; --grad-3:#f6d33c; --glass-border:rgba(246,211,60,.4); }
+body[data-accent="bjk"]{ --accent:#e8e8e8; --accent-dim:#1a1a1a; --bubble-me:#2a2a2a; --grad-1:#000000; --grad-2:#3a3a3a; --grad-3:#e8e8e8; --glass-border:rgba(200,200,200,.4); }
+body[data-accent="ts"]{ --accent:#5aa9e6; --accent-dim:#3a0d1a; --bubble-me:#7a1028; --grad-1:#6a0d1f; --grad-2:#a01530; --grad-3:#4a90d9; --glass-border:rgba(90,169,230,.4); }
+/* — Premier League — */
+body[data-accent="mun"]{ --accent:#f0b41e; --accent-dim:#4a0a0a; --bubble-me:#a01818; --grad-1:#c81414; --grad-2:#e02020; --grad-3:#f0b41e; --glass-border:rgba(240,180,30,.4); }
+body[data-accent="mci"]{ --accent:#6cabdd; --accent-dim:#0a2a45; --bubble-me:#1c6ba8; --grad-1:#2a95c8; --grad-2:#6cabdd; --grad-3:#a8d4ec; --glass-border:rgba(108,171,221,.4); }
+body[data-accent="liv"]{ --accent:#e63946; --accent-dim:#3a0a10; --bubble-me:#a01822; --grad-1:#c8102e; --grad-2:#e63946; --grad-3:#f07886; --glass-border:rgba(230,57,70,.4); }
+body[data-accent="che"]{ --accent:#3f7fd4; --accent-dim:#0a1a40; --bubble-me:#123499; --grad-1:#034694; --grad-2:#1a5fc8; --grad-3:#5a9fe6; --glass-border:rgba(63,127,212,.4); }
+body[data-accent="ars"]{ --accent:#ef4444; --accent-dim:#3a0a0a; --bubble-me:#a01818; --grad-1:#c81414; --grad-2:#ef2020; --grad-3:#ffffff; --glass-border:rgba(239,68,68,.4); }
+body[data-accent="tot"]{ --accent:#cfd4dc; --accent-dim:#0a1128; --bubble-me:#1a2450; --grad-1:#0a1642; --grad-2:#2a3a6a; --grad-3:#cfd4dc; --glass-border:rgba(207,212,220,.4); }
+/* — La Liga — */
+body[data-accent="rma"]{ --accent:#d4af37; --accent-dim:#1a1a3a; --bubble-me:#2a2a5a; --grad-1:#1a1a4a; --grad-2:#3a3a7a; --grad-3:#e8c860; --glass-border:rgba(212,175,55,.4); }
+body[data-accent="fcb"]{ --accent:#edbb00; --accent-dim:#2a0a2a; --bubble-me:#6a1a3a; --grad-1:#8a1538; --grad-2:#123499; --grad-3:#edbb00; --glass-border:rgba(237,187,0,.4); }
+body[data-accent="atm"]{ --accent:#e63946; --accent-dim:#0a1a40; --bubble-me:#123499; --grad-1:#c81428; --grad-2:#1a5fc8; --grad-3:#e6a03a; --glass-border:rgba(230,57,70,.4); }
+/* — Bundesliga — */
+body[data-accent="fcb_m"]{ --accent:#dc052d; --accent-dim:#3a0a12; --bubble-me:#a0142a; --grad-1:#c8051f; --grad-2:#dc052d; --grad-3:#f07886; --glass-border:rgba(220,5,45,.4); }
+body[data-accent="bvb"]{ --accent:#fde100; --accent-dim:#1a1a00; --bubble-me:#3a3a00; --grad-1:#1a1a1a; --grad-2:#4a4a00; --grad-3:#fde100; --glass-border:rgba(253,225,0,.45); }
+
 /* Gradient'i body seviyesinde yeniden hesapla — hangi tema/accent seçili olursa
    olsun --grad-1/2/3 güncel değerleriyle gradient otomatik o renge döner. */
 body{
@@ -2809,6 +2830,37 @@ tbody tr:hover{background:var(--surface-2);}
             <button class="accentDot" data-accent="yellow" style="background:linear-gradient(135deg,#f59e0b,#fde047);" onclick="applyAccent('yellow')" title="Sarı"></button>
             <button class="accentDot" data-accent="green" style="background:linear-gradient(135deg,#16a34a,#4ade80);" onclick="applyAccent('green')" title="Yeşil"></button>
             <button class="accentDot" data-accent="black" style="background:linear-gradient(135deg,#262626,#737373);" onclick="applyAccent('black')" title="Siyah"></button>
+          </div>
+
+          <div style="font-size:12px;color:var(--muted);margin:14px 0 8px;font-weight:600;">⚽ Süper Lig</div>
+          <div class="accentPicker" id="accentPickerSL">
+            <button class="accentDot" data-accent="gs" style="background:linear-gradient(135deg,#a30d0d,#f6c700);" onclick="applyAccent('gs')" title="Galatasaray"></button>
+            <button class="accentDot" data-accent="fb" style="background:linear-gradient(135deg,#123499,#f6d33c);" onclick="applyAccent('fb')" title="Fenerbahçe"></button>
+            <button class="accentDot" data-accent="bjk" style="background:linear-gradient(135deg,#000,#e8e8e8);" onclick="applyAccent('bjk')" title="Beşiktaş"></button>
+            <button class="accentDot" data-accent="ts" style="background:linear-gradient(135deg,#8a1028,#4a90d9);" onclick="applyAccent('ts')" title="Trabzonspor"></button>
+          </div>
+
+          <div style="font-size:12px;color:var(--muted);margin:14px 0 8px;font-weight:600;">🦁 Premier League</div>
+          <div class="accentPicker" id="accentPickerPL">
+            <button class="accentDot" data-accent="mun" style="background:linear-gradient(135deg,#c81414,#f0b41e);" onclick="applyAccent('mun')" title="Man United"></button>
+            <button class="accentDot" data-accent="mci" style="background:linear-gradient(135deg,#2a95c8,#a8d4ec);" onclick="applyAccent('mci')" title="Man City"></button>
+            <button class="accentDot" data-accent="liv" style="background:linear-gradient(135deg,#c8102e,#f07886);" onclick="applyAccent('liv')" title="Liverpool"></button>
+            <button class="accentDot" data-accent="che" style="background:linear-gradient(135deg,#034694,#5a9fe6);" onclick="applyAccent('che')" title="Chelsea"></button>
+            <button class="accentDot" data-accent="ars" style="background:linear-gradient(135deg,#c81414,#fff);" onclick="applyAccent('ars')" title="Arsenal"></button>
+            <button class="accentDot" data-accent="tot" style="background:linear-gradient(135deg,#0a1642,#cfd4dc);" onclick="applyAccent('tot')" title="Tottenham"></button>
+          </div>
+
+          <div style="font-size:12px;color:var(--muted);margin:14px 0 8px;font-weight:600;">🇪🇸 La Liga</div>
+          <div class="accentPicker" id="accentPickerLL">
+            <button class="accentDot" data-accent="rma" style="background:linear-gradient(135deg,#1a1a4a,#e8c860);" onclick="applyAccent('rma')" title="Real Madrid"></button>
+            <button class="accentDot" data-accent="fcb" style="background:linear-gradient(135deg,#8a1538,#123499);" onclick="applyAccent('fcb')" title="Barcelona"></button>
+            <button class="accentDot" data-accent="atm" style="background:linear-gradient(135deg,#c81428,#1a5fc8);" onclick="applyAccent('atm')" title="Atletico Madrid"></button>
+          </div>
+
+          <div style="font-size:12px;color:var(--muted);margin:14px 0 8px;font-weight:600;">🇩🇪 Bundesliga</div>
+          <div class="accentPicker" id="accentPickerBL">
+            <button class="accentDot" data-accent="fcb_m" style="background:linear-gradient(135deg,#dc052d,#f07886);" onclick="applyAccent('fcb_m')" title="Bayern Münih"></button>
+            <button class="accentDot" data-accent="bvb" style="background:linear-gradient(135deg,#1a1a1a,#fde100);" onclick="applyAccent('bvb')" title="Borussia Dortmund"></button>
           </div>
         </div>
 
