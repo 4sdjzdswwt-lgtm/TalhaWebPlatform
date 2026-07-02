@@ -6818,8 +6818,12 @@ function togglePostMusic(postId){
     // Diğer tüm gönderi müziklerini durdur
     document.querySelectorAll('.postMusicAudio').forEach(a=>{ if(a!==audio){ a.pause(); a.muted = true; } });
     document.querySelectorAll('.postMusicBtn').forEach(b=>{ b.classList.remove('playing'); const ic=b.querySelector('.pmIcon'); if(ic) ic.textContent='🔇'; });
+    audio.loop = true;
     audio.muted = false;
-    audio.play().catch(()=>{});
+    audio.volume = 1;
+    // iOS: kullanıcı dokunuşuna doğrudan bağlı play() — en güvenilir an burası
+    const pr = audio.play();
+    if(pr && pr.catch) pr.catch(()=>{ /* yine de sessizce dene */ });
     _postMusicUserWantsSound = true;
     _activePostMusicId = postId;
     if(btn){ btn.classList.add('playing'); const ic=btn.querySelector('.pmIcon'); if(ic) ic.textContent='🔊'; }
@@ -6827,6 +6831,7 @@ function togglePostMusic(postId){
     audio.muted = true;
     audio.pause();
     _postMusicUserWantsSound = false;
+    _activePostMusicId = null;
     if(btn){ btn.classList.remove('playing'); const ic=btn.querySelector('.pmIcon'); if(ic) ic.textContent='🔇'; }
   }
 }
@@ -6840,20 +6845,25 @@ function setupPostMusicObserver(){
       const audio = media.querySelector('.postMusicAudio');
       const btn = media.querySelector('.postMusicBtn');
       if(!audio) return;
+      const pid = audio.getAttribute('data-post-id');
       if(entry.isIntersecting && entry.intersectionRatio > 0.6){
-        // Bu gönderi ekranın ortasında → müziğini başlat
+        // Bu gönderi ekranın ortasında
         document.querySelectorAll('.postMusicAudio').forEach(a=>{ if(a!==audio) a.pause(); });
-        audio.muted = !_postMusicUserWantsSound; // kullanıcı sesi açtıysa sesli
-        audio.play().then(()=>{
-          if(!audio.muted && btn){ btn.classList.add('playing'); const ic=btn.querySelector('.pmIcon'); if(ic) ic.textContent='🔊'; }
-        }).catch(()=>{});
+        audio.loop = true;
+        _activePostMusicId = pid;
+        // Kullanıcı sesi açtıysa SESLİ devam et, açmadıysa sadece hazır dursun (iOS otomatik sesli çalmaya izin vermez)
+        if(_postMusicUserWantsSound){
+          audio.muted = false; audio.volume = 1;
+          const pr = audio.play();
+          if(pr && pr.then) pr.then(()=>{ if(btn){ btn.classList.add('playing'); const ic=btn.querySelector('.pmIcon'); if(ic) ic.textContent='🔊'; } }).catch(()=>{});
+        }
       } else {
+        // Görünürden çıktı → durdur
         audio.pause();
         if(btn){ btn.classList.remove('playing'); const ic=btn.querySelector('.pmIcon'); if(ic) ic.textContent='🔇'; }
       }
     });
   }, { threshold: [0, 0.6, 1] });
-  // Müziği olan tüm gönderi medyalarını gözle
   document.querySelectorAll('.post-media').forEach(m=>{
     if(m.querySelector('.postMusicAudio')) _postMusicObserver.observe(m);
   });
@@ -6878,7 +6888,7 @@ function renderPostCard(id, p, myUid){
       <span class="pmIcon">🔇</span>
     </button>
     <div class="postMusicLabel"><span class="pmNote">🎵</span> ${escapeHtml((p.music.artistName||'') + ' · ' + (p.music.trackName||''))}</div>
-    <audio class="postMusicAudio" data-post-id="${id}" src="${p.music.previewUrl}" loop preload="none"></audio>
+    <audio class="postMusicAudio" data-post-id="${id}" src="${p.music.previewUrl}" loop preload="metadata" playsinline webkit-playsinline></audio>
   ` : '';
   const mediaInner = isVideo ? `<video controls src="${mediaList[0]||''}"></video>` : `<img src="${mediaList[0]||''}">`;
   const mediaHtml = mediaList.length <= 1
@@ -11225,10 +11235,11 @@ function playStoryViewerMusic(music){
   if(audio.readyState >= 1){ seekAndPlay(); }
   else { audio.addEventListener('loadedmetadata', seekAndPlay, { once:true }); audio.load(); }
   // Süre dolunca durdur
+  // Süre dolunca BAŞA SAR (loop) — kesme, hikaye boyunca çalsın
   audio._stopWatcher = setInterval(()=>{
     if(!storyViewerMusicAudio){ return; }
     if(audio.currentTime >= startAt + dur){
-      stopStoryViewerMusic();
+      try{ audio.currentTime = startAt; audio.play().catch(()=>{}); }catch(e){}
     }
   }, 250);
 }
