@@ -5413,6 +5413,20 @@ function showToast(msg){
   t.classList.add('show');
   setTimeout(()=>t.classList.remove('show'), 2400);
 }
+/* GEÇİCİ TEŞHİS KUTUSU — ses sorununu bulmak için, sonra kaldırılacak */
+function dbgLog(msg){
+  let box = document.getElementById('__dbgBox');
+  if(!box){
+    box = document.createElement('div');
+    box.id = '__dbgBox';
+    box.style.cssText = 'position:fixed;left:8px;right:8px;bottom:80px;z-index:999999;background:rgba(0,0,0,.9);color:#0f0;font:11px monospace;padding:10px;max-height:35vh;overflow:auto;white-space:pre-wrap;border-radius:8px;border:1px solid #0f0;';
+    box.addEventListener('click', ()=>box.remove());
+    document.body.appendChild(box);
+  }
+  const now = new Date().toLocaleTimeString();
+  box.textContent += '['+now+'] ' + msg + '\n';
+  box.scrollTop = box.scrollHeight;
+}
 
 /* ===== SÖZLEŞME: ÖNCE METİN, SONRA VİDEO ===== */
 function showContractAgree(){
@@ -6830,28 +6844,31 @@ function togglePostMusic(postId){
   unlockAudioOnce && unlockAudioOnce();
   const audio = document.querySelector('.postMusicAudio[data-post-id="'+postId+'"]');
   const btn = document.querySelector('.postMusicBtn[data-post-id="'+postId+'"]');
-  if(!audio){ showToast('Ses bulunamadı'); return; }
+  if(!audio){ dbgLog('HATA: audio elementi bulunamadı postId='+postId); return; }
+  const srcInfo = (audio.currentSrc||audio.src||audio.getAttribute('src')||'YOK');
+  dbgLog('Butona basıldı. muted='+audio.muted+' paused='+audio.paused+' readyState='+audio.readyState);
+  dbgLog('src: ' + srcInfo.slice(0,70));
   if(audio.muted || audio.paused){
-    // Diğer tüm gönderi müziklerini durdur
     document.querySelectorAll('.postMusicAudio').forEach(a=>{ if(a!==audio){ a.pause(); a.muted = true; } });
     document.querySelectorAll('.postMusicBtn').forEach(b=>{ b.classList.remove('playing'); const ic=b.querySelector('.pmIcon'); if(ic) ic.textContent='🔇'; });
     audio.loop = true;
     audio.muted = false;
     audio.volume = 1;
-    // Kaynak henüz yüklenmediyse yüklemeyi tetikle
-    try{ if(audio.readyState < 2) audio.load(); }catch(e){}
-    // iOS: kullanıcı dokunuşuna doğrudan bağlı play() — en güvenilir an burası
+    try{ if(audio.readyState < 2){ audio.load(); dbgLog('audio.load() çağrıldı'); } }catch(e){ dbgLog('load hatası: '+e.message); }
     const pr = audio.play();
+    dbgLog('play() çağrıldı, promise=' + (pr ? 'var' : 'yok'));
+    if(pr && pr.then) pr.then(()=>{ dbgLog('✓ ÇALIYOR! (play başarılı)'); });
     if(pr && pr.catch) pr.catch((err)=>{
-      // NotAllowedError = iOS izin sorunu; NotSupportedError/AbortError = link ölmüş olabilir
-      if(err && (err.name === 'NotSupportedError' || err.name === 'AbortError')){
+      const nm = err && err.name ? err.name : 'bilinmeyen';
+      dbgLog('✗ play HATASI: ' + nm + ' — ' + (err&&err.message?err.message.slice(0,50):''));
+      if(nm === 'NotSupportedError' || nm === 'AbortError'){
+        dbgLog('→ link ölmüş olabilir, yenileniyor...');
         tryHealPostMusic(audio, postId);
       } else {
         if(btn){ btn.classList.remove('playing'); const ic=btn.querySelector('.pmIcon'); if(ic) ic.textContent='🔇'; }
       }
     });
-    // Yükleme/ağ hatası olursa taze link bul
-    audio.onerror = ()=>{ tryHealPostMusic(audio, postId); };
+    audio.onerror = ()=>{ dbgLog('✗ audio.onerror! kod=' + (audio.error?audio.error.code:'?')); tryHealPostMusic(audio, postId); };
     _postMusicUserWantsSound = true;
     _activePostMusicId = postId;
     if(btn){ btn.classList.add('playing'); const ic=btn.querySelector('.pmIcon'); if(ic) ic.textContent='🔊'; }
