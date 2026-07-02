@@ -3710,6 +3710,19 @@ tbody tr:hover{background:var(--surface-2);}
 </style>
 
 <script>
+/* GEÇİCİ HATA AYIKLAYICI — herhangi bir JS hatası olursa ekranda göster (siyah ekran yerine) */
+window.addEventListener('error', function(e){
+  try{
+    var box = document.getElementById('__errBox');
+    if(!box){
+      box = document.createElement('div');
+      box.id = '__errBox';
+      box.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:999999;background:#b00020;color:#fff;font:12px monospace;padding:10px;max-height:40vh;overflow:auto;white-space:pre-wrap;';
+      document.body.appendChild(box);
+    }
+    box.textContent += '⚠️ ' + (e.message||'hata') + '\n@ ' + (e.filename||'').split('/').pop() + ':' + (e.lineno||'?') + '\n\n';
+  }catch(_){}
+});
 /* ===== KAYIT AKIŞI ===== */
 /* ============================================================
    ADMIN HESABI — bu e-posta + şifre ile kayıt olan/giriş yapan
@@ -13990,21 +14003,26 @@ window.hideStoryUser = hideStoryUser;
 window.unhideAllStoryUsers = unhideAllStoryUsers;
 
 function bootApp(){
-  initTheme();
+  try{ initTheme(); }catch(err){ console.error('initTheme hatası:', err); }
   try{
     // Önce: sosyal giriş redirect'inden döndüysek sonuçları topla
     checkSocialSignInRedirect();
     initAuthState();
   }catch(err){
     console.error('initAuthState hatası:', err);
-    document.getElementById('screenFeed').classList.add('active');
-    document.getElementById('island').classList.remove('hidden');
+    try{ document.getElementById('screenFeed').classList.add('active'); }catch(e){}
+    try{ document.getElementById('island').classList.remove('hidden'); }catch(e){}
   }
-  const splash = document.getElementById('appSplash');
-  setTimeout(()=>{
+  // Splash'i HER DURUMDA kaldır (hata olsa bile siyah ekranda takılmasın)
+  const removeSplash = ()=>{
+    const splash = document.getElementById('appSplash');
+    if(!splash) return;
     splash.classList.add('hide');
-    setTimeout(()=>splash.remove(), 550);
-  }, 900);
+    setTimeout(()=>{ try{ splash.remove(); }catch(e){} }, 550);
+  };
+  setTimeout(removeSplash, 900);
+  // Güvenlik ağı: 4 saniye sonra splash hâlâ duruyorsa zorla kaldır
+  setTimeout(()=>{ const s=document.getElementById('appSplash'); if(s) s.remove(); }, 4000);
 }
 /* Kayıt ekranındaki inputlara focus olunca görünür alana kaydır */
 document.querySelectorAll('#screenRegister input').forEach(inp => {
