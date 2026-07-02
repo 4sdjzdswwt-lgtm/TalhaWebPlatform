@@ -3150,6 +3150,15 @@ tbody tr:hover{background:var(--surface-2);}
       <div id="storyTextOverlaysContainer" style="position:absolute;inset:0;pointer-events:none;"></div>
       <!-- Çıkartma (sticker) katmanı -->
       <div id="storyStickerContainer" style="position:absolute;inset:0;pointer-events:none;"></div>
+      <!-- Sürüklenebilir BÜYÜK müzik kapağı (composer) -->
+      <div id="storyMusicBigSticker" style="display:none;position:absolute;left:50%;top:55%;transform:translate(-50%,-50%);flex-direction:column;align-items:center;gap:8px;z-index:14;touch-action:none;cursor:move;">
+        <img id="storyMusicBigStickerArt" src="" style="width:140px;height:140px;border-radius:16px;object-fit:cover;box-shadow:0 6px 24px rgba(0,0,0,.6);pointer-events:none;">
+        <div style="text-align:center;max-width:200px;pointer-events:none;">
+          <div id="storyMusicBigStickerTrack" style="color:#fff;font-size:15px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 2px 8px rgba(0,0,0,.85);"></div>
+          <div id="storyMusicBigStickerArtist" style="color:rgba(255,255,255,.9);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 2px 8px rgba(0,0,0,.85);"></div>
+        </div>
+        <div class="bigCoverResize" style="position:absolute;right:-10px;bottom:-10px;width:26px;height:26px;background:#fff;border-radius:50%;cursor:nwse-resize;box-shadow:0 1px 5px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;font-size:13px;color:#333;pointer-events:auto;">⤡</div>
+      </div>
 
       <!-- Yazıyı silmek için çöp kutusu (aşağı sürükleyince görünür) -->
       <div id="storyTrashZone" style="display:none;position:absolute;bottom:24px;left:50%;transform:translateX(-50%);z-index:16;width:60px;height:60px;border-radius:50%;background:rgba(0,0,0,.55);backdrop-filter:blur(8px);align-items:center;justify-content:center;font-size:26px;pointer-events:none;transition:transform .15s,background .15s;">🗑️</div>
@@ -10218,7 +10227,67 @@ function toggleStoryCoverStyle(btn){
   if(!selectedStoryMusic) return;
   selectedStoryMusic.coverStyle = (selectedStoryMusic.coverStyle === 'big') ? 'tag' : 'big';
   btn.textContent = selectedStoryMusic.coverStyle === 'big' ? '🖼️ Büyük' : '🎵 Küçük';
-  showToast(selectedStoryMusic.coverStyle === 'big' ? 'Büyük kapak' : 'Küçük etiket');
+  updateStoryBigCoverSticker();
+  showToast(selectedStoryMusic.coverStyle === 'big' ? 'Büyük kapak — sürükle & boyutlandır' : 'Küçük etiket');
+}
+let storyBigCoverX = 50, storyBigCoverY = 55, storyBigCoverScale = 1;
+/* Composer'da büyük kapak sticker'ını göster/gizle ve doldur */
+function updateStoryBigCoverSticker(){
+  const st = document.getElementById('storyMusicBigSticker');
+  if(!st) return;
+  const isBig = selectedStoryMusic && selectedStoryMusic.coverStyle === 'big';
+  if(!isBig){ st.style.display = 'none'; return; }
+  document.getElementById('storyMusicBigStickerArt').src = selectedStoryMusic.artworkUrl || '';
+  document.getElementById('storyMusicBigStickerTrack').textContent = selectedStoryMusic.trackName || '';
+  document.getElementById('storyMusicBigStickerArtist').textContent = selectedStoryMusic.artistName || '';
+  st.style.left = storyBigCoverX + '%';
+  st.style.top = storyBigCoverY + '%';
+  st.style.transform = `translate(-50%,-50%) scale(${storyBigCoverScale})`;
+  st.style.display = 'flex';
+  bindStoryBigCoverDrag(st);
+}
+function bindStoryBigCoverDrag(el){
+  if(el._bound) return; el._bound = true;
+  const resize = el.querySelector('.bigCoverResize');
+  const stage = document.getElementById('storyMediaPreview');
+  let mode = null, sx, sy, startX, startY, startScale;
+  const getPt = (e)=>{ const t = e.touches ? e.touches[0] : e; return {x:t.clientX, y:t.clientY}; };
+  const onStart = (e, m)=>{
+    e.preventDefault(); e.stopPropagation();
+    mode = m;
+    const p = getPt(e);
+    sx = p.x; sy = p.y;
+    startX = storyBigCoverX; startY = storyBigCoverY; startScale = storyBigCoverScale;
+    document.addEventListener('touchmove', onMove, {passive:false});
+    document.addEventListener('touchend', onEnd);
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onEnd);
+  };
+  const onMove = (e)=>{
+    if(!mode) return;
+    e.preventDefault();
+    const rect = stage.getBoundingClientRect();
+    const p = getPt(e);
+    if(mode==='move'){
+      storyBigCoverX = Math.max(8, Math.min(92, startX + (p.x - sx)/rect.width*100));
+      storyBigCoverY = Math.max(8, Math.min(92, startY + (p.y - sy)/rect.height*100));
+      el.style.left = storyBigCoverX+'%'; el.style.top = storyBigCoverY+'%';
+    } else {
+      storyBigCoverScale = Math.max(0.5, Math.min(2.5, startScale + (p.x - sx)/rect.width*3));
+      el.style.transform = `translate(-50%,-50%) scale(${storyBigCoverScale})`;
+    }
+  };
+  const onEnd = ()=>{
+    mode = null;
+    document.removeEventListener('touchmove', onMove);
+    document.removeEventListener('touchend', onEnd);
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', onEnd);
+  };
+  el.addEventListener('touchstart', (e)=>{ if(e.target===resize) return; onStart(e,'move'); }, {passive:false});
+  el.addEventListener('mousedown', (e)=>{ if(e.target===resize) return; onStart(e,'move'); });
+  resize.addEventListener('touchstart', (e)=>onStart(e,'resize'), {passive:false});
+  resize.addEventListener('mousedown', (e)=>onStart(e,'resize'));
 }
 function removePostMusic(){
   selectedPostMusic = null;
@@ -10245,6 +10314,9 @@ function removeStoryMusic(){
   selectedStoryMusic = null;
   const tag = document.getElementById('storyMusicTag');
   if(tag) tag.style.display = 'none';
+  const st = document.getElementById('storyMusicBigSticker');
+  if(st) st.style.display = 'none';
+  storyBigCoverX = 50; storyBigCoverY = 55; storyBigCoverScale = 1;
 }
 
 /* Yeni metin ekleme — modern panel açar */
@@ -10529,6 +10601,12 @@ function publishStory(){
     // Seçili müziği kaydet (varsa)
     if(selectedStoryMusic && selectedStoryMusic.previewUrl){
       storyData.music = selectedStoryMusic;
+      // Büyük kapak seçildiyse konum/boyutu da sakla
+      if(selectedStoryMusic.coverStyle === 'big'){
+        storyData.music.bigX = storyBigCoverX;
+        storyData.music.bigY = storyBigCoverY;
+        storyData.music.bigScale = storyBigCoverScale;
+      }
     }
     // Çıkartmaları kaydet (varsa)
     if(storyStickers.length){
@@ -11094,6 +11172,13 @@ function playStoryViewerMusic(music){
       document.getElementById('storyViewerMusicBigArt').src = music.artworkUrl || '';
       document.getElementById('storyViewerMusicBigTrack').textContent = music.trackName || '';
       document.getElementById('storyViewerMusicBigArtist').textContent = music.artistName || '';
+      // Kaydedilen konum/boyut varsa uygula
+      if(music.bigX != null && music.bigY != null){
+        bigCover.style.bottom = 'auto';
+        bigCover.style.left = music.bigX + '%';
+        bigCover.style.top = music.bigY + '%';
+        bigCover.style.transform = `translate(-50%,-50%) scale(${music.bigScale || 1})`;
+      }
       bigCover.style.display = 'flex';
     }
   } else if(hideTitle){
