@@ -3150,24 +3150,21 @@ tbody tr:hover{background:var(--surface-2);}
       <div id="storyTextOverlaysContainer" style="position:absolute;inset:0;pointer-events:none;"></div>
       <!-- Çıkartma (sticker) katmanı -->
       <div id="storyStickerContainer" style="position:absolute;inset:0;pointer-events:none;"></div>
-      <!-- Sürüklenebilir BÜYÜK müzik kapağı (composer) -->
-      <div id="storyMusicBigSticker" style="display:none;position:absolute;left:50%;top:55%;transform:translate(-50%,-50%);flex-direction:column;align-items:center;gap:8px;z-index:14;touch-action:none;cursor:move;">
-        <img id="storyMusicBigStickerArt" src="" style="width:140px;height:140px;border-radius:16px;object-fit:cover;box-shadow:0 6px 24px rgba(0,0,0,.6);pointer-events:none;">
-        <div style="text-align:center;max-width:200px;pointer-events:none;">
-          <div id="storyMusicBigStickerTrack" style="color:#fff;font-size:15px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 2px 8px rgba(0,0,0,.85);"></div>
-          <div id="storyMusicBigStickerArtist" style="color:rgba(255,255,255,.9);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 2px 8px rgba(0,0,0,.85);"></div>
-        </div>
+      <!-- Sürüklenebilir müzik kapağı sticker'ı (composer) — küçük etiket VEYA büyük kapak -->
+      <div id="storyMusicBigSticker" style="display:none;position:absolute;left:50%;top:55%;transform:translate(-50%,-50%);z-index:14;touch-action:none;cursor:move;">
+        <div id="storyMusicStickerInner"></div>
         <div class="bigCoverResize" style="position:absolute;right:-10px;bottom:-10px;width:26px;height:26px;background:#fff;border-radius:50%;cursor:nwse-resize;box-shadow:0 1px 5px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;font-size:13px;color:#333;pointer-events:auto;">⤡</div>
       </div>
 
       <!-- Yazıyı silmek için çöp kutusu (aşağı sürükleyince görünür) -->
       <div id="storyTrashZone" style="display:none;position:absolute;bottom:24px;left:50%;transform:translateX(-50%);z-index:16;width:60px;height:60px;border-radius:50%;background:rgba(0,0,0,.55);backdrop-filter:blur(8px);align-items:center;justify-content:center;font-size:26px;pointer-events:none;transition:transform .15s,background .15s;">🗑️</div>
 
-      <!-- Seçili müzik etiketi -->
+      <!-- Seçili müzik etiketi (kontrol çubuğu) -->
       <div id="storyMusicTag">
         <img id="storyMusicTagArt" src="">
         <span class="smtTxt" id="storyMusicTagTxt">Müzik</span>
         <button class="smtStyle" onclick="event.stopPropagation();toggleStoryCoverStyle(this)" title="Kapak stili" style="background:rgba(255,255,255,.2);border:none;border-radius:12px;padding:3px 8px;color:#fff;font-size:11px;cursor:pointer;flex-shrink:0;margin-right:4px;">🎵 Küçük</button>
+        <button class="smtColor" onclick="event.stopPropagation();cycleStoryMusicColor(this)" title="Renk" style="background:rgba(255,255,255,.2);border:none;border-radius:50%;width:22px;height:22px;cursor:pointer;flex-shrink:0;margin-right:4px;padding:0;"><span id="smtColorDot" style="display:block;width:12px;height:12px;border-radius:50%;background:#000;margin:0 auto;"></span></button>
         <button class="smtClose" onclick="removeStoryMusic()">✕</button>
       </div>
     </div>
@@ -10148,21 +10145,28 @@ function toggleTrimHide(){
 function previewTrim(btn){
   const m = selectedStoryMusic;
   if(!m || !m.previewUrl) return;
+  unlockAudioOnce();
   if(storyMusicPreviewAudio && !storyMusicPreviewAudio.paused){
     stopStoryMusicPreview(); btn.textContent = '▶ Dinle'; return;
   }
   stopStoryMusicPreview();
-  const audio = new Audio(m.previewUrl);
+  const audio = new Audio();
   audio.preload = 'auto';
+  audio.src = m.previewUrl;
   storyMusicPreviewAudio = audio;
   const startAt = m.startTime || 0;
   const beginPlay = ()=>{
     try{ audio.currentTime = startAt; }catch(e){}
-    audio.play().catch(()=>{});
+    const p = audio.play();
+    if(p && p.catch){
+      p.catch((err)=>{
+        showToast('Ses çalınamadı, tekrar dene');
+        btn.textContent = '▶ Dinle';
+      });
+    }
     btn.textContent = '⏸ Durdur';
     const watcher = setInterval(()=>{
       if(!storyMusicPreviewAudio || storyMusicPreviewAudio.paused){ clearInterval(watcher); btn.textContent='▶ Dinle'; return; }
-      // Süre, o an seçili başlangıç + süreye göre (kullanıcı slider'ı oynatırken değiştirebilir)
       const curStart = (selectedStoryMusic && selectedStoryMusic.startTime) || 0;
       const dur = (selectedStoryMusic && selectedStoryMusic.duration) || 15;
       if(storyMusicPreviewAudio.currentTime >= curStart + dur){
@@ -10170,6 +10174,7 @@ function previewTrim(btn){
       }
     }, 200);
   };
+  audio.onerror = ()=>{ showToast('Şarkı yüklenemedi (bağlantı sorunu)'); btn.textContent = '▶ Dinle'; };
   // currentTime metadata yüklenince güvenilir ayarlanır
   if(audio.readyState >= 1){ beginPlay(); }
   else { audio.addEventListener('loadedmetadata', beginPlay, { once:true }); audio.load(); }
@@ -10224,13 +10229,23 @@ function confirmMusicTrim(){
   }
   // Varsayılan: hikaye
   if(selectedStoryMusic.coverStyle == null) selectedStoryMusic.coverStyle = 'tag';
+  if(selectedStoryMusic.color == null) selectedStoryMusic.color = '#000000';
+  // Küçük etiket ilk eklenişte alt kısımda, büyük kapak ortada başlasın
+  if(!_musicPositionSetByUser){
+    storyBigCoverX = 50;
+    storyBigCoverY = selectedStoryMusic.coverStyle === 'big' ? 55 : 82;
+    storyBigCoverScale = 1;
+  }
   const tag = document.getElementById('storyMusicTag');
   document.getElementById('storyMusicTagArt').src = m.artworkUrl;
   document.getElementById('storyMusicTagTxt').textContent = m.artistName + ' · ' + m.trackName;
   const styleBtn = document.querySelector('#storyMusicTag .smtStyle');
   if(styleBtn) styleBtn.textContent = selectedStoryMusic.coverStyle === 'big' ? '🖼️ Büyük' : '🎵 Küçük';
+  const dot = document.getElementById('smtColorDot');
+  if(dot) dot.style.background = selectedStoryMusic.color;
   if(tag) tag.style.display = 'flex';
-  showToast('🎵 Müzik eklendi');
+  updateStoryBigCoverSticker();
+  showToast('🎵 Müzik eklendi — sürükleyip yerleştirebilirsin');
 }
 /* Hikaye kapak stilini değiştir (küçük etiket <-> büyük kapak) */
 function toggleStoryCoverStyle(btn){
@@ -10241,20 +10256,51 @@ function toggleStoryCoverStyle(btn){
   showToast(selectedStoryMusic.coverStyle === 'big' ? 'Büyük kapak — sürükle & boyutlandır' : 'Küçük etiket');
 }
 let storyBigCoverX = 50, storyBigCoverY = 55, storyBigCoverScale = 1;
-/* Composer'da büyük kapak sticker'ını göster/gizle ve doldur */
+let _musicPositionSetByUser = false;
+const STORY_MUSIC_COLORS = ['#000000', '#ffffff', '#7c3aed', '#ec4899', '#f59e0b', '#10b981', '#3b82f6', '#ef4444'];
+/* Composer'da müzik sticker'ını göster/gizle ve doldur (küçük etiket VEYA büyük kapak) */
 function updateStoryBigCoverSticker(){
   const st = document.getElementById('storyMusicBigSticker');
-  if(!st) return;
-  const isBig = selectedStoryMusic && selectedStoryMusic.coverStyle === 'big';
-  if(!isBig){ st.style.display = 'none'; return; }
-  document.getElementById('storyMusicBigStickerArt').src = selectedStoryMusic.artworkUrl || '';
-  document.getElementById('storyMusicBigStickerTrack').textContent = selectedStoryMusic.trackName || '';
-  document.getElementById('storyMusicBigStickerArtist').textContent = selectedStoryMusic.artistName || '';
+  const inner = document.getElementById('storyMusicStickerInner');
+  if(!st || !inner || !selectedStoryMusic) { if(st) st.style.display = 'none'; return; }
+  const m = selectedStoryMusic;
+  const color = m.color || '#000000';
+  const bg = colorToRgba(color, 0.62);
+  if(m.coverStyle === 'big'){
+    inner.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:8px;';
+    inner.innerHTML = `<img src="${m.artworkUrl||''}" style="width:140px;height:140px;border-radius:16px;object-fit:cover;box-shadow:0 6px 24px rgba(0,0,0,.6);pointer-events:none;">
+      <div style="text-align:center;max-width:200px;pointer-events:none;background:${bg};border-radius:10px;padding:6px 12px;">
+        <div style="color:#fff;font-size:15px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(m.trackName||'')}</div>
+        <div style="color:rgba(255,255,255,.9);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(m.artistName||'')}</div>
+      </div>`;
+  } else {
+    inner.style.cssText = `display:flex;align-items:center;gap:8px;background:${bg};border-radius:20px;padding:7px 14px 7px 7px;pointer-events:none;`;
+    inner.innerHTML = `<img src="${m.artworkUrl||''}" style="width:30px;height:30px;border-radius:6px;object-fit:cover;flex-shrink:0;">
+      <span style="color:#fff;font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px;">🎵 ${escapeHtml((m.artistName||'')+' · '+(m.trackName||''))}</span>`;
+  }
   st.style.left = storyBigCoverX + '%';
   st.style.top = storyBigCoverY + '%';
   st.style.transform = `translate(-50%,-50%) scale(${storyBigCoverScale})`;
-  st.style.display = 'flex';
+  st.style.display = 'block';
   bindStoryBigCoverDrag(st);
+}
+/* Hex rengi rgba'ya çevir (opaklıklı arka plan için) */
+function colorToRgba(hex, alpha){
+  hex = (hex||'#000000').replace('#','');
+  if(hex.length===3) hex = hex.split('').map(c=>c+c).join('');
+  const r = parseInt(hex.substr(0,2),16)||0, g = parseInt(hex.substr(2,2),16)||0, b = parseInt(hex.substr(4,2),16)||0;
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+/* Müzik etiketi/kapağı rengini döngüyle değiştir */
+function cycleStoryMusicColor(btn){
+  if(!selectedStoryMusic) return;
+  const cur = selectedStoryMusic.color || '#000000';
+  const idx = STORY_MUSIC_COLORS.indexOf(cur);
+  const next = STORY_MUSIC_COLORS[(idx+1) % STORY_MUSIC_COLORS.length];
+  selectedStoryMusic.color = next;
+  const dot = document.getElementById('smtColorDot');
+  if(dot) dot.style.background = next;
+  updateStoryBigCoverSticker();
 }
 function bindStoryBigCoverDrag(el){
   if(el._bound) return; el._bound = true;
@@ -10265,6 +10311,7 @@ function bindStoryBigCoverDrag(el){
   const onStart = (e, m)=>{
     e.preventDefault(); e.stopPropagation();
     mode = m;
+    _musicPositionSetByUser = true;
     const p = getPt(e);
     sx = p.x; sy = p.y;
     startX = storyBigCoverX; startY = storyBigCoverY; startScale = storyBigCoverScale;
@@ -10327,6 +10374,7 @@ function removeStoryMusic(){
   const st = document.getElementById('storyMusicBigSticker');
   if(st) st.style.display = 'none';
   storyBigCoverX = 50; storyBigCoverY = 55; storyBigCoverScale = 1;
+  _musicPositionSetByUser = false;
 }
 
 /* Yeni metin ekleme — modern panel açar */
@@ -10611,12 +10659,10 @@ function publishStory(){
     // Seçili müziği kaydet (varsa)
     if(selectedStoryMusic && selectedStoryMusic.previewUrl){
       storyData.music = selectedStoryMusic;
-      // Büyük kapak seçildiyse konum/boyutu da sakla
-      if(selectedStoryMusic.coverStyle === 'big'){
-        storyData.music.bigX = storyBigCoverX;
-        storyData.music.bigY = storyBigCoverY;
-        storyData.music.bigScale = storyBigCoverScale;
-      }
+      // Konum/boyutu her stilde sakla (küçük etiket de artık taşınabilir)
+      storyData.music.bigX = storyBigCoverX;
+      storyData.music.bigY = storyBigCoverY;
+      storyData.music.bigScale = storyBigCoverScale;
     }
     // Çıkartmaları kaydet (varsa)
     if(storyStickers.length){
@@ -11173,37 +11219,47 @@ function playStoryViewerMusic(music){
   }
   const label = (music.artistName||'') + ' · ' + (music.trackName||'');
   const hideTitle = !!music.hideTitle;
+  const color = music.color || '#000000';
+  const bg = colorToRgba(color, 0.62);
 
-  if(music.coverStyle === 'big' && !hideTitle){
-    // Büyük albüm kapağı
-    if(tag) tag.style.display = 'none';
-    if(marquee) marquee.style.display = 'none';
-    if(bigCover){
-      document.getElementById('storyViewerMusicBigArt').src = music.artworkUrl || '';
-      document.getElementById('storyViewerMusicBigTrack').textContent = music.trackName || '';
-      document.getElementById('storyViewerMusicBigArtist').textContent = music.artistName || '';
-      // Kaydedilen konum/boyut varsa uygula
-      if(music.bigX != null && music.bigY != null){
-        bigCover.style.bottom = 'auto';
-        bigCover.style.left = music.bigX + '%';
-        bigCover.style.top = music.bigY + '%';
-        bigCover.style.transform = `translate(-50%,-50%) scale(${music.bigScale || 1})`;
-      }
-      bigCover.style.display = 'flex';
-    }
-  } else if(hideTitle){
+  if(hideTitle){
     // Adı gizli → sol üstte KAYAN yazı
     if(tag) tag.style.display = 'none';
     if(marquee){
       document.getElementById('storyMarqueeTxt').textContent = label + '   •   ' + label;
       marquee.style.display = 'flex';
     }
+  } else if(music.coverStyle === 'big'){
+    // Büyük albüm kapağı — kullanıcının ayarladığı konum/boyutta
+    if(tag) tag.style.display = 'none';
+    if(marquee) marquee.style.display = 'none';
+    if(bigCover){
+      document.getElementById('storyViewerMusicBigArt').src = music.artworkUrl || '';
+      document.getElementById('storyViewerMusicBigTrack').textContent = music.trackName || '';
+      document.getElementById('storyViewerMusicBigArtist').textContent = music.artistName || '';
+      const textWrap = document.getElementById('storyViewerMusicBigTrack').parentElement;
+      if(textWrap) textWrap.style.background = bg;
+      const bx = music.bigX != null ? music.bigX : 50;
+      const by = music.bigY != null ? music.bigY : 55;
+      bigCover.style.bottom = 'auto';
+      bigCover.style.left = bx + '%';
+      bigCover.style.top = by + '%';
+      bigCover.style.transform = `translate(-50%,-50%) scale(${music.bigScale || 1})`;
+      bigCover.style.display = 'flex';
+    }
   } else {
-    // Normal alt etiket (küçük)
+    // Küçük etiket — kullanıcının ayarladığı konum/boyutta (varsayılan: alt orta)
     if(marquee) marquee.style.display = 'none';
     if(tag){
       document.getElementById('storyViewerMusicArt').src = music.artworkUrl || '';
       document.getElementById('storyViewerMusicTxt').textContent = label;
+      tag.style.background = bg;
+      const bx = music.bigX != null ? music.bigX : 50;
+      const by = music.bigY != null ? music.bigY : 82;
+      tag.style.bottom = 'auto';
+      tag.style.left = bx + '%';
+      tag.style.top = by + '%';
+      tag.style.transform = `translate(-50%,-50%) scale(${music.bigScale || 1})`;
       tag.style.display = 'flex';
     }
   }
@@ -11223,7 +11279,7 @@ function playStoryViewerMusic(music){
         // Otomatik oynatma engellendi → bir sonraki ekran dokunuşunda başlat
         const resume = ()=>{
           try{ audio.currentTime = startAt; }catch(e){}
-          audio.play().catch(()=>{});
+          audio.play().catch(()=>{ showToast('🔇 Müzik çalınamadı'); });
           document.removeEventListener('touchstart', resume);
           document.removeEventListener('click', resume);
         };
@@ -11232,6 +11288,7 @@ function playStoryViewerMusic(music){
       });
     }
   };
+  audio.onerror = ()=>{ showToast('🔇 Şarkı yüklenemedi'); };
   if(audio.readyState >= 1){ seekAndPlay(); }
   else { audio.addEventListener('loadedmetadata', seekAndPlay, { once:true }); audio.load(); }
   // Süre dolunca durdur
