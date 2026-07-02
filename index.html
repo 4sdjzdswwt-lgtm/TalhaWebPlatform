@@ -2596,7 +2596,7 @@ tbody tr:hover{background:var(--surface-2);}
         <div style="display:flex;gap:0;border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:none;background:var(--bg);position:sticky;top:0;z-index:5;">
           <button class="momentFeedTab active" onclick="filterMomentFeed('all', this)" style="flex:1;padding:12px;font-size:13px;font-weight:600;background:none;border:none;color:var(--accent);border-bottom:2px solid var(--accent);cursor:pointer;">Tümü</button>
           <button class="momentFeedTab" onclick="filterMomentFeed('following', this)" style="flex:1;padding:12px;font-size:13px;font-weight:600;background:none;border:none;color:var(--muted);border-bottom:2px solid transparent;cursor:pointer;">Takip</button>
-          <button class="momentFeedTab" onclick="filterMomentFeed('mine', this)" style="flex:1;padding:12px;font-size:13px;font-weight:600;background:none;border:none;color:var(--muted);border-bottom:2px solid transparent;cursor:pointer;">Benimkiler</button>
+          <button class="momentFeedTab" onclick="filterMomentFeed('mine', this)" style="flex:1;padding:12px;font-size:13px;font-weight:600;background:none;border:none;color:var(--muted);border-bottom:2px solid transparent;cursor:pointer;">Sizin</button>
         </div>
         <div id="momentFeedContainer" style="padding:14px 0 80px;"></div>
       </div>
@@ -8015,19 +8015,25 @@ function openMomentPreview(session, captures){
   // Her kullanıcının tüm karelerini (shots) sırayla topla — her kareye sahibini bağla
   const urls = [];
   const owners = []; // her kareye: {uid, username, photo}
+  const isValidImg = (u)=> u && typeof u==='string' && (u.startsWith('data:image') || u.startsWith('http')) && u.length>100;
   uids.forEach(uid => {
-    const c = captures[uid];
+    const c = captures[uid] || {};
     const pInfo = {
       uid,
       username: (session.participants[uid]||{}).username || '@kullanici',
       photo: (session.participants[uid]||{}).photo || ''
     };
     if(Array.isArray(c.shots) && c.shots.length){
-      c.shots.forEach(u => { if(u && typeof u==='string' && u.length>20){ urls.push(u); owners.push(pInfo); } });
-    } else if(c.url && typeof c.url==='string' && c.url.length>20){
+      c.shots.forEach(u => { if(isValidImg(u)){ urls.push(u); owners.push(pInfo); } });
+    } else if(isValidImg(c.url)){
       urls.push(c.url); owners.push(pInfo);
     }
   });
+  // Hiç geçerli foto yoksa uyar ve çık
+  if(!urls.length){
+    showToast('Fotoğraf yüklenemedi, tekrar dene.');
+    return;
+  }
   // Kareleri + sahiplerini sakla (yeniden çizim ve etiketleme için)
   momentCollageUrls = urls;
   momentCollageOwners = owners;
@@ -8649,7 +8655,19 @@ function retakeMoment(){
     momentCurrentShotIndex = 0;
     momentCountdownStarted = false;
     document.getElementById('momentPreviewOverlay').classList.add('hidden');
-    return fbDb.ref('momentSessions/' + momentSessionId).update({ state: 'countdown', countdownStartAt: Date.now() + 7000 });
+    document.body.classList.remove('moment-active');
+    const startAt = Date.now() + 5000;
+    return fbDb.ref('momentSessions/' + momentSessionId).update({ state: 'countdown', countdownStartAt: startAt })
+      .then(()=>{
+        // Solo/host için çekim ekranını DOĞRUDAN başlat (Firebase dinleyicisine güvenme)
+        fbDb.ref('momentSessions/' + momentSessionId).once('value').then(s=>{
+          const session = s.val();
+          if(session){
+            momentCountdownStarted = false;
+            beginMomentCountdownUI(session);
+          }
+        });
+      });
   });
 }
 
@@ -9728,15 +9746,23 @@ let storyMusicSearchTimer = null;
 
 function openStoryMusicPicker(){
   const panel = document.getElementById('storyMusicPanel');
-  if(panel) panel.classList.remove('hidden');
-  // Arama kutusuna odaklan → klavye açılır, direkt yazmaya hazır
+  const trim = document.getElementById('musicTrimPanel');
+  // Panelleri body'ye taşı — böylece hangi ekrandan açılırsa açılsın (composer gizli olsa bile) görünür
+  if(panel && panel.parentElement !== document.body) document.body.appendChild(panel);
+  if(trim && trim.parentElement !== document.body) document.body.appendChild(trim);
+  if(panel){
+    panel.classList.remove('hidden');
+    // Görünürlüğü zorla garantiye al
+    panel.style.display = 'flex';
+    panel.style.zIndex = '100000';
+  }
   const input = document.getElementById('storyMusicSearch');
   if(input){ input.focus(); requestAnimationFrame(()=>{ try{ input.focus(); }catch(e){} }); }
 }
 function closeStoryMusicPicker(){
   stopStoryMusicPreview();
   const panel = document.getElementById('storyMusicPanel');
-  if(panel) panel.classList.add('hidden');
+  if(panel){ panel.classList.add('hidden'); panel.style.display = ''; }
 }
 function onStoryMusicSearchInput(){
   const q = document.getElementById('storyMusicSearch').value.trim();
@@ -9930,7 +9956,10 @@ function openMusicTrimPanel(){
   document.getElementById('trimStartLabel').textContent = m.startTime + 'sn';
   document.querySelectorAll('#trimDurRow .trimDurBtn').forEach(b=> b.classList.toggle('active', parseInt(b.dataset.dur)===m.duration));
   document.getElementById('trimHideToggle').classList.toggle('active', !!m.hideTitle);
-  document.getElementById('musicTrimPanel').classList.remove('hidden');
+  const tp = document.getElementById('musicTrimPanel');
+  tp.classList.remove('hidden');
+  tp.style.display = 'flex';
+  tp.style.zIndex = '100001';
 }
 function closeMusicTrimPanel(){
   stopStoryMusicPreview();
@@ -10000,7 +10029,8 @@ function confirmMusicTrim(){
   const m = selectedStoryMusic;
   if(!m) return;
   stopStoryMusicPreview();
-  document.getElementById('musicTrimPanel').classList.add('hidden');
+  const _tp = document.getElementById('musicTrimPanel');
+  _tp.classList.add('hidden'); _tp.style.display = '';
 
   if(_musicPickerContext === 'post'){
     selectedPostMusic = {...m};
@@ -12011,7 +12041,8 @@ function loadMomentFeed(filter){
       // Takip edilenler — basit kontrol
       fbDb.ref('follows/' + myUid).once('value').then(fs => {
         const following = fs.val() || {};
-        items = items.filter(p => following[p.uid] || p.uid === myUid);
+        // Sadece takip ettiklerim — kendi anılarım "Sizin" sekmesinde
+        items = items.filter(p => following[p.uid] && p.uid !== myUid);
         renderMomentFeedItems(container, items, myUid);
       });
       return;
