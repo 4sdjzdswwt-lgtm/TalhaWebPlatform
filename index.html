@@ -3426,15 +3426,6 @@ tbody tr:hover{background:var(--surface-2);}
       </div>
       <input type="file" id="collageTemplateUpload" accept="image/*" style="display:none;" onchange="onCollageTemplateUpload(this)">
 
-      <!-- ANI MÜZİĞİ -->
-      <label style="display:block;font-size:12px;color:var(--muted);margin-bottom:8px;">Müzik (opsiyonel)</label>
-      <button type="button" id="momentMusicBtn" onclick="openMusicPickerFor('moment')" style="width:100%;padding:12px;border-radius:12px;background:var(--surface-2);border:1px solid var(--line);color:var(--text);font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px;justify-content:center;margin-bottom:8px;">🎵 Müzik Ekle</button>
-      <div id="momentMusicTag" style="display:none;align-items:center;gap:10px;margin-bottom:16px;padding:8px 12px;background:var(--surface-2);border-radius:12px;">
-        <img id="momentMusicArt" style="width:36px;height:36px;border-radius:6px;object-fit:cover;">
-        <div style="flex:1;min-width:0;"><div id="momentMusicTxt" style="font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div></div>
-        <button onclick="removeMomentMusic()" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;">✕</button>
-      </div>
-
       <label style="display:block;font-size:12px;color:var(--muted);margin-bottom:8px;">Kimleri davet edeceksin? (en fazla 6 kişi)</label>
       <input type="text" class="momentFriendSearch" id="momentFriendSearch" placeholder="Takip ettiklerinde ara..." oninput="renderMomentFriendList()">
       <div class="momentFriendList" id="momentFriendList">
@@ -3512,6 +3503,18 @@ tbody tr:hover{background:var(--surface-2);}
       <span class="momentToolHint">Yerleşim şablonu seç · ⟳ döndür · ⛶ sığdır/doldur · ⇄ yerini değiştir</span>
     </div>
     <input type="text" class="momentCaptionInput" id="momentCaptionInput" placeholder="Bir açıklama ekle... (örn. Arkadaşlarla unutulmaz an! 🎉)">
+    <div style="width:100%;max-width:380px;margin:10px auto 0;">
+      <button type="button" id="momentMusicBtn" onclick="openMusicPickerFor('moment')" style="width:100%;padding:12px;border-radius:12px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);color:#fff;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px;justify-content:center;">🎵 Müzik Ekle</button>
+      <div id="momentMusicTag" style="display:none;align-items:center;gap:10px;margin-top:8px;padding:8px 12px;background:rgba(255,255,255,.1);border-radius:12px;">
+        <img id="momentMusicArt" style="width:36px;height:36px;border-radius:6px;object-fit:cover;">
+        <div style="flex:1;min-width:0;"><div id="momentMusicTxt" style="font-size:13px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div></div>
+        <button onclick="removeMomentMusic()" style="background:none;border:none;color:rgba(255,255,255,.6);font-size:18px;cursor:pointer;">✕</button>
+      </div>
+      <label id="momentMusicCoverRow" style="display:none;align-items:center;gap:8px;margin-top:8px;font-size:13px;color:rgba(255,255,255,.85);cursor:pointer;">
+        <input type="checkbox" id="momentMusicCoverChk" onchange="if(typeof rebuildMomentPreview==='function') rebuildMomentPreview();" style="width:18px;height:18px;accent-color:var(--accent);">
+        Şarkı kapağını kolaja ekle
+      </label>
+    </div>
     <div style="width:100%;max-width:380px;margin:10px auto 0;">
       <div class="audiencePicker">
         <button type="button" class="audienceBtn active" data-aud="public" onclick="setMomentAudience('public', this)">🌍 Herkese Açık</button>
@@ -7371,6 +7374,7 @@ function openMomentStart(){
   document.querySelector('.momentChallengeChip[data-c=""]').classList.add('active');
   document.getElementById('momentFriendSearch').value = '';
   selectedMomentMusic = null;
+  momentCoverX = 72; momentCoverY = 90; momentCoverScale = 1;
   if(typeof removeMomentMusic === 'function') removeMomentMusic();
   selectedCollageTemplate = COLLAGE_TEMPLATES[0]; // klasik varsayılan
   renderCollageTemplates();
@@ -8102,6 +8106,7 @@ let momentCellFit = [];    // her hücre contain (true) mu cover (false=varsayı
 let momentCellRotate = []; // her hücre döndürme açısı (0/90/180/270)
 let momentCollageOwners = []; // her kareye {uid, username, photo}
 let momentCollageBg = '#1a1a2e'; // tek arka plan/çerçeve rengi
+let momentCoverX = 72, momentCoverY = 90, momentCoverScale = 1; // şarkı kapağı konum(%)+boyut
 let momentCollageHasColor = false; // kullanıcı renk seçti mi (ince çerçeve için)
 let momentLayoutVariant = 0;  // seçili yerleşim şablonu varyantı
 
@@ -8172,7 +8177,79 @@ function buildMomentCollageGrid(urls, owners){
   buildLayoutPicker(useTemplate ? 0 : n);
   const picker = document.getElementById('momentLayoutPicker');
   if(picker) picker.style.display = useTemplate ? 'none' : '';
+  // Kapak fotoğrafı önizlemesi (kullanıcı istediyse) — taşınabilir + boyutlandırılabilir
+  const chk = document.getElementById('momentMusicCoverChk');
+  if(chk && chk.checked && selectedMomentMusic && selectedMomentMusic.artworkUrl){
+    const cover = document.createElement('div');
+    cover.className = 'momentPreviewCover';
+    cover.id = 'momentPreviewCover';
+    // Konum yüzde (momentCoverX/Y = merkez), boyut momentCoverScale
+    const cx = (momentCoverX!=null? momentCoverX : 72);
+    const cy = (momentCoverY!=null? momentCoverY : 90);
+    const sc = (momentCoverScale!=null? momentCoverScale : 1);
+    cover.style.cssText = `position:absolute;left:${cx}%;top:${cy}%;transform:translate(-50%,-50%) scale(${sc});transform-origin:center center;display:flex;align-items:center;gap:6px;background:rgba(0,0,0,.6);border-radius:10px;padding:5px 9px;white-space:nowrap;touch-action:none;cursor:move;z-index:5;`;
+    cover.innerHTML = `<img src="${selectedMomentMusic.artworkUrl}" style="width:28px;height:28px;border-radius:5px;object-fit:cover;pointer-events:none;">
+      <div style="min-width:0;pointer-events:none;"><div style="color:#fff;font-size:10px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px;">🎵 ${escapeHtml(selectedMomentMusic.trackName||'')}</div>
+      <div style="color:rgba(255,255,255,.8);font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px;">${escapeHtml(selectedMomentMusic.artistName||'')}</div></div>
+      <div class="coverResize" style="position:absolute;right:-9px;bottom:-9px;width:22px;height:22px;background:#fff;border-radius:50%;cursor:nwse-resize;box-shadow:0 1px 4px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;font-size:11px;color:#333;">⤡</div>`;
+    grid.appendChild(cover);
+    bindCoverDrag(cover, grid);
+  }
   return Promise.resolve();
+}
+
+/* Kapağı sürükle + köşeden boyutlandır */
+function bindCoverDrag(el, grid){
+  const resize = el.querySelector('.coverResize');
+  let mode = null, startX, startY, startCX, startCY, startScale;
+  const getPt = (e)=>{ const t = e.touches ? e.touches[0] : e; return {x:t.clientX, y:t.clientY}; };
+  const onStart = (e, m)=>{
+    e.preventDefault(); e.stopPropagation();
+    mode = m;
+    const p = getPt(e);
+    startX = p.x; startY = p.y;
+    startCX = (momentCoverX!=null?momentCoverX:72);
+    startCY = (momentCoverY!=null?momentCoverY:90);
+    startScale = (momentCoverScale!=null?momentCoverScale:1);
+    document.addEventListener('touchmove', onMove, {passive:false});
+    document.addEventListener('touchend', onEnd);
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onEnd);
+  };
+  const onMove = (e)=>{
+    if(!mode) return;
+    e.preventDefault();
+    const rect = grid.getBoundingClientRect();
+    const p = getPt(e);
+    if(mode==='move'){
+      const dx = (p.x - startX)/rect.width*100, dy = (p.y - startY)/rect.height*100;
+      momentCoverX = Math.max(5, Math.min(95, startCX + dx));
+      momentCoverY = Math.max(5, Math.min(95, startCY + dy));
+      el.style.left = momentCoverX+'%'; el.style.top = momentCoverY+'%';
+    } else {
+      const dist = (p.x - startX)/rect.width;
+      momentCoverScale = Math.max(0.5, Math.min(2.5, startScale + dist*3));
+      el.style.transform = `translate(-50%,-50%) scale(${momentCoverScale})`;
+    }
+  };
+  const onEnd = ()=>{
+    mode = null;
+    document.removeEventListener('touchmove', onMove);
+    document.removeEventListener('touchend', onEnd);
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', onEnd);
+  };
+  el.addEventListener('touchstart', (e)=>{ if(e.target===resize) return; onStart(e,'move'); }, {passive:false});
+  el.addEventListener('mousedown', (e)=>{ if(e.target===resize) return; onStart(e,'move'); });
+  resize.addEventListener('touchstart', (e)=>onStart(e,'resize'), {passive:false});
+  resize.addEventListener('mousedown', (e)=>onStart(e,'resize'));
+}
+
+/* Kapak seçeneği değişince önizleme kolajını yeniden çiz */
+function rebuildMomentPreview(){
+  if(typeof momentCollageUrls !== 'undefined' && momentCollageUrls && momentCollageUrls.length){
+    buildMomentCollageGrid(momentCollageUrls, momentCollageOwners);
+  }
 }
 
 /* Foto sayısına göre yerleşim şablonu seçici butonlarını oluştur (görseldeki gibi) */
@@ -8468,6 +8545,7 @@ function renderCollageToCanvas(){
         if(frameImg) ctx.drawImage(frameImg, 0, 0, SW, SH);
         const L = tpl.boxes.slice(0, n).map(b => [b.x, b.y, b.w, b.h, b.rot||0]);
         drawPhotos(imgs, L, SW, SH);
+        return drawMusicCover(ctx, SW, SH);
       });
     } else {
       // Klasik: kare tuval
@@ -8481,8 +8559,76 @@ function renderCollageToCanvas(){
         L = urls.slice(0,n).map((_,i)=>[(i%cols)/cols, Math.floor(i/cols)/rows, 1/cols, 1/rows]);
       }
       drawPhotos(imgs, L, SIZE, SIZE);
+      return drawMusicCover(ctx, SIZE, SIZE);
     }
   });
+}
+
+/* Kapak fotoğrafı kolaja çiz (kullanıcı istediyse) — sağ alt köşe */
+function drawMusicCover(ctx, SW, SH){
+  const chk = document.getElementById('momentMusicCoverChk');
+  const wantCover = chk && chk.checked;
+  if(!wantCover || !selectedMomentMusic || !selectedMomentMusic.artworkUrl) return Promise.resolve();
+  return new Promise((res)=>{
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = ()=>{
+      const scale = (momentCoverScale!=null?momentCoverScale:1);
+      // Önizlemedeki kart oranlarına yakın ölçekler
+      const artSize = SH * 0.055 * scale;
+      const padIn = artSize * 0.28;
+      const gap = artSize * 0.35;
+      const fs1 = Math.round(SH*0.020*scale), fs2 = Math.round(SH*0.016*scale);
+      // Metin genişliğini ölç
+      ctx.font = `700 ${fs1}px Inter, sans-serif`;
+      const t1 = '🎵 ' + (selectedMomentMusic.trackName||'');
+      ctx.font = `500 ${fs2}px Inter, sans-serif`;
+      const t2 = selectedMomentMusic.artistName||'';
+      ctx.font = `700 ${fs1}px Inter, sans-serif`;
+      let tw1 = ctx.measureText(t1).width;
+      ctx.font = `500 ${fs2}px Inter, sans-serif`;
+      let tw2 = ctx.measureText(t2).width;
+      const maxTextW = Math.min(Math.max(tw1, tw2), SW*0.45);
+      const cardW = padIn + artSize + gap + maxTextW + padIn;
+      const cardH = artSize + padIn*2;
+      // Merkez konumdan sol-üst köşeyi bul
+      const ccx = (momentCoverX!=null?momentCoverX:72)/100 * SW;
+      const ccy = (momentCoverY!=null?momentCoverY:90)/100 * SH;
+      const x = ccx - cardW/2, y = ccy - cardH/2;
+      ctx.save();
+      // Kart
+      roundRectPath(ctx, x, y, cardW, cardH, cardH*0.24);
+      ctx.fillStyle = 'rgba(0,0,0,.6)';
+      ctx.fill();
+      // Kapak
+      const ax = x + padIn, ay = y + padIn;
+      roundRectPath(ctx, ax, ay, artSize, artSize, artSize*0.18);
+      ctx.save(); ctx.clip();
+      ctx.drawImage(img, ax, ay, artSize, artSize);
+      ctx.restore();
+      // Yazı
+      ctx.textBaseline = 'middle';
+      const tx = ax + artSize + gap;
+      const clip = (t, f)=>{ ctx.font = f; let s=t||''; while(ctx.measureText(s).width > maxTextW && s.length>1) s=s.slice(0,-1); return s.length<(t||'').length ? s.slice(0,-1)+'…' : s; };
+      ctx.fillStyle = '#fff';
+      ctx.fillText(clip(t1, `700 ${fs1}px Inter, sans-serif`), tx, y + cardH*0.36);
+      ctx.fillStyle = 'rgba(255,255,255,.8)';
+      ctx.fillText(clip(t2, `500 ${fs2}px Inter, sans-serif`), tx, y + cardH*0.66);
+      ctx.restore();
+      res();
+    };
+    img.onerror = ()=> res();
+    img.src = selectedMomentMusic.artworkUrl;
+  });
+}
+function roundRectPath(ctx, x, y, w, h, r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.arcTo(x+w,y,x+w,y+h,r);
+  ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r);
+  ctx.arcTo(x,y,x+w,y,r);
+  ctx.closePath();
 }
 
 function retakeMoment(){
@@ -9880,6 +10026,8 @@ function confirmMusicTrim(){
     }
     const btn = document.getElementById('momentMusicBtn');
     if(btn) btn.textContent = '🎵 Müziği Değiştir';
+    const coverRow = document.getElementById('momentMusicCoverRow');
+    if(coverRow) coverRow.style.display = m.artworkUrl ? 'flex' : 'none';
     closeStoryMusicPicker();
     showToast('🎵 Müzik eklendi');
     return;
@@ -9904,6 +10052,11 @@ function removeMomentMusic(){
   if(tag) tag.style.display = 'none';
   const btn = document.getElementById('momentMusicBtn');
   if(btn) btn.textContent = '🎵 Müzik Ekle';
+  const coverRow = document.getElementById('momentMusicCoverRow');
+  if(coverRow) coverRow.style.display = 'none';
+  const chk = document.getElementById('momentMusicCoverChk');
+  if(chk) chk.checked = false;
+  if(typeof rebuildMomentPreview === 'function') rebuildMomentPreview();
 }
 function removeStoryMusic(){
   selectedStoryMusic = null;
