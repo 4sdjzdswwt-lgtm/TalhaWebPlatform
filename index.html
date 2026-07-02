@@ -5413,20 +5413,6 @@ function showToast(msg){
   t.classList.add('show');
   setTimeout(()=>t.classList.remove('show'), 2400);
 }
-/* GEÇİCİ TEŞHİS KUTUSU — ses sorununu bulmak için, sonra kaldırılacak */
-function dbgLog(msg){
-  let box = document.getElementById('__dbgBox');
-  if(!box){
-    box = document.createElement('div');
-    box.id = '__dbgBox';
-    box.style.cssText = 'position:fixed;left:8px;right:8px;bottom:80px;z-index:999999;background:rgba(0,0,0,.9);color:#0f0;font:11px monospace;padding:10px;max-height:35vh;overflow:auto;white-space:pre-wrap;border-radius:8px;border:1px solid #0f0;';
-    box.addEventListener('click', ()=>box.remove());
-    document.body.appendChild(box);
-  }
-  const now = new Date().toLocaleTimeString();
-  box.textContent += '['+now+'] ' + msg + '\n';
-  box.scrollTop = box.scrollHeight;
-}
 
 /* ===== SÖZLEŞME: ÖNCE METİN, SONRA VİDEO ===== */
 function showContractAgree(){
@@ -6844,31 +6830,24 @@ function togglePostMusic(postId){
   unlockAudioOnce && unlockAudioOnce();
   const audio = document.querySelector('.postMusicAudio[data-post-id="'+postId+'"]');
   const btn = document.querySelector('.postMusicBtn[data-post-id="'+postId+'"]');
-  if(!audio){ dbgLog('HATA: audio elementi bulunamadı postId='+postId); return; }
-  const srcInfo = (audio.currentSrc||audio.src||audio.getAttribute('src')||'YOK');
-  dbgLog('Butona basıldı. muted='+audio.muted+' paused='+audio.paused+' readyState='+audio.readyState);
-  dbgLog('src: ' + srcInfo.slice(0,70));
+  if(!audio){ return; }
   if(audio.muted || audio.paused){
     document.querySelectorAll('.postMusicAudio').forEach(a=>{ if(a!==audio){ a.pause(); a.muted = true; } });
     document.querySelectorAll('.postMusicBtn').forEach(b=>{ b.classList.remove('playing'); const ic=b.querySelector('.pmIcon'); if(ic) ic.textContent='🔇'; });
     audio.loop = true;
     audio.muted = false;
     audio.volume = 1;
-    try{ if(audio.readyState < 2){ audio.load(); dbgLog('audio.load() çağrıldı'); } }catch(e){ dbgLog('load hatası: '+e.message); }
+    try{ if(audio.readyState < 2){ audio.load(); } }catch(e){}
     const pr = audio.play();
-    dbgLog('play() çağrıldı, promise=' + (pr ? 'var' : 'yok'));
-    if(pr && pr.then) pr.then(()=>{ dbgLog('✓ ÇALIYOR! (play başarılı)'); });
     if(pr && pr.catch) pr.catch((err)=>{
       const nm = err && err.name ? err.name : 'bilinmeyen';
-      dbgLog('✗ play HATASI: ' + nm + ' — ' + (err&&err.message?err.message.slice(0,50):''));
       if(nm === 'NotSupportedError' || nm === 'AbortError'){
-        dbgLog('→ link ölmüş olabilir, yenileniyor...');
         tryHealPostMusic(audio, postId);
       } else {
         if(btn){ btn.classList.remove('playing'); const ic=btn.querySelector('.pmIcon'); if(ic) ic.textContent='🔇'; }
       }
     });
-    audio.onerror = ()=>{ dbgLog('✗ audio.onerror! kod=' + (audio.error?audio.error.code:'?')); tryHealPostMusic(audio, postId); };
+    audio.onerror = ()=>{ tryHealPostMusic(audio, postId); };
     _postMusicUserWantsSound = true;
     _activePostMusicId = postId;
     if(btn){ btn.classList.add('playing'); const ic=btn.querySelector('.pmIcon'); if(ic) ic.textContent='🔊'; }
@@ -11366,46 +11345,62 @@ function playStoryViewerMusic(music){
   }
 
   // Müziği çal — seçilen başlangıçtan, seçilen süre kadar
+  if(typeof unlockAudioOnce === 'function') unlockAudioOnce();
   const startAt = Math.max(0, music.startTime || 0);
   const dur = music.duration || 15;
-  const audio = new Audio(music.previewUrl);
+  const audio = new Audio();
   audio.preload = 'auto';
+  audio.loop = false;
+  audio.volume = 1;
+  audio.src = music.previewUrl;
   storyViewerMusicAudio = audio;
-  // currentTime metadata yüklenince ayarlanabilir
+  let _resumeBound = false;
+  const bindResume = ()=>{
+    if(_resumeBound) return; _resumeBound = true;
+    const resume = ()=>{
+      try{ if(audio.currentTime < startAt) audio.currentTime = startAt; }catch(e){}
+      audio.play().catch(()=>{});
+      cleanup();
+    };
+    const cleanup = ()=>{
+      document.removeEventListener('touchstart', resume, true);
+      document.removeEventListener('click', resume, true);
+      const v = document.getElementById('storyViewer');
+      if(v){ v.removeEventListener('touchstart', resume, true); v.removeEventListener('click', resume, true); }
+    };
+    // Hem document hem hikaye ekranının kendisine (capture aşamasında) bağla
+    document.addEventListener('touchstart', resume, true);
+    document.addEventListener('click', resume, true);
+    const v = document.getElementById('storyViewer');
+    if(v){ v.addEventListener('touchstart', resume, true); v.addEventListener('click', resume, true); }
+  };
   const seekAndPlay = ()=>{
     try{ if(audio.currentTime < startAt) audio.currentTime = startAt; }catch(e){}
     const p = audio.play();
+    if(p && p.then) p.then(()=>{ /* çaldı */ });
     if(p && p.catch){
       p.catch(()=>{
-        // Otomatik oynatma engellendi → bir sonraki ekran dokunuşunda başlat
-        const resume = ()=>{
-          try{ audio.currentTime = startAt; }catch(e){}
-          audio.play().catch(()=>{ showToast('🔇 Müzik çalınamadı'); });
-          document.removeEventListener('touchstart', resume);
-          document.removeEventListener('click', resume);
-        };
-        document.addEventListener('touchstart', resume, { once:true });
-        document.addEventListener('click', resume, { once:true });
+        // Otomatik oynatma engellendi → bir sonraki dokunuşta başlat
+        bindResume();
       });
     }
   };
   audio.onerror = ()=>{
     // Link ölmüş → aynı şarkının taze linkini bul
-    if(audio._healed) { showToast('🔇 Şarkı bulunamadı'); return; }
+    if(audio._healed) { return; }
     audio._healed = true;
-    showToast('🔄 Şarkı bağlantısı yenileniyor...');
     healAudioAndPlay(audio, music, (newUrl)=>{
-      // Hikaye kaydını Firebase'de güncelle (bir daha ölmesin)
       try{
         if(currentStoryId){
           fbDb.ref('stories/' + currentStoryId + '/music/previewUrl').set(newUrl);
         }
       }catch(e){}
-      showToast('🎵 Şarkı yenilendi');
     });
   };
   if(audio.readyState >= 1){ seekAndPlay(); }
   else { audio.addEventListener('loadedmetadata', seekAndPlay, { once:true }); audio.load(); }
+  // Metadata gelmese bile bir dokunuşta çalması için resume'u da hazırla
+  bindResume();
   // Süre dolunca durdur
   // Süre dolunca BAŞA SAR (loop) — kesme, hikaye boyunca çalsın
   audio._stopWatcher = setInterval(()=>{
