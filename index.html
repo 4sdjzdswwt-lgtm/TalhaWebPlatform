@@ -784,23 +784,21 @@ body.moment-active #island{display:none !important;}
   backdrop-filter:blur(16px) saturate(160%);-webkit-backdrop-filter:blur(16px) saturate(160%);
   border:1px solid rgba(255,255,255,.08);
 }
-/* Gelen mesajlar (sol) — yarı saydam koyu gri cam */
+/* Gelen mesajlar (sol) — her zeminde (açık/koyu duvar kağıdı) okunur */
 .msg.them{
   align-self:flex-start;border-bottom-left-radius:5px;
-  background:rgba(255,255,255,.10);
-  border-color:rgba(255,255,255,.12);
+  background:rgba(28,28,40,.82);
+  border-color:rgba(255,255,255,.14);
+  color:#fff;
+  box-shadow:0 2px 10px rgba(0,0,0,.25);
 }
+.msg.them .time{color:rgba(255,255,255,.7);}
 /* Giden mesajlar (sağ) — yarı saydam mavi cam */
 .msg.me{
   align-self:flex-end;color:#fff;border-bottom-right-radius:5px;
   background:linear-gradient(135deg, var(--grad-1), var(--grad-2), var(--grad-3));
   border-color:rgba(255,255,255,.22);
   box-shadow:0 4px 16px color-mix(in srgb, var(--accent) 40%, transparent);
-}
-body.light-mode .msg.them{
-  background:rgba(0,0,0,.06);
-  border-color:rgba(0,0,0,.08);
-  color:var(--text);
 }
 .msg .time{display:block;font-size:10px;color:var(--muted);margin-top:4px;}
 .msg.me .time{color:rgba(255,255,255,.85);}
@@ -1968,9 +1966,9 @@ tbody tr:hover{background:var(--surface-2);}
 }
 .momentFeedCardHead{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
 .momentFeedCardHead img{width:40px;height:40px;border-radius:50%;object-fit:cover;border:2px solid var(--accent);}
-.momentFeedMedia{width:100%;border-radius:14px;overflow:hidden;background:var(--surface-2);aspect-ratio:1/1;}
-.momentFeedMedia img{width:100%;height:100%;object-fit:cover;display:block;}
-.momentFeedMedia video{width:100%;height:100%;object-fit:cover;display:block;}
+.momentFeedMedia{width:100%;border-radius:14px;overflow:hidden;background:var(--surface-2);}
+.momentFeedMedia img{width:100%;height:auto;object-fit:contain;display:block;}
+.momentFeedMedia video{width:100%;height:auto;object-fit:contain;display:block;}
 .momentFeedActions{display:flex;gap:18px;margin-top:10px;align-items:center;}
 .momentFeedBtn{background:none;border:none;color:var(--muted);font-size:13px;cursor:pointer;display:flex;align-items:center;gap:5px;padding:4px 0;}
 .momentFeedBtn svg{width:18px;height:18px;}
@@ -7103,6 +7101,22 @@ let COLLAGE_TEMPLATES = [
 ];
 // Kullanıcının yüklediği özel şablonlar (bu oturumda)
 let userCollageTemplates = [];
+// Kayıtlı kullanıcı şablonlarını localStorage'dan yükle (kalıcı)
+function loadUserCollageTemplates(){
+  try{
+    const raw = localStorage.getItem('userCollageTemplates');
+    if(raw) userCollageTemplates = JSON.parse(raw) || [];
+  }catch(e){ userCollageTemplates = []; }
+}
+function saveUserCollageTemplates(){
+  try{
+    localStorage.setItem('userCollageTemplates', JSON.stringify(userCollageTemplates));
+  }catch(e){
+    // Kota dolabilir (base64 büyük) — kullanıcıya bilgi ver
+    showToast('Şablon kaydedilemedi (depolama dolu olabilir)');
+  }
+}
+loadUserCollageTemplates();
 let selectedCollageTemplate = null; // seçili şablon nesnesi
 
 /* Şablon seçici satırını çiz — mevcut kare sayısına uygun şablonları göster */
@@ -7162,6 +7176,7 @@ function onCollageTemplateUpload(input){
       boxes: defaultBoxesForShots(momentSelectedShotCount)
     };
     userCollageTemplates.push(tpl);
+    saveUserCollageTemplates();
     selectedCollageTemplate = tpl;
     renderCollageTemplates();
     // Kutuları şablona göre ayarlamak için editörü aç
@@ -7317,6 +7332,7 @@ function deleteCollageTemplate(id){
   if(overlay) overlay.remove();
   _boxEditorTpl = null;
   userCollageTemplates = userCollageTemplates.filter(t=>t.id !== id);
+  saveUserCollageTemplates();
   // Seçili şablon silindiyse klasik'e dön
   if(selectedCollageTemplate && selectedCollageTemplate.id === id){
     selectedCollageTemplate = COLLAGE_TEMPLATES[0];
@@ -7329,6 +7345,7 @@ function closeBoxEditor(save){
   const overlay = document.getElementById('boxEditorOverlay');
   if(overlay) overlay.remove();
   if(save){
+    saveUserCollageTemplates(); // kutu ayarları kalıcı olsun
     showToast('Şablon hazır ✓');
     renderCollageTemplates();
   }
@@ -8506,7 +8523,12 @@ function publishMoment(){
 function doPublishMoment(btn){
   const canvas = document.getElementById('momentCollageCanvas');
   const myUid = fbAuth.currentUser.uid;
-  const caption = (document.getElementById('momentCaptionInput').value || '').trim() || 'Arkadaşlarla unutulmaz an! 🎉';
+  // Katılımcı sayısı: sadece ben mi, yoksa başkaları da var mı?
+  const participants = momentSessionPendingParticipants || [];
+  const withOthers = participants.filter(p => p && p.uid && p.uid !== myUid).length > 0;
+  const typed = (document.getElementById('momentCaptionInput').value || '').trim();
+  // Kullanıcı yazmadıysa: başkalarıyla çektiyse varsayılan metin, tek başınaysa boş
+  const caption = typed || (withOthers ? 'Arkadaşlarla unutulmaz an! 🎉' : '');
 
   const finishPublish = (collageUrl)=>{
     const postRef = fbDb.ref('posts').push();
