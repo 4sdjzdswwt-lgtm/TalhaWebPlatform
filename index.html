@@ -845,6 +845,8 @@ body.moment-active #island{display:none !important;}
   background:var(--surface);border-left:1px solid var(--line);
   z-index:120;transform:translateX(100%);transition:transform .32s ease;
   padding:24px 18px;display:flex;flex-direction:column;gap:8px;
+  overflow-y:auto;-webkit-overflow-scrolling:touch;
+  padding-bottom:calc(120px + env(safe-area-inset-bottom,0px));
 }
 .side-drawer.open{transform:translateX(0);}
 .drawer-title{font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:600;margin-bottom:10px;}
@@ -855,6 +857,12 @@ body.moment-active #island{display:none !important;}
 }
 /* Renk teması seçici noktaları */
 .accentPicker{display:flex;flex-wrap:wrap;gap:10px;}
+/* Takım renkleri: buton + altında kısa isim */
+.teamPicker{gap:12px 14px;}
+.teamAccent{display:flex;flex-direction:column;align-items:center;gap:4px;width:48px;}
+.teamAccent .accentDot{margin:0;}
+.teamAccent span{font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.3px;}
+.teamAccent .accentDot.active + span,.teamAccent:has(.accentDot.active) span{color:var(--accent);}
 .accentDot{
   width:34px;height:34px;border-radius:50%;cursor:pointer;padding:0;
   border:2.5px solid transparent;transition:transform .15s, border-color .15s;
@@ -2833,34 +2841,34 @@ tbody tr:hover{background:var(--surface-2);}
           </div>
 
           <div style="font-size:12px;color:var(--muted);margin:14px 0 8px;font-weight:600;">⚽ Süper Lig</div>
-          <div class="accentPicker" id="accentPickerSL">
-            <button class="accentDot" data-accent="gs" style="background:linear-gradient(135deg,#a30d0d,#f6c700);" onclick="applyAccent('gs')" title="Galatasaray"></button>
-            <button class="accentDot" data-accent="fb" style="background:linear-gradient(135deg,#123499,#f6d33c);" onclick="applyAccent('fb')" title="Fenerbahçe"></button>
-            <button class="accentDot" data-accent="bjk" style="background:linear-gradient(135deg,#000,#e8e8e8);" onclick="applyAccent('bjk')" title="Beşiktaş"></button>
-            <button class="accentDot" data-accent="ts" style="background:linear-gradient(135deg,#8a1028,#4a90d9);" onclick="applyAccent('ts')" title="Trabzonspor"></button>
+          <div class="accentPicker teamPicker" id="accentPickerSL">
+            <div class="teamAccent"><button class="accentDot" data-accent="gs" style="background:linear-gradient(135deg,#a30d0d,#f6c700);" onclick="applyAccent('gs')" title="Galatasaray"></button><span>GS</span></div>
+            <div class="teamAccent"><button class="accentDot" data-accent="fb" style="background:linear-gradient(135deg,#123499,#f6d33c);" onclick="applyAccent('fb')" title="Fenerbahçe"></button><span>FB</span></div>
+            <div class="teamAccent"><button class="accentDot" data-accent="bjk" style="background:linear-gradient(135deg,#000,#e8e8e8);" onclick="applyAccent('bjk')" title="Beşiktaş"></button><span>BJK</span></div>
+            <div class="teamAccent"><button class="accentDot" data-accent="ts" style="background:linear-gradient(135deg,#8a1028,#4a90d9);" onclick="applyAccent('ts')" title="Trabzonspor"></button><span>TS</span></div>
           </div>
 
           <div style="font-size:12px;color:var(--muted);margin:14px 0 8px;font-weight:600;">🦁 Premier League</div>
-          <div class="accentPicker" id="accentPickerPL">
-            <button class="accentDot" data-accent="mun" style="background:linear-gradient(135deg,#c81414,#f0b41e);" onclick="applyAccent('mun')" title="Man United"></button>
-            <button class="accentDot" data-accent="mci" style="background:linear-gradient(135deg,#2a95c8,#a8d4ec);" onclick="applyAccent('mci')" title="Man City"></button>
-            <button class="accentDot" data-accent="liv" style="background:linear-gradient(135deg,#c8102e,#f07886);" onclick="applyAccent('liv')" title="Liverpool"></button>
-            <button class="accentDot" data-accent="che" style="background:linear-gradient(135deg,#034694,#5a9fe6);" onclick="applyAccent('che')" title="Chelsea"></button>
-            <button class="accentDot" data-accent="ars" style="background:linear-gradient(135deg,#c81414,#fff);" onclick="applyAccent('ars')" title="Arsenal"></button>
-            <button class="accentDot" data-accent="tot" style="background:linear-gradient(135deg,#0a1642,#cfd4dc);" onclick="applyAccent('tot')" title="Tottenham"></button>
+          <div class="accentPicker teamPicker" id="accentPickerPL">
+            <div class="teamAccent"><button class="accentDot" data-accent="mun" style="background:linear-gradient(135deg,#c81414,#f0b41e);" onclick="applyAccent('mun')" title="Man United"></button><span>MUN</span></div>
+            <div class="teamAccent"><button class="accentDot" data-accent="mci" style="background:linear-gradient(135deg,#2a95c8,#a8d4ec);" onclick="applyAccent('mci')" title="Man City"></button><span>MCI</span></div>
+            <div class="teamAccent"><button class="accentDot" data-accent="liv" style="background:linear-gradient(135deg,#c8102e,#f07886);" onclick="applyAccent('liv')" title="Liverpool"></button><span>LIV</span></div>
+            <div class="teamAccent"><button class="accentDot" data-accent="che" style="background:linear-gradient(135deg,#034694,#5a9fe6);" onclick="applyAccent('che')" title="Chelsea"></button><span>CHE</span></div>
+            <div class="teamAccent"><button class="accentDot" data-accent="ars" style="background:linear-gradient(135deg,#c81414,#fff);" onclick="applyAccent('ars')" title="Arsenal"></button><span>ARS</span></div>
+            <div class="teamAccent"><button class="accentDot" data-accent="tot" style="background:linear-gradient(135deg,#0a1642,#cfd4dc);" onclick="applyAccent('tot')" title="Tottenham"></button><span>TOT</span></div>
           </div>
 
           <div style="font-size:12px;color:var(--muted);margin:14px 0 8px;font-weight:600;">🇪🇸 La Liga</div>
-          <div class="accentPicker" id="accentPickerLL">
-            <button class="accentDot" data-accent="rma" style="background:linear-gradient(135deg,#1a1a4a,#e8c860);" onclick="applyAccent('rma')" title="Real Madrid"></button>
-            <button class="accentDot" data-accent="fcb" style="background:linear-gradient(135deg,#8a1538,#123499);" onclick="applyAccent('fcb')" title="Barcelona"></button>
-            <button class="accentDot" data-accent="atm" style="background:linear-gradient(135deg,#c81428,#1a5fc8);" onclick="applyAccent('atm')" title="Atletico Madrid"></button>
+          <div class="accentPicker teamPicker" id="accentPickerLL">
+            <div class="teamAccent"><button class="accentDot" data-accent="rma" style="background:linear-gradient(135deg,#1a1a4a,#e8c860);" onclick="applyAccent('rma')" title="Real Madrid"></button><span>RMA</span></div>
+            <div class="teamAccent"><button class="accentDot" data-accent="fcb" style="background:linear-gradient(135deg,#8a1538,#123499);" onclick="applyAccent('fcb')" title="Barcelona"></button><span>BAR</span></div>
+            <div class="teamAccent"><button class="accentDot" data-accent="atm" style="background:linear-gradient(135deg,#c81428,#1a5fc8);" onclick="applyAccent('atm')" title="Atletico Madrid"></button><span>ATM</span></div>
           </div>
 
           <div style="font-size:12px;color:var(--muted);margin:14px 0 8px;font-weight:600;">🇩🇪 Bundesliga</div>
-          <div class="accentPicker" id="accentPickerBL">
-            <button class="accentDot" data-accent="fcb_m" style="background:linear-gradient(135deg,#dc052d,#f07886);" onclick="applyAccent('fcb_m')" title="Bayern Münih"></button>
-            <button class="accentDot" data-accent="bvb" style="background:linear-gradient(135deg,#1a1a1a,#fde100);" onclick="applyAccent('bvb')" title="Borussia Dortmund"></button>
+          <div class="accentPicker teamPicker" id="accentPickerBL">
+            <div class="teamAccent"><button class="accentDot" data-accent="fcb_m" style="background:linear-gradient(135deg,#dc052d,#f07886);" onclick="applyAccent('fcb_m')" title="Bayern Münih"></button><span>FCB</span></div>
+            <div class="teamAccent"><button class="accentDot" data-accent="bvb" style="background:linear-gradient(135deg,#1a1a1a,#fde100);" onclick="applyAccent('bvb')" title="Borussia Dortmund"></button><span>BVB</span></div>
           </div>
         </div>
 
