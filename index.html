@@ -7274,18 +7274,33 @@ function publishNewPost(){
   }
 }
 
-/* Video'yu base64 olarak yayınla — boyut kontrolü ile */
+/* Video'yu base64 olarak yayınla — boyut kontrolü + timeout ile */
 function publishVideoAsBase64(doPublish, btn){
   const dataUrl = newPostDataUrl;
-  // Base64 boyutu ~ dataUrl.length * 0.75 byte. Firebase DB limiti pratikte ~9MB.
-  const approxBytes = dataUrl.length * 0.75;
-  const maxBytes = 8 * 1024 * 1024; // 8MB güvenli sınır
-  if(approxBytes > maxBytes){
+  if(!dataUrl || !dataUrl.startsWith('data:video')){
     btn.disabled = false; btn.textContent = 'Paylaş';
-    showToast('Video çok büyük (max ~8MB). Daha kısa bir video seç.');
+    showToast('Video okunamadı, tekrar seç.');
     return;
   }
-  doPublish(dataUrl);
+  // Base64 boyutu ~ dataUrl.length * 0.75 byte
+  const approxBytes = dataUrl.length * 0.75;
+  const maxBytes = 5 * 1024 * 1024; // 5MB güvenli sınır (Firebase RTDB için)
+  if(approxBytes > maxBytes){
+    btn.disabled = false; btn.textContent = 'Paylaş';
+    const mb = (approxBytes/1024/1024).toFixed(1);
+    showToast('Video çok büyük ('+mb+'MB). Max 5MB — daha kısa/düşük kaliteli video seç.');
+    return;
+  }
+  // Yükleme çok uzun sürerse (30sn) kullanıcıya bildir
+  let done = false;
+  const timeout = setTimeout(()=>{
+    if(!done){ btn.disabled = false; btn.textContent = 'Paylaş'; showToast('Yükleme çok uzun sürdü, tekrar dene.'); }
+  }, 30000);
+  const origPublish = doPublish;
+  const wrapped = (url)=>{
+    return origPublish(url).finally(()=>{ done = true; clearTimeout(timeout); });
+  };
+  wrapped(dataUrl);
 }
 
 // Resmi canvas ile küçültüp sıkıştır
@@ -12647,6 +12662,12 @@ function onNewPostFileChosen(ev){
   const mediaType = files[0].type.startsWith('video') ? 'video' : 'image';
   newPostMediaType = mediaType;
 
+  // Video için erken boyut uyarısı (base64 ~%33 büyür, 5MB DB sınırı)
+  if(mediaType === 'video' && files[0].size > 3.6 * 1024 * 1024){
+    const mb = (files[0].size/1024/1024).toFixed(1);
+    showToast('⚠️ Video '+mb+'MB — çok büyük olabilir. En fazla ~3.5MB önerilir.');
+  }
+
   const readers = files.slice(0,4).map(f => new Promise(res=>{
     const r = new FileReader();
     r.onload = e => res({dataUrl: e.target.result, type: f.type.startsWith('video')?'video':'image'});
@@ -12736,7 +12757,7 @@ function triggerDoubleTapLike(mediaEl, postId){
    NAV_MAP güncelleme — momentFeed eklendi
    ============================================================ */
 NAV_MAP['momentFeed'] = 'screenMomentFeed';
-NAV_MAP['reels'] = 'screenMomentFeed';
+NAV_MAP['reels'] = 'screenReels';
 
 /* ============================================================
    SÜRELİ FOTOĞRAF (EPHEMERAL) SİSTEMİ
