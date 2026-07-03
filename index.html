@@ -2861,6 +2861,12 @@ tbody tr:hover{background:var(--surface-2);}
         </div>
 
         <div style="margin:6px 0 14px;">
+          <!-- Tıklanınca açılıp kapanan Tema Renkleri başlığı -->
+          <button id="themeColorsToggle" onclick="toggleThemeColors()" style="width:100%;display:flex;align-items:center;justify-content:space-between;background:var(--surface-2);border:none;border-radius:14px;padding:14px 16px;cursor:pointer;color:var(--text);font-size:14px;font-weight:600;font-family:inherit;">
+            <span>🎨 Tema Renkleri</span>
+            <span id="themeColorsChevron" style="transition:transform .25s;color:var(--muted);">▼</span>
+          </button>
+          <div id="themeColorsPanel" style="display:none;padding-top:14px;">
           <div style="font-size:13px;color:var(--muted);margin-bottom:10px;">🎨 Renk Teması</div>
           <div class="accentPicker" id="accentPicker">
             <button class="accentDot" data-accent="default" style="background:linear-gradient(135deg,#7c3aed,#06b6d4);" onclick="applyAccent('default')" title="Mor (varsayılan)"></button>
@@ -2904,6 +2910,7 @@ tbody tr:hover{background:var(--surface-2);}
           <div class="accentPicker teamPicker" id="accentPickerBL">
             <div class="teamAccent"><button class="accentDot" data-accent="fcb_m" style="background:linear-gradient(135deg,#dc052d,#f07886);" onclick="applyAccent('fcb_m')" title="Bayern Münih"></button><span>FCB</span></div>
             <div class="teamAccent"><button class="accentDot" data-accent="bvb" style="background:linear-gradient(135deg,#1a1a1a,#fde100);" onclick="applyAccent('bvb')" title="Borussia Dortmund"></button><span>BVB</span></div>
+          </div>
           </div>
         </div>
 
@@ -5967,6 +5974,16 @@ function initTheme(){
 }
 
 /* Renk teması (accent) uygula — açık/koyu moddan bağımsız */
+/* Tema renkleri panelini aç/kapat */
+function toggleThemeColors(){
+  const panel = document.getElementById('themeColorsPanel');
+  const chevron = document.getElementById('themeColorsChevron');
+  if(!panel) return;
+  const isOpen = panel.style.display !== 'none';
+  panel.style.display = isOpen ? 'none' : 'block';
+  if(chevron) chevron.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(180deg)';
+}
+
 function applyAccent(accent){
   if(accent === 'default'){
     document.body.removeAttribute('data-accent');
