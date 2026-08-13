@@ -342,7 +342,7 @@ function initMatchMapInstance(){
     container: 'matchMapCanvas',
     style: MATCH_MAP_STYLES[matchMapStyleKey] || MATCH_MAP_STYLES.dark,
     center, zoom: 15, pitch: 0, bearing: 0, attributionControl: false,
-    minZoom: 1.8,             // küre görünümü kalsın ama bundan fazla uzaklaşıp küçülemesin
+    minZoom: 0.9,              // küre görünümü kalsın, ekrana tam sığacak kadar uzaklaşabilsin
     pitchWithRotate: false,   // iki parmakla sürükleyerek eğme (tilt) kapalı
     dragRotate: false,        // sağ tık / iki parmak sürükleyerek döndürme kapalı
     touchPitch: false         // iki parmak dikey kaydırmayla eğme kapalı
@@ -638,21 +638,28 @@ function renderAllMatchMarkers(candidates){
   // Eskileri temizle
   Object.values(matchMapMarkers).forEach(m=> m.remove());
   matchMapMarkers = {};
-  // Kendi işaretçim
+
+  // Kendimi de arkadaşlarla AYNI kümeleme/dağıtma hesabına dahil ediyoruz —
+  // yoksa bir arkadaşımla tam aynı pikselde çakışırsam kendi işaretçim
+  // onunkinin arkasında tamamen gizlenip kayboluyordu.
+  const allEntries = [];
   if(matchMapMyLoc && fbAuth.currentUser){
-    const meCandidate = { loc: { lng: matchMapMyLoc.lng, lat: matchMapMyLoc.lat, updatedAt: Date.now() },
-      profile: { username: savedUsername || t('match_you') || 'Sen', photo: savedProfilePhoto } };
-    matchMapMarkers['__me__'] = new SnapAvatarMarker(fbAuth.currentUser.uid, meCandidate, true).addTo(matchMap);
+    allEntries.push({
+      uid: fbAuth.currentUser.uid, isMe: true,
+      loc: { lng: matchMapMyLoc.lng, lat: matchMapMyLoc.lat, updatedAt: Date.now() },
+      profile: { username: savedUsername || t('match_you') || 'Sen', photo: savedProfilePhoto }
+    });
   }
-  // Arkadaşlar — ekranda üst üste binenler artık isimsiz bir yığında
-  // gizlenmiyor; her biri tekli kişilerle AYNI görünümde (isim üstte,
-  // renkli halka + fotoğraf, altında zaman) yan yana bir sıra halinde
-  // gösteriliyor, böylece kimin kim olduğu doğrudan okunabiliyor.
-  const clusters = clusterCandidatesByPixelDistance(candidates);
+  candidates.forEach(c=> allEntries.push(Object.assign({ isMe: false }, c)));
+
+  // Ekranda üst üste binenler artık isimsiz bir yığında gizlenmiyor; her
+  // biri tekli kişilerle AYNI görünümde (isim üstte, renkli halka +
+  // fotoğraf, altında zaman) yan yana bir sıra halinde gösteriliyor.
+  const clusters = clusterCandidatesByPixelDistance(allEntries);
   clusters.forEach(group=>{
     if(group.length === 1){
       const c = group[0];
-      matchMapMarkers[c.uid] = new SnapAvatarMarker(c.uid, c, false).addTo(matchMap);
+      matchMapMarkers[c.isMe ? '__me__' : c.uid] = new SnapAvatarMarker(c.uid, c, c.isMe).addTo(matchMap);
       return;
     }
     const centroidLng = group.reduce((s,c)=> s + c.loc.lng, 0) / group.length;
@@ -661,7 +668,7 @@ function renderAllMatchMarkers(candidates){
     group.forEach((c, i)=>{
       const pos = positions[i];
       const spreadCandidate = Object.assign({}, c, { loc: Object.assign({}, c.loc, { lng: pos.lng, lat: pos.lat }) });
-      matchMapMarkers[c.uid] = new SnapAvatarMarker(c.uid, spreadCandidate, false).addTo(matchMap);
+      matchMapMarkers[c.isMe ? '__me__' : c.uid] = new SnapAvatarMarker(c.uid, spreadCandidate, c.isMe).addTo(matchMap);
     });
   });
 }
@@ -785,7 +792,7 @@ function openMatchProfilePreview(uid, candidateArg){
   const profile = candidate.profile || {};
   const hasAccess = savedVerifiedTier === 'gold' || savedVerifiedTier === 'purple';
   const distText = candidate.dist < 1 ? t('match_m_away').replace('{n}', Math.round(candidate.dist*1000)) : t('match_km_away').replace('{n}', candidate.dist.toFixed(1));
-  const photo = profile.photo || ('https://i.pravatar.cc/300?u=' + uid);
+  const smallAvatar = profile.photo || ('https://i.pravatar.cc/120?u=' + uid);
 
   const overlay = document.createElement('div');
   overlay.className = 'followListOverlay';
@@ -796,16 +803,23 @@ function openMatchProfilePreview(uid, candidateArg){
 
   overlay.innerHTML = `
     <div class="followListSheet" style="max-height:88vh;">
-      <div class="followListHead" style="position:sticky;top:0;z-index:5;background:var(--surface);flex-shrink:0;padding-top:calc(env(safe-area-inset-top,0px) + 16px);">
+      <div class="followListHead" style="position:sticky;top:0;z-index:5;background:var(--surface);flex-shrink:0;padding-top:calc(env(safe-area-inset-top,0px) + 16px);justify-content:flex-end;border-bottom:none;">
         <button class="matchMapIconBtn" style="background:var(--surface-2);border:1px solid var(--line);color:var(--text);width:34px;height:34px;" onclick="closeMatchProfilePreview()" title="${escapeHtml(t('match_back'))}">
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+          <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M18 6L6 18M6 6l12 12"/></svg>
         </button>
-        <h3 style="flex:1;text-align:center;">${escapeHtml(profile.displayName || profile.username || '@kullanici')} ${typeof verifiedBadgeHtml==='function' ? verifiedBadgeHtml(profile.verifiedTier, 15) : ''}</h3>
-        <div style="width:34px;flex-shrink:0;"></div>
       </div>
-      <div class="followListBody" style="padding:0 0 20px;">
-        <div class="matchLockOverlayBox">
-          <img class="matchProfilePhotoBig ${hasAccess ? '' : 'matchLockedBlur'}" src="${photo}" onerror="this.src='https://i.pravatar.cc/300?u=${uid}'">
+      <div class="followListBody" style="padding:0 20px 20px;">
+        <div style="display:flex;align-items:center;gap:14px;">
+          <img src="${smallAvatar}" onerror="this.src='https://i.pravatar.cc/120?u=${uid}'" style="width:60px;height:60px;border-radius:50%;object-fit:cover;flex-shrink:0;border:1px solid var(--glass-border);">
+          <div>
+            <div style="font-size:17px;font-weight:800;color:var(--text);font-family:'Space Grotesk',sans-serif;">${escapeHtml(profile.displayName || profile.username || '@kullanici')} ${typeof verifiedBadgeHtml==='function' ? verifiedBadgeHtml(profile.verifiedTier, 15) : ''}</div>
+            <div style="font-size:12.5px;color:var(--accent);margin-top:3px;">📍 ${escapeHtml(distText)} · ${escapeHtml(formatPostAge(candidate.loc.updatedAt))}</div>
+          </div>
+        </div>
+        ${profile.bio ? `<div style="font-size:13px;color:var(--text);margin:14px 0 0;line-height:1.5;">${escapeHtml(profile.bio)}</div>` : ''}
+
+        <div class="matchLockOverlayBox" id="matchProfilePostsWrap" style="margin-top:16px;border-radius:16px;overflow:hidden;min-height:90px;background:var(--surface-2);">
+          <div style="padding:24px 0;text-align:center;color:var(--muted);font-size:12px;">${escapeHtml(t('toast_loading_generic') || 'Yükleniyor...')}</div>
           ${hasAccess ? '' : `
             <div class="matchLockBadge">
               <div style="font-size:30px;">🔒</div>
@@ -813,20 +827,49 @@ function openMatchProfilePreview(uid, candidateArg){
               <button class="btn btn-primary" style="padding:9px 20px;font-size:12.5px;" onclick="closeMatchProfilePreview();openVerifiedBadgeInfo();">${escapeHtml(t('match_upgrade_btn'))}</button>
             </div>`}
         </div>
-        <div style="padding:14px 20px 0;">
-          <div style="font-size:12.5px;color:var(--muted);margin-bottom:4px;">📍 ${escapeHtml(distText)} · ${escapeHtml(formatPostAge(candidate.loc.updatedAt))}</div>
-          ${profile.bio ? `<div style="font-size:13px;color:var(--text);margin:8px 0;line-height:1.5;">${escapeHtml(profile.bio)}</div>` : ''}
-          <div style="display:flex;gap:10px;margin-top:16px;">
-            <button class="btn btn-ghost" style="flex:1;" id="matchFollowBtn" onclick="matchFollowUser('${uid}')">${escapeHtml(t('match_follow_btn'))}</button>
-            <button class="btn ${hasAccess ? 'btn-primary' : 'btn-ghost'}" style="flex:1;" onclick="${hasAccess ? `matchMessageUser('${uid}')` : `closeMatchProfilePreview();openVerifiedBadgeInfo();`}">
-              ${hasAccess ? '💬 ' + escapeHtml(t('match_message_btn')) : '🔒 ' + escapeHtml(t('match_message_btn'))}
-            </button>
-          </div>
+
+        <div style="display:flex;gap:10px;margin-top:18px;">
+          <button class="btn" style="flex:1;background:var(--gradient-vivid);color:#fff;border:none;" id="matchFollowBtn" onclick="matchFollowUser('${uid}')">${escapeHtml(t('match_follow_btn'))}</button>
+          <button class="btn ${hasAccess ? '' : 'btn-ghost'}" style="flex:1;${hasAccess ? 'background:var(--surface-2);color:var(--text);border:1px solid var(--line);' : ''}" onclick="${hasAccess ? `matchMessageUser('${uid}')` : `closeMatchProfilePreview();openVerifiedBadgeInfo();`}">
+            ${hasAccess ? '💬 ' + escapeHtml(t('match_message_btn')) : '🔒 ' + escapeHtml(t('match_message_btn'))}
+          </button>
         </div>
       </div>
     </div>`;
   document.body.appendChild(overlay);
   refreshMatchFollowButtonState(uid);
+  loadMatchProfilePosts(uid, hasAccess);
+}
+
+/* Kullanıcının paylaştığı son gönderi/anı fotoğraflarını çeker ve önizler.
+   Rozet kuralı: Plus/Premium değilse bulanıklaştırılıp kilit rozeti kalır
+   (fotoğraflar arka planda yine de bulanık olarak yükleniyor, DOM'dan
+   çalınamaz diye değil — sadece görsel amaçlı; asıl erişim kontrolü
+   sunucu/Storage kurallarında sağlanmalı). */
+function loadMatchProfilePosts(uid, hasAccess){
+  const wrap = document.getElementById('matchProfilePostsWrap');
+  if(!wrap) return;
+  fbDb.ref('posts').orderByChild('uid').equalTo(uid).limitToLast(6).once('value').then(snap=>{
+    const data = snap.val() || {};
+    const ids = Object.keys(data).sort((a,b)=> (data[b].ts||0) - (data[a].ts||0)).slice(0, 3);
+    const lockBadge = wrap.querySelector('.matchLockBadge');
+    if(!ids.length){
+      wrap.innerHTML = `<div style="padding:24px 0;text-align:center;color:var(--muted);font-size:12px;">Henüz gönderi yok.</div>`;
+      if(lockBadge) wrap.appendChild(lockBadge);
+      return;
+    }
+    const thumbsHtml = ids.map(id=>{
+      const p = data[id];
+      const isVid = p.mediaType === 'video';
+      const rawMedia = (Array.isArray(p.media) && p.media[0]) || p.photo || '';
+      const thumb = isVid ? (p.coverImage || '') : rawMedia;
+      return `<div style="aspect-ratio:1/1;background:var(--surface);${thumb ? `background-image:url('${thumb}');background-size:cover;background-position:center;` : ''}"></div>`;
+    }).join('');
+    wrap.innerHTML = `<div class="${hasAccess ? '' : 'matchLockedBlur'}" style="display:grid;grid-template-columns:repeat(${ids.length},1fr);gap:2px;">${thumbsHtml}</div>`;
+    if(lockBadge) wrap.appendChild(lockBadge);
+  }).catch(()=>{
+    wrap.innerHTML = `<div style="padding:24px 0;text-align:center;color:var(--muted);font-size:12px;">${escapeHtml(t('toast_generic_error') || 'Yüklenemedi.')}</div>`;
+  });
 }
 function closeMatchProfilePreview(){
   const ov = document.getElementById('matchProfileOverlay');
