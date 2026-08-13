@@ -348,6 +348,9 @@ function initMatchMapInstance(){
     applyMatchMapHolidayTheme();
     refreshNearbyMatchUsers();
   });
+  // Zoom seviyesi değişince (yakınlaş/uzaklaş) piksel mesafeleri değişir —
+  // yığınları (kimin kiminle üst üste bindiğini) yeniden hesaplamamız gerekir.
+  matchMap.on('zoomend', ()=>{ renderAllMatchMarkers(matchMapLastCandidates || []); });
   updateMatchMapStyleToggleUI();
 }
 
@@ -582,21 +585,27 @@ class SnapAvatarMarker {
 }
 
 /* Aynı yerdeki (ör. aynı bina/mekan) kişileri tek bir "yığın" işaretçisinde
-   birleştirir, böylece üst üste binip birbirini gizlemezler. Basit ve
-   geçişli (transitive) bir gruplama: birbirine CLUSTER_RADIUS_KM'den yakın
-   olan herkes aynı yığında toplanır. */
-const CLUSTER_RADIUS_KM = 0.04; // ~40 metre
-function clusterCandidatesByLocation(candidates){
-  const used = new Array(candidates.length).fill(false);
+   birleştirir, böylece üst üste binip birbirini gizlemezler. Gerçek dünya
+   mesafesi yerine EKRANDAKİ PİKSEL mesafesine göre gruplama yapılır —
+   böylece haritanın o anki yakınlaştırma seviyesi ne olursa olsun (uzaktan
+   bakarken üst üste binenler de, yakınlaşınca ayrılanlar da) doğru şekilde
+   davranır. Zoom değiştikçe (bkz. 'zoomend' dinleyicisi) yeniden hesaplanır. */
+const CLUSTER_PIXEL_THRESHOLD = 55; // ekranda bu kadar piksel veya daha yakınsa aynı yığında say
+function clusterCandidatesByPixelDistance(candidates){
+  if(!matchMap) return candidates.map(c=> [c]);
+  const projected = candidates.map(c=> ({ c, pt: matchMap.project([c.loc.lng, c.loc.lat]) }));
+  const used = new Array(projected.length).fill(false);
   const clusters = [];
-  for(let i = 0; i < candidates.length; i++){
+  for(let i = 0; i < projected.length; i++){
     if(used[i]) continue;
-    const group = [candidates[i]];
+    const group = [projected[i].c];
     used[i] = true;
-    for(let j = i + 1; j < candidates.length; j++){
+    for(let j = i + 1; j < projected.length; j++){
       if(used[j]) continue;
-      const d = haversineKm(candidates[i].loc.lat, candidates[i].loc.lng, candidates[j].loc.lat, candidates[j].loc.lng);
-      if(d <= CLUSTER_RADIUS_KM){ group.push(candidates[j]); used[j] = true; }
+      const dx = projected[i].pt.x - projected[j].pt.x;
+      const dy = projected[i].pt.y - projected[j].pt.y;
+      const distPx = Math.sqrt(dx * dx + dy * dy);
+      if(distPx <= CLUSTER_PIXEL_THRESHOLD){ group.push(projected[j].c); used[j] = true; }
     }
     clusters.push(group);
   }
@@ -614,8 +623,8 @@ function renderAllMatchMarkers(candidates){
       profile: { username: savedUsername || t('match_you') || 'Sen', photo: savedProfilePhoto } };
     matchMapMarkers['__me__'] = new SnapAvatarMarker(fbAuth.currentUser.uid, meCandidate, true).addTo(matchMap);
   }
-  // Arkadaşlar — aynı konumdakiler yığın halinde, tekiler normal işaretçi olarak
-  const clusters = clusterCandidatesByLocation(candidates);
+  // Arkadaşlar — ekranda üst üste binenler yığın halinde, tekiler normal işaretçi olarak
+  const clusters = clusterCandidatesByPixelDistance(candidates);
   clusters.forEach((group, idx)=>{
     if(group.length === 1){
       const c = group[0];
