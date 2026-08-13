@@ -1,0 +1,1134 @@
+/* ============================================================
+   YAKINDAKİLER HARİTASI — "match-map.js"
+   ------------------------------------------------------------
+   Snap Map benzeri, arkadaşların gerçek zamanlı konumunu gösteren
+   harita özelliği. index.html'deki global değişken/fonksiyonlara
+   (fbAuth, fbDb, requireFirebase, t, currentLang, showToast,
+   escapeHtml, isMutuallyBlocked, formatPostAge, startChatWith,
+   makeChatId, ensureChatMeta, savedUsername, savedProfilePhoto,
+   savedVerifiedTier, openVerifiedBadgeInfo, closeTopmostOverlay
+   listesi vb.) dayanır — bu dosya index.html'den SONRA yüklenmeli.
+
+   Firebase veri şeması: userLocations/{uid}
+     lat, lng        — gerçek koordinat
+     sharing         — true değilse harita hiç göstermez
+     ghostMode       — true ise kişi görünmez ama başkalarını görür
+     updatedAt       — son güncelleme zamanı (ms epoch)
+     heading         — hareket yönü, derece (Araba Modu)
+     visibility      — 'public' | 'mutual' | 'except'
+     excludedUids    — { [uid]: true } — 'except' modunda hariç tutulanlar
+     trackMode       — 'normal' | 'battery' | 'car'
+     msgApprovalOn   — mesaj onayı tercihi (varsayılan: true)
+   ============================================================ */
+
+/* ---------- AYARLAR ---------- */
+// KENDİ Mapbox erişim token'ını buraya yaz: https://account.mapbox.com/access-tokens/
+const MAPBOX_ACCESS_TOKEN = 'pk.eyJ1IjoidGFseGFlIiwiYSI6ImNtc2wyNTBidjE1Nm0yeXF6Z2h5d2plMzUifQ.qqsum3zJ-Swis6YN8LMOkA';
+const MATCH_MAP_MAX_DISTANCE_KM = 100;
+const MATCH_MAP_MAX_RESULTS = 60;
+const MATCH_MAP_STYLES = {
+  dark: 'mapbox://styles/mapbox/dark-v11',
+  satellite: 'mapbox://styles/mapbox/satellite-streets-v12'
+};
+
+/* ---------- DURUM ---------- */
+let matchMap = null;
+let matchMapStyleKey = 'dark';
+let matchMapMarkers = {};              // uid -> SnapAvatarMarker
+let matchMapMyLoc = null;              // {lat,lng}
+let matchMapWatchId = null;
+let matchMapRefreshTimer = null;
+let matchMapMySettings = { sharing:false, ghostMode:false, visibility:'mutual', excludedUids:{}, onlyUids:{}, trackMode:'normal', msgApprovalOn:true };
+let matchMapSelectedUid = null;
+let matchMapFollowSetCache = null;     // {follows:Set, followers:Set}
+let matchMapLoadToken = 0;             // eşzamanlı yükleme yarışını önlemek için
+
+/* ---------- YARDIMCI: Haversine mesafe (km) ----------
+   Not: uygulamanın başka bir yerinde (konum etiketi özelliğinde)
+   haversineKm() tanımsız olarak çağrılıyordu — burada global olarak
+   tanımlanınca o eksik de giderilmiş oluyor. */
+if(typeof window.haversineKm !== 'function'){
+  window.haversineKm = function haversineKm(lat1, lon1, lat2, lon2){
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLon/2)**2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  };
+}
+
+/* ============================================================
+   STİL — bu dosyanın ihtiyaç duyduğu tüm CSS'i kendisi enjekte eder
+   ============================================================ */
+(function injectMatchMapStyles(){
+  const css = `
+  #matchMapOverlay{position:fixed;inset:0;z-index:9500;background:#000;display:flex;flex-direction:column;}
+  #matchMapOverlay.hidden{display:none;}
+  #matchMapCanvas{position:absolute;inset:0;}
+  .matchMapTopBar{position:absolute;top:0;left:0;right:0;z-index:2;display:flex;align-items:center;justify-content:space-between;
+    padding:calc(env(safe-area-inset-top,0px) + 14px) 14px 10px;pointer-events:none;}
+  .matchMapTopBar > *{pointer-events:auto;}
+  .matchMapIconBtn{width:40px;height:40px;border-radius:50%;background:var(--glass-bg);backdrop-filter:blur(10px);
+    border:1px solid var(--glass-border);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:var(--glass-shadow);}
+  .matchMapTitle{color:#fff;font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:15px;text-shadow:0 1px 6px rgba(0,0,0,.5);}
+  .matchMapRightBtns{display:flex;gap:8px;}
+  .matchMapStyleToggleBtn{display:flex;align-items:center;gap:6px;padding:9px 16px 9px 12px;border-radius:22px;background:rgba(24,27,38,.72);
+    backdrop-filter:blur(10px);border:1px solid #3A4756;color:#fff;font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap;}
+  .matchMapFloatingLocBtn{position:absolute;bottom:calc(env(safe-area-inset-bottom,0px) + 20px);right:16px;z-index:2;
+    width:46px;height:46px;border-radius:50%;background:#A855F7;box-shadow:0 4px 18px rgba(168,85,247,.55);
+    border:none;color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+  .matchMapEmptyHint{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:2;color:#fff;text-align:center;
+    background:rgba(5,2,15,.6);backdrop-filter:blur(6px);padding:16px 22px;border-radius:16px;font-size:13px;max-width:260px;pointer-events:none;}
+
+  /* SnapAvatarMarker — sabit piksel boyutu, zoom'dan bağımsız */
+  .snapAvatarMarker{width:50px;height:92px;display:flex;flex-direction:column;align-items:center;cursor:pointer;user-select:none;}
+  .snapMarkerName{max-width:70px;font-size:10px;font-weight:700;color:#fff;background:rgba(5,2,15,.55);padding:2px 6px;border-radius:8px;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:3px;text-align:center;}
+  .snapMarkerRing{width:46px;height:46px;border-radius:50%;padding:2.5px;background:var(--ring-color,#8b5cf6);
+    box-shadow:0 0 10px 2px var(--ring-color,#8b5cf6), 0 0 0 2px rgba(0,0,0,.35);position:relative;}
+  .snapMarkerRing img{width:100%;height:100%;border-radius:50%;object-fit:cover;display:block;border:2px solid #0a0a0f;}
+  .snapMarkerHeadingArrow{position:absolute;top:-9px;left:50%;width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;
+    border-bottom:9px solid var(--ring-color,#8b5cf6);transform-origin:50% 28px;filter:drop-shadow(0 0 3px rgba(0,0,0,.5));}
+  .snapMarkerShadow{width:22px;height:6px;border-radius:50%;background:rgba(0,0,0,.45);filter:blur(1.5px);margin-top:3px;}
+  .snapMarkerTime{font-size:9px;color:#d8d3ee;margin-top:2px;text-shadow:0 1px 3px rgba(0,0,0,.7);white-space:nowrap;}
+  .snapAvatarMarker.is-me .snapMarkerRing{box-shadow:0 0 14px 3px #fff, 0 0 0 2px rgba(0,0,0,.35);}
+
+  /* Aynı konumdaki birden fazla kişi — yığın (cluster) işaretçisi */
+  .snapClusterMarker{display:flex;flex-direction:column;align-items:center;cursor:pointer;user-select:none;}
+  .snapClusterName{font-size:10px;font-weight:700;color:#fff;background:linear-gradient(135deg,#FF4D6D,#FF2A55);padding:2px 7px;border-radius:8px;white-space:nowrap;margin-bottom:3px;}
+  .snapClusterStack{display:flex;align-items:center;}
+  .snapClusterAvatar{width:38px;height:38px;border-radius:50%;object-fit:cover;border:2.5px solid #0a0a0f;box-shadow:0 0 8px rgba(139,92,246,.5);}
+  .snapClusterExtra{width:38px;height:38px;border-radius:50%;background:var(--gradient-vivid);color:#fff;display:flex;align-items:center;justify-content:center;
+    font-size:11.5px;font-weight:800;border:2.5px solid #0a0a0f;margin-left:-14px;}
+  .matchClusterRow{display:flex;align-items:center;gap:12px;padding:11px 20px;cursor:pointer;}
+  .matchClusterRow:hover{background:var(--surface-2);}
+  .matchClusterRow img{width:44px;height:44px;border-radius:50%;object-fit:cover;flex-shrink:0;}
+
+  /* Profil önizleme / ayarlar — mevcut followListOverlay/Sheet düzenini kullanır */
+  .matchProfilePhotoBig{width:100%;aspect-ratio:1/1;max-height:280px;object-fit:cover;background:var(--surface-2);}
+  .matchLockedBlur{filter:blur(14px);pointer-events:none;user-select:none;}
+  .matchLockOverlayBox{position:relative;}
+  .matchLockBadge{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;
+    background:rgba(5,2,15,.35);text-align:center;padding:14px;}
+  .matchSettingsRow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 18px;border-bottom:1px solid var(--line);}
+  .matchSettingsRow .lbl{font-size:13.5px;font-weight:600;color:var(--text);}
+  .matchSettingsRow .desc{font-size:11.5px;color:var(--muted);margin-top:2px;line-height:1.4;}
+  .matchSwitch{position:relative;width:44px;height:26px;border-radius:14px;background:var(--surface-2);border:1px solid var(--line);cursor:pointer;flex-shrink:0;transition:background .15s;}
+  .matchSwitch.on{background:var(--gradient-vivid);border-color:transparent;}
+  .matchSwitch .knob{position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform .15s;box-shadow:0 1px 3px rgba(0,0,0,.3);}
+  .matchSwitch.on .knob{transform:translateX(18px);}
+  .matchVisOption{display:flex;align-items:flex-start;gap:10px;padding:12px 18px;cursor:pointer;border-bottom:1px solid var(--line);}
+  .matchVisOption .dot{width:18px;height:18px;border-radius:50%;border:2px solid var(--line);flex-shrink:0;margin-top:1px;position:relative;}
+  .matchVisOption.selected .dot{border-color:var(--accent);}
+  .matchVisOption.selected .dot::after{content:'';position:absolute;inset:3px;border-radius:50%;background:var(--accent);}
+  .matchExcludeChip{padding:6px 12px;border-radius:14px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--line);background:var(--surface-2);color:var(--text);}
+  .matchExcludeChip.excluded{background:var(--danger);border-color:var(--danger);color:#fff;}
+  .mapboxgl-marker{will-change:transform;}
+  `;
+  const style = document.createElement('style');
+  style.id = 'matchMapInjectedStyles';
+  style.textContent = css;
+  document.head.appendChild(style);
+})();
+
+/* ============================================================
+   GİRİŞ NOKTASI
+   ============================================================ */
+function openMatchMap(){
+  if(!requireFirebase() || !fbAuth.currentUser){ showToast(t('toast_login_required') || 'Giriş yapmalısın.'); return; }
+  const myUid = fbAuth.currentUser.uid;
+  fbDb.ref('userLocations/' + myUid + '/sharing').once('value').then(snap=>{
+    if(snap.val() === true){
+      openMatchMapOverlay();
+    } else {
+      showMatchConsentModal();
+    }
+  }).catch(()=> showToast(t('toast_generic_error') || 'Bir şeyler ters gitti.'));
+}
+
+/* ---------- Onam (consent) modalı — konum paylaşımı ilk kez açılırken ---------- */
+function showMatchConsentModal(){
+  const overlay = document.createElement('div');
+  overlay.className = 'followListOverlay';
+  overlay.id = 'matchConsentOverlay';
+  overlay.onclick = (e)=>{ if(e.target === overlay) closeMatchConsentModal(); };
+  document.body.classList.add('follow-list-open');
+  overlay.innerHTML = `
+    <div class="followListSheet">
+      <div class="followListHead">
+        <h3>🗺️ ${escapeHtml(t('match_consent_title'))}</h3>
+        <button class="followListClose" onclick="closeMatchConsentModal()">✕</button>
+      </div>
+      <div class="followListBody" style="padding:6px 20px 20px;">
+        <p style="font-size:13px;line-height:1.6;color:var(--text);margin:6px 0 18px;">${escapeHtml(t('match_consent_body'))}</p>
+        <button class="btn btn-primary" style="width:100%;margin-bottom:10px;" onclick="acceptMatchConsent()">${escapeHtml(t('match_consent_accept'))}</button>
+        <button class="btn btn-ghost" style="width:100%;" onclick="closeMatchConsentModal()">${escapeHtml(t('match_consent_cancel'))}</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+}
+function closeMatchConsentModal(){
+  const ov = document.getElementById('matchConsentOverlay');
+  if(ov) ov.remove();
+  document.body.classList.remove('follow-list-open');
+}
+function acceptMatchConsent(){
+  closeMatchConsentModal();
+  enableMatchLocationSharing();
+}
+
+/* ---------- Konum paylaşımını aç ve haritayı başlat ---------- */
+function enableMatchLocationSharing(){
+  if(!navigator.geolocation){ showToast(t('toast_no_geo')); return; }
+  const myUid = fbAuth.currentUser.uid;
+  showToast(t('toast_loc_loading'));
+  navigator.geolocation.getCurrentPosition(
+    (pos)=>{
+      const { latitude, longitude, heading } = pos.coords;
+      matchMapMyLoc = { lat: latitude, lng: longitude };
+      matchMapMySettings.sharing = true;
+      fbDb.ref('userLocations/' + myUid).update({
+        lat: latitude, lng: longitude,
+        heading: heading || 0,
+        sharing: true, ghostMode: false,
+        visibility: matchMapMySettings.visibility || 'mutual',
+        trackMode: matchMapMySettings.trackMode || 'normal',
+        updatedAt: Date.now()
+      }).then(()=>{
+        startMatchLocationWatch(matchMapMySettings.trackMode || 'normal');
+        openMatchMapOverlay();
+      }).catch(()=> showToast(t('toast_generic_error') || 'Konum kaydedilemedi.'));
+    },
+    ()=>{ showToast(t('toast_loc_denied')); },
+    { enableHighAccuracy:true, timeout:12000, maximumAge:60000 }
+  );
+}
+
+/* ---------- Konum takibi: Normal (bir kez) / Tasarruf (seyrek) / Araba (sürekli) ---------- */
+function startMatchLocationWatch(mode){
+  stopMatchLocationWatch();
+  if(!navigator.geolocation || !fbAuth.currentUser) return;
+  const myUid = fbAuth.currentUser.uid;
+  const writeLoc = (pos)=>{
+    const { latitude, longitude, heading } = pos.coords;
+    matchMapMyLoc = { lat: latitude, lng: longitude };
+    const update = { lat: latitude, lng: longitude, updatedAt: Date.now() };
+    if(mode === 'car') update.heading = (heading === null || isNaN(heading)) ? 0 : heading;
+    fbDb.ref('userLocations/' + myUid).update(update).catch(()=>{});
+    if(matchMap && matchMapMarkers['__me__']) matchMapMarkers['__me__'].updatePosition(longitude, latitude);
+  };
+  if(mode === 'car'){
+    matchMapWatchId = navigator.geolocation.watchPosition(writeLoc, ()=>{}, { enableHighAccuracy:true, maximumAge:5000 });
+  } else if(mode === 'battery'){
+    writeLoc({ coords: { latitude: matchMapMyLoc ? matchMapMyLoc.lat : 0, longitude: matchMapMyLoc ? matchMapMyLoc.lng : 0 } });
+    matchMapRefreshTimer = setInterval(()=>{
+      navigator.geolocation.getCurrentPosition(writeLoc, ()=>{}, { enableHighAccuracy:false, timeout:15000, maximumAge:120000 });
+    }, 5 * 60000); // 5 dakikada bir
+  } else {
+    // normal: haritayı her açtığında bir kez alınır (zaten enableMatchLocationSharing/openMatchMapOverlay içinde alınıyor)
+  }
+}
+function stopMatchLocationWatch(){
+  if(matchMapWatchId !== null){ navigator.geolocation.clearWatch(matchMapWatchId); matchMapWatchId = null; }
+  if(matchMapRefreshTimer){ clearInterval(matchMapRefreshTimer); matchMapRefreshTimer = null; }
+}
+
+/* ============================================================
+   HARİTA ÜST KATMANI (overlay) — açma / kapama
+   ============================================================ */
+function openMatchMapOverlay(){
+  let overlay = document.getElementById('matchMapOverlay');
+  if(!overlay){
+    overlay = document.createElement('div');
+    overlay.id = 'matchMapOverlay';
+    overlay.className = 'followListOverlay-ignore'; // özel tam ekran overlay, followListOverlay davranışını KULLANMIYORUZ
+    overlay.innerHTML = `
+      <div id="matchMapCanvas"></div>
+      <div class="matchMapTopBar">
+        <button class="matchMapIconBtn" onclick="closeMatchMapOverlay()" title="${escapeHtml(t('match_back'))}">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        </button>
+        <div class="matchMapTitle">${escapeHtml(t('match_nearby_title'))}</div>
+        <div class="matchMapRightBtns">
+          <button class="matchMapStyleToggleBtn" id="matchMapStyleToggleBtn" onclick="toggleMatchMapStyleMode()"></button>
+          <button class="matchMapIconBtn" onclick="openMatchSettings()" title="${escapeHtml(t('match_settings_title'))}">
+            <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06A1.65 1.65 0 005 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 009 4.6a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06A1.65 1.65 0 0019 9c.14.36.22.75.22 1.15"/></svg>
+          </button>
+        </div>
+      </div>
+      <button class="matchMapFloatingLocBtn" onclick="goToMyMatchLocation()" title="${escapeHtml(t('match_my_location'))}">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12 2L4 21l8-4 8 4z"/></svg>
+      </button>
+      <div class="matchMapEmptyHint hidden" id="matchMapEmptyHint">${escapeHtml(t('toast_no_one_nearby'))}</div>
+    `;
+    document.body.appendChild(overlay);
+    Object.assign(overlay.style, { position:'fixed', inset:'0', zIndex:9500, background:'#000', display:'flex', flexDirection:'column' });
+  }
+  overlay.classList.remove('hidden');
+  overlay.style.display = 'flex';
+  document.getElementById('island')?.classList.add('hidden');
+
+  loadMatchMapSettingsThenInit();
+}
+
+function closeMatchMapOverlay(){
+  const overlay = document.getElementById('matchMapOverlay');
+  if(overlay){ overlay.style.display = 'none'; }
+  document.getElementById('island')?.classList.remove('hidden');
+  // Not: harita kapansa da, "Normal" mod dışında konum takibi arka planda
+  // devam eder (Tasarruf/Araba modu kasıtlı olarak böyle çalışır).
+}
+
+/* closeTopmostOverlay() listesine elle kaydolmadan da kapanabilsin diye
+   burada global bir yardımcı bırakıyoruz — index.html'deki closer
+   listesine `['matchMapOverlay', ()=>closeMatchMapOverlay()]` eklenmiştir. */
+
+/* ---------- Ayarları oku, sonra haritayı kur ---------- */
+function loadMatchMapSettingsThenInit(){
+  const myUid = fbAuth.currentUser.uid;
+  fbDb.ref('userLocations/' + myUid).once('value').then(snap=>{
+    const d = snap.val() || {};
+    matchMapMySettings = {
+      sharing: d.sharing === true,
+      ghostMode: d.ghostMode === true,
+      visibility: d.visibility || 'mutual',
+      excludedUids: d.excludedUids || {},
+      onlyUids: d.onlyUids || {},
+      trackMode: d.trackMode || 'normal',
+      msgApprovalOn: d.msgApprovalOn !== false
+    };
+    if(typeof d.lat === 'number' && typeof d.lng === 'number') matchMapMyLoc = { lat:d.lat, lng:d.lng };
+    initMatchMapInstance();
+  });
+}
+
+/* ============================================================
+   MAPBOX GL — HARİTA KURULUMU
+   ============================================================ */
+function initMatchMapInstance(){
+  if(typeof mapboxgl === 'undefined'){
+    showToast("Mapbox GL JS yüklenemedi. index.html'e CDN scriptini eklediğinden emin ol.");
+    return;
+  }
+  mapboxgl.accessToken = MAPBOX_ACCESS_TOKEN;
+  const center = matchMapMyLoc ? [matchMapMyLoc.lng, matchMapMyLoc.lat] : [35.2433, 38.9637]; // varsayılan: Türkiye ortası
+
+  if(matchMap){
+    // Zaten kurulu — sadece merkezle ve yeniden yükle
+    matchMap.setCenter(center);
+    refreshNearbyMatchUsers();
+    return;
+  }
+
+  matchMap = new mapboxgl.Map({
+    container: 'matchMapCanvas',
+    style: MATCH_MAP_STYLES[matchMapStyleKey] || MATCH_MAP_STYLES.dark,
+    center, zoom: 13, pitch: 0, attributionControl: false
+  });
+  matchMap.on('load', ()=>{
+    applyMatchMapColorPalette();
+    applyMatchMapHolidayTheme();
+    refreshNearbyMatchUsers();
+  });
+  updateMatchMapStyleToggleUI();
+}
+
+/* Uydu ⇄ Koyu tek buton üzerinden değişir (Snapchat'teki gibi) — buton her
+   zaman GEÇİLECEK modu gösterir: koyu haritadayken "🛰️ Uydu" yazar,
+   uyduyken "🌙 Koyu" yazar. */
+function toggleMatchMapStyleMode(){
+  matchMapStyleKey = matchMapStyleKey === 'dark' ? 'satellite' : 'dark';
+  updateMatchMapStyleToggleUI();
+  if(!matchMap) return;
+  matchMap.setStyle(MATCH_MAP_STYLES[matchMapStyleKey]);
+  matchMap.once('style.load', ()=>{
+    applyMatchMapColorPalette();
+    applyMatchMapHolidayTheme();
+    renderAllMatchMarkers(matchMapLastCandidates || []);
+  });
+}
+function updateMatchMapStyleToggleUI(){
+  const btn = document.getElementById('matchMapStyleToggleBtn');
+  if(!btn) return;
+  // Buton, geçiş yapılacak SONRAKİ modu gösterir
+  btn.innerHTML = matchMapStyleKey === 'dark' ? escapeHtml(t('match_style_satellite')) : escapeHtml(t('match_style_dark'));
+}
+
+function goToMyMatchLocation(){
+  if(!matchMap || !matchMapMyLoc) return;
+  matchMap.flyTo({ center: [matchMapMyLoc.lng, matchMapMyLoc.lat], zoom: 14 });
+}
+
+/* ============================================================
+   ÖZEL RENK PALETİ — Deep Midnight Blue / neon mor-pembe tema
+   Mapbox'ın hazır "dark-v11" stilini, verilen HEX paletine göre
+   katman katman yeniden renklendirir (Mapbox Studio'ya ihtiyaç
+   duymadan, istemci tarafında setPaintProperty ile). Uydu modunda
+   (raster gerçek görüntü) renk override edilmez, olduğu gibi kalır. */
+const MATCH_MAP_PALETTE = {
+  bg: '#181B26',
+  bgAlt: '#12151E',
+  land: '#232B35',
+  water: '#2C3540',
+  roadThin: '#3A4756',
+  roadMain: '#4B596B',
+  text: '#FFFFFF'
+};
+function applyMatchMapColorPalette(){
+  if(!matchMap || matchMapStyleKey !== 'dark') return;
+  let layers = [];
+  try{ layers = matchMap.getStyle().layers || []; }catch(e){ return; }
+  layers.forEach(layer=>{
+    const id = (layer.id || '').toLowerCase();
+    const src = (layer['source-layer'] || '').toLowerCase();
+    const key = id + ' ' + src;
+    try{
+      if(layer.type === 'background'){
+        matchMap.setPaintProperty(layer.id, 'background-color', MATCH_MAP_PALETTE.bg);
+      } else if(layer.type === 'fill'){
+        if(key.includes('water')) matchMap.setPaintProperty(layer.id, 'fill-color', MATCH_MAP_PALETTE.water);
+        else if(key.includes('building')) matchMap.setPaintProperty(layer.id, 'fill-color', MATCH_MAP_PALETTE.bgAlt);
+        else if(key.includes('land') || key.includes('park') || key.includes('landuse') || key.includes('wood') || key.includes('vegetation') || key.includes('grass'))
+          matchMap.setPaintProperty(layer.id, 'fill-color', MATCH_MAP_PALETTE.land);
+      } else if(layer.type === 'line'){
+        if(key.includes('road') || key.includes('bridge') || key.includes('tunnel')){
+          const isMajor = key.includes('motorway') || key.includes('trunk') || key.includes('primary');
+          matchMap.setPaintProperty(layer.id, 'line-color', isMajor ? MATCH_MAP_PALETTE.roadMain : MATCH_MAP_PALETTE.roadThin);
+        } else if(key.includes('water') || key.includes('river') || key.includes('stream')){
+          matchMap.setPaintProperty(layer.id, 'line-color', MATCH_MAP_PALETTE.water);
+        }
+      } else if(layer.type === 'symbol'){
+        matchMap.setPaintProperty(layer.id, 'text-color', MATCH_MAP_PALETTE.text);
+        matchMap.setPaintProperty(layer.id, 'text-halo-color', MATCH_MAP_PALETTE.bgAlt);
+      }
+    }catch(e){ /* bu katman ilgili boya özelliğini desteklemiyor olabilir — yok say */ }
+  });
+}
+
+/* ---------- Bayram teması (appConfig/mapTheme) — hafif dekoratif filtre ---------- */
+function applyMatchMapHolidayTheme(){
+  const canvas = document.getElementById('matchMapCanvas');
+  if(!canvas) return;
+  canvas.style.filter = '';
+  fbDb.ref('appConfig/mapTheme').once('value').then(snap=>{
+    const cfg = snap.val() || {};
+    let themeId = '';
+    if(cfg.mode === 'manual'){
+      themeId = cfg.themeId || '';
+    } else {
+      themeId = detectAutoHolidayTheme();
+    }
+    const filters = {
+      newyear: 'hue-rotate(190deg) saturate(1.15)',
+      ramadan: 'sepia(.25) saturate(1.1)',
+      halloween: 'hue-rotate(-40deg) saturate(1.3) brightness(.92)',
+      easter: 'saturate(1.2) brightness(1.05)'
+    };
+    if(filters[themeId]) canvas.style.filter = filters[themeId];
+  }).catch(()=>{});
+}
+function detectAutoHolidayTheme(){
+  const now = new Date();
+  const m = now.getMonth() + 1, d = now.getDate();
+  if(m === 12 && d >= 15) return 'newyear';
+  if(m === 1 && d <= 2) return 'newyear';
+  if(m === 10 && d >= 24 && d <= 31) return 'halloween';
+  return '';
+}
+
+/* ============================================================
+   VERİ ÇEKME & FİLTRELEME — loadNearbyMatchUsers()
+   Adımlar:
+   1. Kendini listeden çıkar
+   2. sharing!==true veya ghostMode===true olanları çıkar
+   3. Engellenen/engelleyen kullanıcıları çıkar
+   4. visibility: mutual/except için karşılıklı takip kontrolü
+   5. 100 km'den uzak olanları ele, en yakın 60 kişiyi al
+   ============================================================ */
+let matchMapLastCandidates = [];
+
+function loadNearbyMatchUsers(){
+  const myUid = fbAuth.currentUser.uid;
+  return Promise.all([
+    fbDb.ref('userLocations').once('value'),
+    fbDb.ref('follows/' + myUid).once('value'),
+    fbDb.ref('followers/' + myUid).once('value')
+  ]).then(([allSnap, myFollowsSnap, myFollowersSnap])=>{
+    if(!matchMapMyLoc) return [];
+    const myFollows = new Set(Object.keys(myFollowsSnap.val() || {}));     // ben kimi takip ediyorum
+    const myFollowers = new Set(Object.keys(myFollowersSnap.val() || {})); // beni kim takip ediyor
+    const all = allSnap.val() || {};
+    const candidates = [];
+
+    Object.keys(all).forEach(uid=>{
+      if(uid === myUid) return;                                           // 1) kendini çıkar
+      const loc = all[uid];
+      if(!loc || loc.sharing !== true || loc.ghostMode === true) return;  // 2) paylaşmayan/hayalet modda olan
+      if(typeof loc.lat !== 'number' || typeof loc.lng !== 'number') return;
+      if(isMutuallyBlocked(uid)) return;                                  // 3) engelli ilişki
+
+      const isMutual = myFollows.has(uid) && myFollowers.has(uid);
+      const vis = loc.visibility || 'mutual';
+      if(vis === 'mutual'){
+        if(!isMutual) return;                                             // 4) karşılıklı takip şartı
+      } else if(vis === 'except'){
+        if(!isMutual) return;
+        if((loc.excludedUids || {})[myUid]) return;                       // beni hariç tutmuş
+      } else if(vis === 'only'){
+        if(!isMutual) return;
+        if(!(loc.onlyUids || {})[myUid]) return;                          // beni seçili listeye eklememiş
+      } else {
+        return; // bilinmeyen değer (ör. eski 'public') — güvenli taraf: gösterme
+      }
+
+      const dist = haversineKm(matchMapMyLoc.lat, matchMapMyLoc.lng, loc.lat, loc.lng);
+      if(dist > MATCH_MAP_MAX_DISTANCE_KM) return;                        // 5) mesafe sınırı
+      candidates.push({ uid, loc, dist });
+    });
+
+    candidates.sort((a, b)=> a.dist - b.dist);
+    return candidates.slice(0, MATCH_MAP_MAX_RESULTS);                    // 5) en yakın 60
+  });
+}
+
+function refreshNearbyMatchUsers(){
+  const token = ++matchMapLoadToken;
+  loadNearbyMatchUsers().then(candidates=>{
+    if(token !== matchMapLoadToken) return; // eskimiş istek, yok say
+    matchMapLastCandidates = candidates;
+    const emptyHint = document.getElementById('matchMapEmptyHint');
+    if(emptyHint) emptyHint.classList.toggle('hidden', candidates.length > 0);
+    return fetchProfilesFor(candidates.map(c=>c.uid)).then(profiles=>{
+      candidates.forEach(c=>{ c.profile = profiles[c.uid] || {}; });
+      renderAllMatchMarkers(candidates);
+    });
+  }).catch(()=>{ showToast(t('toast_generic_error') || 'Harita yüklenemedi.'); });
+}
+
+function fetchProfilesFor(uids){
+  return Promise.all(uids.map(uid=>
+    fbDb.ref('users/' + uid).once('value').then(s=> ({ uid, data: s.val() || {} }))
+  )).then(results=>{
+    const map = {};
+    results.forEach(r=>{ map[r.uid] = r.data; });
+    return map;
+  });
+}
+
+/* ============================================================
+   SnapAvatarMarker — sabit boyutlu (50×92px), zoom'dan bağımsız
+   ============================================================ */
+class SnapAvatarMarker {
+  constructor(uid, candidate, isMe){
+    this.uid = uid;
+    this.candidate = candidate; // {loc, profile, dist}
+    this.isMe = !!isMe;
+    this.el = this._buildEl();
+    this.marker = new mapboxgl.Marker({ element: this.el, anchor: 'bottom' })
+      .setLngLat([candidate.loc.lng, candidate.loc.lat]);
+  }
+  _genderColor(){
+    const g = (this.candidate.profile || {}).gender;
+    if(g === 'female') return '#ec4899';
+    if(g === 'male') return '#3b82f6';
+    return '#8b5cf6';
+  }
+  _buildEl(){
+    const el = document.createElement('div');
+    el.className = 'snapAvatarMarker' + (this.isMe ? ' is-me' : '');
+    const profile = this.candidate.profile || {};
+    const name = escapeHtml(profile.displayName || profile.username || '@kullanici');
+    const photo = profile.photo || ('https://i.pravatar.cc/100?u=' + this.uid);
+    const when = formatPostAge(this.candidate.loc.updatedAt);
+    const color = this._genderColor();
+    const heading = this.candidate.loc.trackMode === 'car' ? (this.candidate.loc.heading || 0) : null;
+    el.innerHTML = `
+      <div class="snapMarkerName">${name}</div>
+      <div class="snapMarkerRing" style="--ring-color:${color}">
+        ${heading !== null ? `<div class="snapMarkerHeadingArrow" style="transform:translateX(-50%) rotate(${heading}deg)"></div>` : ''}
+        <img src="${photo}" onerror="this.src='https://i.pravatar.cc/100?u=${this.uid}'">
+      </div>
+      <div class="snapMarkerShadow"></div>
+      <div class="snapMarkerTime">${when}</div>
+    `;
+    if(!this.isMe){
+      el.addEventListener('click', ()=> openMatchProfilePreview(this.uid, this.candidate));
+    }
+    return el;
+  }
+  addTo(map){ this.marker.addTo(map); return this; }
+  remove(){ try{ this.marker.remove(); }catch(e){} }
+  updatePosition(lng, lat){ this.marker.setLngLat([lng, lat]); }
+}
+
+/* Aynı yerdeki (ör. aynı bina/mekan) kişileri tek bir "yığın" işaretçisinde
+   birleştirir, böylece üst üste binip birbirini gizlemezler. Basit ve
+   geçişli (transitive) bir gruplama: birbirine CLUSTER_RADIUS_KM'den yakın
+   olan herkes aynı yığında toplanır. */
+const CLUSTER_RADIUS_KM = 0.04; // ~40 metre
+function clusterCandidatesByLocation(candidates){
+  const used = new Array(candidates.length).fill(false);
+  const clusters = [];
+  for(let i = 0; i < candidates.length; i++){
+    if(used[i]) continue;
+    const group = [candidates[i]];
+    used[i] = true;
+    for(let j = i + 1; j < candidates.length; j++){
+      if(used[j]) continue;
+      const d = haversineKm(candidates[i].loc.lat, candidates[i].loc.lng, candidates[j].loc.lat, candidates[j].loc.lng);
+      if(d <= CLUSTER_RADIUS_KM){ group.push(candidates[j]); used[j] = true; }
+    }
+    clusters.push(group);
+  }
+  return clusters;
+}
+
+function renderAllMatchMarkers(candidates){
+  if(!matchMap) return;
+  // Eskileri temizle
+  Object.values(matchMapMarkers).forEach(m=> m.remove());
+  matchMapMarkers = {};
+  // Kendi işaretçim
+  if(matchMapMyLoc && fbAuth.currentUser){
+    const meCandidate = { loc: { lng: matchMapMyLoc.lng, lat: matchMapMyLoc.lat, updatedAt: Date.now() },
+      profile: { username: savedUsername || t('match_you') || 'Sen', photo: savedProfilePhoto } };
+    matchMapMarkers['__me__'] = new SnapAvatarMarker(fbAuth.currentUser.uid, meCandidate, true).addTo(matchMap);
+  }
+  // Arkadaşlar — aynı konumdakiler yığın halinde, tekiler normal işaretçi olarak
+  const clusters = clusterCandidatesByLocation(candidates);
+  clusters.forEach((group, idx)=>{
+    if(group.length === 1){
+      const c = group[0];
+      matchMapMarkers[c.uid] = new SnapAvatarMarker(c.uid, c, false).addTo(matchMap);
+    } else {
+      matchMapMarkers['__cluster_' + idx + '__'] = new SnapClusterMarker(group).addTo(matchMap);
+    }
+  });
+}
+
+/* ============================================================
+   SnapClusterMarker — aynı konumda (≈40m içinde) birden fazla kişi varsa
+   üst üste binen avatarları + "+N" rozetiyle tek bir yığın olarak gösterir.
+   Tıklanınca içindekileri listeleyen bir alt sayfa açılır.
+   ============================================================ */
+class SnapClusterMarker {
+  constructor(group){
+    this.group = group;
+    const lat = group.reduce((s,c)=> s + c.loc.lat, 0) / group.length;
+    const lng = group.reduce((s,c)=> s + c.loc.lng, 0) / group.length;
+    this.el = this._buildEl();
+    this.marker = new mapboxgl.Marker({ element: this.el, anchor: 'bottom' }).setLngLat([lng, lat]);
+  }
+  _buildEl(){
+    const el = document.createElement('div');
+    el.className = 'snapClusterMarker';
+    const shown = this.group.slice(0, 3);
+    const extra = this.group.length - shown.length;
+    const stackHtml = shown.map((c, i)=>{
+      const photo = (c.profile || {}).photo || ('https://i.pravatar.cc/100?u=' + c.uid);
+      const marginStyle = i === 0 ? '' : 'margin-left:-14px;';
+      return `<img class="snapClusterAvatar" style="z-index:${shown.length - i};${marginStyle}" src="${photo}" onerror="this.src='https://i.pravatar.cc/100?u=${c.uid}'">`;
+    }).join('');
+    el.innerHTML = `
+      <div class="snapClusterName">${this.group.length} ${escapeHtml(t('match_people_here'))}</div>
+      <div class="snapClusterStack">${stackHtml}${extra > 0 ? `<div class="snapClusterExtra">+${extra}</div>` : ''}</div>
+      <div class="snapMarkerShadow"></div>
+    `;
+    el.addEventListener('click', ()=> openMatchClusterList(this.group));
+    return el;
+  }
+  addTo(map){ this.marker.addTo(map); return this; }
+  remove(){ try{ this.marker.remove(); }catch(e){} }
+}
+
+/* Yığındaki kişileri listeleyen alt sayfa — bir satıra dokununca o kişinin
+   normal profil önizlemesi açılır (rozet kuralları orada da geçerli). */
+function openMatchClusterList(group){
+  const overlay = document.createElement('div');
+  overlay.className = 'followListOverlay';
+  overlay.id = 'matchClusterOverlay';
+  overlay.style.zIndex = 10150; // profil önizlemesinin altında, harita ekranının üstünde
+  overlay.onclick = (e)=>{ if(e.target === overlay) closeMatchClusterList(); };
+  document.body.classList.add('follow-list-open');
+
+  const rows = group.map(c=>{
+    const profile = c.profile || {};
+    const name = escapeHtml(profile.displayName || profile.username || '@kullanici');
+    const photo = profile.photo || ('https://i.pravatar.cc/100?u=' + c.uid);
+    const when = escapeHtml(formatPostAge(c.loc.updatedAt));
+    return `<div class="matchClusterRow" onclick="closeMatchClusterList();openMatchProfilePreview('${c.uid}')">
+      <img src="${photo}" onerror="this.src='https://i.pravatar.cc/100?u=${c.uid}'">
+      <div><div style="font-size:13.5px;font-weight:600;color:var(--text);">${name}</div>
+        <div style="font-size:11px;color:var(--muted);">${when}</div></div>
+    </div>`;
+  }).join('');
+
+  overlay.innerHTML = `
+    <div class="followListSheet">
+      <div class="followListHead" style="position:sticky;top:0;z-index:5;background:var(--surface);flex-shrink:0;">
+        <h3 style="flex:1;">📍 ${group.length} ${escapeHtml(t('match_people_here'))}</h3>
+        <button class="followListClose" onclick="closeMatchClusterList()">✕</button>
+      </div>
+      <div class="followListBody" style="padding:4px 0;">${rows}</div>
+    </div>`;
+  document.body.appendChild(overlay);
+}
+function closeMatchClusterList(){
+  const ov = document.getElementById('matchClusterOverlay');
+  if(ov) ov.remove();
+  document.body.classList.remove('follow-list-open');
+}
+
+/* ============================================================
+   PROFİL ÖNİZLEME (alt sayfa) — openMatchProfilePreview()
+   Rozet kuralı: savedVerifiedTier gold/purple değilse gönderi
+   önizlemeleri gösterilmez ve "Mesaj Yaz" kilitlenir.
+   ============================================================ */
+function openMatchProfilePreview(uid, candidateArg){
+  matchMapSelectedUid = uid;
+  const candidate = candidateArg || matchMapLastCandidates.find(c=>c.uid === uid);
+  if(!candidate) return;
+  const profile = candidate.profile || {};
+  const hasAccess = savedVerifiedTier === 'gold' || savedVerifiedTier === 'purple';
+  const distText = candidate.dist < 1 ? t('match_m_away').replace('{n}', Math.round(candidate.dist*1000)) : t('match_km_away').replace('{n}', candidate.dist.toFixed(1));
+  const photo = profile.photo || ('https://i.pravatar.cc/300?u=' + uid);
+
+  const overlay = document.createElement('div');
+  overlay.className = 'followListOverlay';
+  overlay.id = 'matchProfileOverlay';
+  overlay.style.zIndex = 10200; // harita overlay'inin üstünde dursun
+  overlay.onclick = (e)=>{ if(e.target === overlay) closeMatchProfilePreview(); };
+  document.body.classList.add('follow-list-open');
+
+  overlay.innerHTML = `
+    <div class="followListSheet" style="max-height:88vh;">
+      <div class="followListHead" style="position:sticky;top:0;z-index:5;background:var(--surface);flex-shrink:0;">
+        <button class="matchMapIconBtn" style="background:var(--surface-2);border:1px solid var(--line);color:var(--text);width:34px;height:34px;" onclick="closeMatchProfilePreview()" title="${escapeHtml(t('match_back'))}">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        </button>
+        <h3 style="flex:1;text-align:center;">${escapeHtml(profile.displayName || profile.username || '@kullanici')} ${typeof verifiedBadgeHtml==='function' ? verifiedBadgeHtml(profile.verifiedTier, 15) : ''}</h3>
+        <div style="width:34px;flex-shrink:0;"></div>
+      </div>
+      <div class="followListBody" style="padding:0 0 20px;">
+        <div class="matchLockOverlayBox">
+          <img class="matchProfilePhotoBig ${hasAccess ? '' : 'matchLockedBlur'}" src="${photo}" onerror="this.src='https://i.pravatar.cc/300?u=${uid}'">
+          ${hasAccess ? '' : `
+            <div class="matchLockBadge">
+              <div style="font-size:30px;">🔒</div>
+              <div style="color:#fff;font-size:12.5px;max-width:240px;line-height:1.5;">${escapeHtml(t('match_upgrade_needed'))}</div>
+              <button class="btn btn-primary" style="padding:9px 20px;font-size:12.5px;" onclick="closeMatchProfilePreview();openVerifiedBadgeInfo();">${escapeHtml(t('match_upgrade_btn'))}</button>
+            </div>`}
+        </div>
+        <div style="padding:14px 20px 0;">
+          <div style="font-size:12.5px;color:var(--muted);margin-bottom:4px;">📍 ${escapeHtml(distText)} · ${escapeHtml(formatPostAge(candidate.loc.updatedAt))}</div>
+          ${profile.bio ? `<div style="font-size:13px;color:var(--text);margin:8px 0;line-height:1.5;">${escapeHtml(profile.bio)}</div>` : ''}
+          <div style="display:flex;gap:10px;margin-top:16px;">
+            <button class="btn btn-ghost" style="flex:1;" id="matchFollowBtn" onclick="matchFollowUser('${uid}')">${escapeHtml(t('match_follow_btn'))}</button>
+            <button class="btn ${hasAccess ? 'btn-primary' : 'btn-ghost'}" style="flex:1;" onclick="${hasAccess ? `matchMessageUser('${uid}')` : `closeMatchProfilePreview();openVerifiedBadgeInfo();`}">
+              ${hasAccess ? '💬 ' + escapeHtml(t('match_message_btn')) : '🔒 ' + escapeHtml(t('match_message_btn'))}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  refreshMatchFollowButtonState(uid);
+}
+function closeMatchProfilePreview(){
+  const ov = document.getElementById('matchProfileOverlay');
+  if(ov) ov.remove();
+  document.body.classList.remove('follow-list-open');
+}
+
+function refreshMatchFollowButtonState(uid){
+  if(!fbAuth.currentUser) return;
+  fbDb.ref('follows/' + fbAuth.currentUser.uid + '/' + uid).once('value').then(snap=>{
+    const btn = document.getElementById('matchFollowBtn');
+    if(!btn) return;
+    btn.textContent = snap.exists() ? t('match_following_btn') : t('match_follow_btn');
+  });
+}
+
+/* ============================================================
+   TAKİP ET / MESAJ YAZ
+   ============================================================ */
+function matchFollowUser(uid){
+  if(!fbAuth.currentUser) return;
+  const myUid = fbAuth.currentUser.uid;
+  const followRef = fbDb.ref('follows/' + myUid + '/' + uid);
+  const followerRef = fbDb.ref('followers/' + uid + '/' + myUid);
+  followRef.once('value').then(snap=>{
+    if(snap.exists()){
+      Promise.all([followRef.remove(), followerRef.remove()]).then(()=>{
+        showToast(t('toast_unfollowed'));
+        refreshMatchFollowButtonState(uid);
+      });
+    } else {
+      Promise.all([followRef.set(true), followerRef.set(true)]).then(()=>{
+        showToast(t('toast_following_check'));
+        refreshMatchFollowButtonState(uid);
+        if(typeof sendFollowNotification === 'function') sendFollowNotification(uid);
+      });
+    }
+  });
+}
+
+/* Haritadan mesaj gönderme: karşılıklı takipse doğrudan sohbete gir;
+   değilse (ve karşı taraf mesaj onayını kapatmadıysa) "onay bekliyor"
+   durumunda bir sohbet isteği oluşturur. */
+function matchMessageUser(uid){
+  if(!fbAuth.currentUser) return;
+  const myUid = fbAuth.currentUser.uid;
+  Promise.all([
+    fbDb.ref('follows/' + myUid + '/' + uid).once('value'),
+    fbDb.ref('followers/' + myUid + '/' + uid).once('value'),
+    fbDb.ref('users/' + uid + '/matchMsgApprovalOn').once('value')
+  ]).then(([followsSnap, followersSnap, approvalSnap])=>{
+    const isMutual = followsSnap.exists() && followersSnap.exists();
+    const approvalRequired = approvalSnap.val() !== false; // varsayılan: açık
+    if(isMutual || !approvalRequired){
+      closeMatchProfilePreview();
+      closeMatchMapOverlay();
+      startChatWith(uid);
+      return;
+    }
+    sendMatchMessageRequest(uid);
+  });
+}
+
+function sendMatchMessageRequest(uid){
+  const myUid = fbAuth.currentUser.uid;
+  const chatId = makeChatId(myUid, uid);
+  const ts = Date.now();
+  ensureChatMeta(chatId, uid).then(()=>{
+    return fbDb.ref('chatMeta/' + chatId).update({
+      pendingApprovalFor: uid,
+      pendingApprovalFrom: myUid,
+      lastMsg: t('match_msg_pending_sent'),
+      lastTs: ts,
+      lastSenderUid: myUid,
+      ['unreadFor/' + uid]: true
+    });
+  }).then(()=>{
+    return fbDb.ref('chats/' + chatId + '/messages').push().set({ from: myUid, text: '👋', ts, matchMapRequest: true });
+  }).then(()=>{
+    fbDb.ref('notifications/' + uid).push({
+      text: '<b>' + escapeHtml(savedUsername || '@kullanici') + '</b> ' + t('match_msg_approval_prompt'),
+      photo: savedProfilePhoto || '', targetUid: myUid, ts, type: 'matchMsgRequest', chatId
+    });
+    showToast(t('match_msg_pending_sent'));
+    closeMatchProfilePreview();
+    closeMatchMapOverlay();
+    startChatWith(uid);
+  }).catch(()=> showToast(t('toast_generic_error') || 'Mesaj gönderilemedi.'));
+}
+
+/* index.html'deki sohbet onay bandosu bu iki fonksiyonu çağırıyor
+   (openChatThread içindeki approvalBanner) — burada tanımlanıyorlar. */
+function approveMatchMsgRequest(chatId){
+  if(!fbAuth.currentUser) return;
+  fbDb.ref('chatMeta/' + chatId).update({ pendingApprovalFor: null, pendingApprovalFrom: null }).then(()=>{
+    showToast(t('match_msg_approved_toast'));
+    const banner = document.getElementById('chatApprovalBanner');
+    if(banner) banner.style.display = 'none';
+  }).catch(()=> showToast(t('toast_generic_error') || 'İşlem başarısız.'));
+}
+function declineMatchMsgRequest(chatId, peerUid){
+  if(!confirm(t('match_msg_decline_confirm'))) return;
+  const myUid = fbAuth.currentUser.uid;
+  Promise.all([
+    fbDb.ref('chats/' + chatId).remove(),
+    fbDb.ref('chatMeta/' + chatId).remove(),
+    fbDb.ref('blocks/' + myUid + '/' + peerUid).set(true),
+    fbDb.ref('blockedBy/' + peerUid + '/' + myUid).set(true),
+    fbDb.ref('follows/' + myUid + '/' + peerUid).remove(),
+    fbDb.ref('followers/' + peerUid + '/' + myUid).remove(),
+    fbDb.ref('follows/' + peerUid + '/' + myUid).remove(),
+    fbDb.ref('followers/' + myUid + '/' + peerUid).remove()
+  ]).then(()=>{
+    showToast(t('match_msg_declined_toast'));
+    if(typeof loadMyBlockList === 'function') loadMyBlockList();
+    if(typeof goNav === 'function'){
+      const feedBtn = document.getElementById('navFeed');
+      if(feedBtn) goNav('feed', feedBtn);
+    }
+  }).catch(()=> showToast(t('toast_generic_error') || 'İşlem başarısız.'));
+}
+
+/* ============================================================
+   AYARLAR PANELİ — Hayalet Modu / Görünürlük / Takip Modu /
+   Mesaj Onayı / Paylaşımı Tamamen Kapat
+   ============================================================ */
+function openMatchSettings(){
+  const overlay = document.createElement('div');
+  overlay.className = 'followListOverlay';
+  overlay.id = 'matchSettingsOverlay';
+  overlay.style.zIndex = 10200;
+  overlay.onclick = (e)=>{ if(e.target === overlay) closeMatchSettings(); };
+  document.body.classList.add('follow-list-open');
+
+  const s = matchMapMySettings;
+  // Snapchat'teki gibi sıralama: Arkadaşlarım → Arkadaşlarım Hariç → Sadece Şu Arkadaşlarım
+  const visOptions = [
+    { key:'mutual', title:t('match_vis_mutual'), desc:t('match_vis_mutual_desc') },
+    { key:'except', title:t('match_vis_except'), desc:t('match_vis_except_desc') },
+    { key:'only', title:t('match_vis_only'), desc:t('match_vis_only_desc') }
+  ];
+  const trackOptions = [
+    { key:'normal', title:t('match_track_normal'), desc:t('match_track_normal_desc') },
+    { key:'battery', title:t('match_track_battery'), desc:t('match_track_battery_desc') },
+    { key:'car', title:t('match_track_car'), desc:t('match_track_car_desc') }
+  ];
+
+  overlay.innerHTML = `
+    <div class="followListSheet" style="max-height:92vh;">
+      <div class="followListHead" style="position:sticky;top:0;z-index:5;background:var(--surface);flex-shrink:0;">
+        <button class="matchMapIconBtn" style="background:var(--surface-2);border:1px solid var(--line);color:var(--text);width:34px;height:34px;" onclick="closeMatchSettings()" title="${escapeHtml(t('match_back'))}">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        </button>
+        <h3 style="flex:1;text-align:center;">⚙️ ${escapeHtml(t('match_settings_title'))}</h3>
+        <div style="width:34px;flex-shrink:0;"></div>
+      </div>
+      <div class="followListBody" style="padding:0;">
+
+        <!-- Snapchat'teki "Canlı konum" durum satırı -->
+        <div class="matchSettingsRow">
+          <div>
+            <div class="lbl">${escapeHtml(t('match_live_location_label'))}</div>
+            <div class="desc" id="matchLiveLocationStatus">${escapeHtml(s.sharing ? t('match_live_location_on') : t('match_live_location_off'))}</div>
+          </div>
+          <button class="btn" style="background:#FACC15;color:#1a1a1a;border:none;border-radius:20px;padding:8px 16px;font-weight:800;font-size:12.5px;flex-shrink:0;"
+            onclick="document.getElementById('matchVisOptionsWrap').scrollIntoView({behavior:'smooth',block:'center'})">${escapeHtml(t('match_settings_btn'))}</button>
+        </div>
+
+        <div class="matchSettingsRow">
+          <div><div class="lbl">👻 ${escapeHtml(t('match_ghost_mode'))}</div><div class="desc">${escapeHtml(t('match_ghost_mode_desc'))}</div></div>
+          <div class="matchSwitch ${s.ghostMode ? 'on' : ''}" id="matchGhostSwitch" onclick="toggleMatchGhostMode()"><div class="knob"></div></div>
+        </div>
+
+        <div style="padding:14px 18px 4px;font-size:12.5px;font-weight:700;color:var(--muted);">${escapeHtml(t('match_visibility_title'))}</div>
+        <div id="matchVisOptionsWrap">
+          ${visOptions.map(o=>`
+            <div class="matchVisOption ${s.visibility===o.key?'selected':''}" data-vis="${o.key}" onclick="setMatchVisibility('${o.key}')">
+              <div class="dot"></div>
+              <div><div class="lbl" style="font-size:13px;font-weight:600;">${escapeHtml(o.title)}</div><div class="desc">${escapeHtml(o.desc)}</div></div>
+            </div>`).join('')}
+        </div>
+        <div id="matchExcludeWrap" style="display:${s.visibility==='except'?'block':'none'};padding:12px 18px;">
+          <div style="font-size:11.5px;color:var(--muted);margin-bottom:10px;">${escapeHtml(t('match_exclude_hint'))}</div>
+          <div id="matchExcludeChips" style="display:flex;flex-wrap:wrap;gap:8px;">${escapeHtml(t('toast_loading_generic') || 'Yükleniyor...')}</div>
+        </div>
+        <div id="matchOnlyWrap" style="display:${s.visibility==='only'?'block':'none'};padding:12px 18px;">
+          <div style="font-size:11.5px;color:var(--muted);margin-bottom:10px;">${escapeHtml(t('match_only_hint'))}</div>
+          <div id="matchOnlyChips" style="display:flex;flex-wrap:wrap;gap:8px;">${escapeHtml(t('toast_loading_generic') || 'Yükleniyor...')}</div>
+        </div>
+
+        <!-- Snapchat'teki "Hızlı Paylaş" bölümü -->
+        <div style="padding:20px 18px 4px;">
+          <div style="font-size:14.5px;font-weight:700;color:var(--text);font-family:'Space Grotesk',sans-serif;">${escapeHtml(t('match_quick_share_title'))}</div>
+          <div style="font-size:11.5px;color:var(--muted);margin-top:2px;">${escapeHtml(t('match_quick_share_desc'))}</div>
+        </div>
+        <div id="matchQuickShareList" style="padding:6px 0 4px;">${escapeHtml(t('toast_loading_generic') || 'Yükleniyor...')}</div>
+
+        <div style="padding:18px 18px 4px;font-size:12.5px;font-weight:700;color:var(--muted);">${escapeHtml(t('match_tracking_mode_title'))}</div>
+        <div id="matchTrackOptionsWrap">
+          ${trackOptions.map(o=>`
+            <div class="matchVisOption ${s.trackMode===o.key?'selected':''}" data-track="${o.key}" onclick="setMatchTrackMode('${o.key}')">
+              <div class="dot"></div>
+              <div><div class="lbl" style="font-size:13px;font-weight:600;">${escapeHtml(o.title)}</div><div class="desc">${escapeHtml(o.desc)}</div></div>
+            </div>`).join('')}
+        </div>
+
+        <div class="matchSettingsRow">
+          <div><div class="lbl">✅ ${escapeHtml(t('match_msg_approval'))}</div><div class="desc">${escapeHtml(t('match_msg_approval_desc'))}</div></div>
+          <div class="matchSwitch ${s.msgApprovalOn ? 'on' : ''}" id="matchApprovalSwitch" onclick="toggleMatchMsgApproval()"><div class="knob"></div></div>
+        </div>
+
+        <div style="padding:20px 18px 4px;">
+          <button class="btn" style="width:100%;background:var(--danger);color:#fff;border:none;" onclick="stopMatchLocationSharingCompletely()">🚫 ${escapeHtml(t('match_stop_sharing'))}</button>
+        </div>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  if(s.visibility === 'except') loadMatchPeoplePicker('except');
+  if(s.visibility === 'only') loadMatchPeoplePicker('only');
+  loadMatchQuickShareList();
+}
+function closeMatchSettings(){
+  const ov = document.getElementById('matchSettingsOverlay');
+  if(ov) ov.remove();
+  document.body.classList.remove('follow-list-open');
+}
+
+function toggleMatchGhostMode(){
+  const myUid = fbAuth.currentUser.uid;
+  matchMapMySettings.ghostMode = !matchMapMySettings.ghostMode;
+  document.getElementById('matchGhostSwitch')?.classList.toggle('on', matchMapMySettings.ghostMode);
+  fbDb.ref('userLocations/' + myUid + '/ghostMode').set(matchMapMySettings.ghostMode).then(()=>{
+    showToast(matchMapMySettings.ghostMode ? t('match_ghost_mode_on_toast') : t('match_ghost_mode_off_toast'));
+    refreshNearbyMatchUsers();
+  });
+}
+
+function setMatchVisibility(key){
+  const myUid = fbAuth.currentUser.uid;
+  matchMapMySettings.visibility = key;
+  document.querySelectorAll('.matchVisOption[data-vis]').forEach(el=> el.classList.toggle('selected', el.dataset.vis === key));
+  const excludeWrap = document.getElementById('matchExcludeWrap');
+  const onlyWrap = document.getElementById('matchOnlyWrap');
+  if(excludeWrap) excludeWrap.style.display = key === 'except' ? 'block' : 'none';
+  if(onlyWrap) onlyWrap.style.display = key === 'only' ? 'block' : 'none';
+  if(key === 'except') loadMatchPeoplePicker('except');
+  if(key === 'only') loadMatchPeoplePicker('only');
+  fbDb.ref('userLocations/' + myUid + '/visibility').set(key).then(()=> refreshNearbyMatchUsers());
+}
+
+/* ---------- 'except' (hariç tutulanlar) ve 'only' (sadece şunlar) listeleri ----------
+   İkisi de aynı mantıkla çalışır: karşılıklı takipleştiğin kişiler arasından
+   seç; hangi Firebase alanına (excludedUids / onlyUids) yazılacağı `mode`
+   parametresine göre değişir. */
+function loadMatchPeoplePicker(mode){
+  const myUid = fbAuth.currentUser.uid;
+  const wrapId = mode === 'only' ? 'matchOnlyChips' : 'matchExcludeChips';
+  const fieldName = mode === 'only' ? 'onlyUids' : 'excludedUids';
+  const wrap = document.getElementById(wrapId);
+  Promise.all([
+    fbDb.ref('follows/' + myUid).once('value'),
+    fbDb.ref('followers/' + myUid).once('value'),
+    fbDb.ref('userLocations/' + myUid + '/' + fieldName).once('value')
+  ]).then(([followsSnap, followersSnap, selectedSnap])=>{
+    const follows = new Set(Object.keys(followsSnap.val() || {}));
+    const followers = new Set(Object.keys(followersSnap.val() || {}));
+    const mutualUids = [...follows].filter(u=> followers.has(u));
+    const selected = selectedSnap.val() || {};
+    if(!wrap) return;
+    if(!mutualUids.length){ wrap.innerHTML = `<div style="font-size:12px;color:var(--muted);">—</div>`; return; }
+    Promise.all(mutualUids.map(uid=> fbDb.ref('users/' + uid).once('value').then(s=>({uid, data:s.val()||{}})))).then(results=>{
+      const chipLabel = mode === 'only' ? t('match_only_chip') : t('match_exclude_chip');
+      const chipSelectedLabel = mode === 'only' ? t('match_only_selected_chip') : t('match_excluded_chip');
+      wrap.innerHTML = results.map(r=>{
+        const isSelected = !!selected[r.uid];
+        const name = escapeHtml(r.data.username || r.data.displayName || '@kullanici');
+        return `<div class="matchExcludeChip ${isSelected?'excluded':''}" data-uid="${r.uid}" onclick="toggleMatchPersonInList('${mode}','${r.uid}')">${isSelected ? escapeHtml(chipSelectedLabel) : escapeHtml(chipLabel)} · ${name}</div>`;
+      }).join('');
+    });
+  });
+}
+function toggleMatchPersonInList(mode, uid){
+  const myUid = fbAuth.currentUser.uid;
+  const fieldName = mode === 'only' ? 'onlyUids' : 'excludedUids';
+  const ref = fbDb.ref('userLocations/' + myUid + '/' + fieldName + '/' + uid);
+  ref.once('value').then(snap=>{
+    const next = !snap.exists();
+    (next ? ref.set(true) : ref.remove()).then(()=>{
+      loadMatchPeoplePicker(mode);
+      refreshNearbyMatchUsers();
+    });
+  });
+}
+
+/* ---------- Hızlı Paylaş — Snapchat'teki gibi, henüz konumunu göremeyen
+   karşılıklı arkadaşlarını önerir; "Paylaş"a basınca mevcut görünürlük
+   moduna göre onları listeye ekler (except: hariç listesinden çıkar,
+   only: sadece-listesine ekler, mutual: zaten herkese açık, bilgi verilir). */
+function loadMatchQuickShareList(){
+  const myUid = fbAuth.currentUser.uid;
+  const listEl = document.getElementById('matchQuickShareList');
+  Promise.all([
+    fbDb.ref('follows/' + myUid).once('value'),
+    fbDb.ref('followers/' + myUid).once('value'),
+    fbDb.ref('userLocations/' + myUid).once('value')
+  ]).then(([followsSnap, followersSnap, myLocSnap])=>{
+    const follows = new Set(Object.keys(followsSnap.val() || {}));
+    const followers = new Set(Object.keys(followersSnap.val() || {}));
+    const mutualUids = [...follows].filter(u=> followers.has(u) && !isMutuallyBlocked(u));
+    const myLoc = myLocSnap.val() || {};
+    const vis = myLoc.visibility || 'mutual';
+    const excluded = myLoc.excludedUids || {};
+    const only = myLoc.onlyUids || {};
+    // Zaten konumunu görebilenleri listeden çıkar
+    const notYetSharing = mutualUids.filter(uid=>{
+      if(vis === 'mutual') return false;               // herkes zaten görüyor
+      if(vis === 'except') return !!excluded[uid];      // hariç tutulmuşsa öner
+      if(vis === 'only') return !only[uid];             // henüz seçilmemişse öner
+      return false;
+    });
+    if(!listEl) return;
+    if(!notYetSharing.length){
+      listEl.innerHTML = `<div style="padding:10px 18px;font-size:12px;color:var(--muted);">${escapeHtml(t('match_quick_share_empty'))}</div>`;
+      return;
+    }
+    Promise.all(notYetSharing.slice(0,20).map(uid=> fbDb.ref('users/' + uid).once('value').then(s=>({uid, data:s.val()||{}})))).then(results=>{
+      listEl.innerHTML = results.map(r=>{
+        const name = escapeHtml(r.data.displayName || r.data.username || '@kullanici');
+        const photo = r.data.photo || ('https://i.pravatar.cc/80?u=' + r.uid);
+        return `
+        <div class="followListRow" style="justify-content:space-between;">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <img src="${photo}" onerror="this.src='https://i.pravatar.cc/80?u=${r.uid}'">
+            <div><div style="font-size:13.5px;font-weight:600;color:var(--text);">${name}</div></div>
+          </div>
+          <button class="btn" style="padding:7px 14px;border-radius:16px;border:1px solid var(--glass-border);background:var(--surface-2);color:var(--text);font-size:12px;font-weight:700;flex-shrink:0;"
+            onclick="quickShareMatchLocationWith('${r.uid}', this)">📍 ${escapeHtml(t('match_quick_share_btn'))}</button>
+        </div>`;
+      }).join('');
+    });
+  });
+}
+function quickShareMatchLocationWith(uid, btnEl){
+  const myUid = fbAuth.currentUser.uid;
+  const vis = matchMapMySettings.visibility;
+  let op;
+  if(vis === 'except') op = fbDb.ref('userLocations/' + myUid + '/excludedUids/' + uid).remove();
+  else if(vis === 'only') op = fbDb.ref('userLocations/' + myUid + '/onlyUids/' + uid).set(true);
+  else op = Promise.resolve();
+  op.then(()=>{
+    if(btnEl){ btnEl.textContent = '✓'; btnEl.disabled = true; btnEl.style.opacity = '.6'; }
+    showToast(t('toast_loc_added') || 'Paylaşıldı.');
+    refreshNearbyMatchUsers();
+    if(vis === 'except' || vis === 'only') loadMatchPeoplePicker(vis);
+  });
+}
+
+function setMatchTrackMode(key){
+  const myUid = fbAuth.currentUser.uid;
+  matchMapMySettings.trackMode = key;
+  document.querySelectorAll('.matchVisOption[data-track]').forEach(el=> el.classList.toggle('selected', el.dataset.track === key));
+  fbDb.ref('userLocations/' + myUid + '/trackMode').set(key).then(()=>{
+    showToast(t('match_track_saved_toast'));
+    startMatchLocationWatch(key);
+  });
+}
+
+function toggleMatchMsgApproval(){
+  const myUid = fbAuth.currentUser.uid;
+  matchMapMySettings.msgApprovalOn = !matchMapMySettings.msgApprovalOn;
+  document.getElementById('matchApprovalSwitch')?.classList.toggle('on', matchMapMySettings.msgApprovalOn);
+  Promise.all([
+    fbDb.ref('userLocations/' + myUid + '/msgApprovalOn').set(matchMapMySettings.msgApprovalOn),
+    fbDb.ref('users/' + myUid + '/matchMsgApprovalOn').set(matchMapMySettings.msgApprovalOn)
+  ]);
+}
+
+function stopMatchLocationSharingCompletely(){
+  if(!confirm(t('match_stop_sharing_confirm'))) return;
+  const myUid = fbAuth.currentUser.uid;
+  stopMatchLocationWatch();
+  fbDb.ref('userLocations/' + myUid).update({ sharing:false }).then(()=>{
+    showToast(t('toast_location_sharing_off'));
+    closeMatchSettings();
+    closeMatchMapOverlay();
+  });
+}
+
+/* ============================================================
+   Android donanım geri tuşu / genel "kapat" listesine kayıt
+   index.html'deki closeTopmostOverlay() fonksiyonundaki `closers`
+   dizisine şu satırı eklemen yeterli (zaten eklendi, bkz. talimat):
+     ['matchMapOverlay', ()=>{ if(typeof closeMatchMapOverlay==='function') closeMatchMapOverlay(); }],
+   ============================================================ */
+
+window.openMatchMap = openMatchMap;
+window.closeMatchMapOverlay = closeMatchMapOverlay;
+window.approveMatchMsgRequest = approveMatchMsgRequest;
+window.declineMatchMsgRequest = declineMatchMsgRequest;
