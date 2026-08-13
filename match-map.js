@@ -363,7 +363,7 @@ function initMatchMapInstance(){
   matchMap = new mapboxgl.Map({
     container: 'matchMapCanvas',
     style: MATCH_MAP_STYLES[matchMapStyleKey] || MATCH_MAP_STYLES.dark,
-    center, zoom: 15, pitch: MATCH_MAP_3D_PITCH, bearing: 0, attributionControl: false,
+    center, zoom: 15, pitch: matchMapMyLoc ? MATCH_MAP_3D_PITCH : 0, bearing: 0, attributionControl: false,
     minZoom: 0.9,              // küre görünümü kalsın, ekrana tam sığacak kadar uzaklaşabilsin
     pitchWithRotate: false,   // iki parmakla sürükleyerek eğme (tilt) kapalı — açı SADECE kod tarafından, sabit ve kontrollü
     dragRotate: false,        // sağ tık / iki parmak sürükleyerek döndürme kapalı
@@ -394,7 +394,17 @@ function initMatchMapInstance(){
   });
   // Zoom seviyesi değişince (yakınlaş/uzaklaş) piksel mesafeleri değişir —
   // yığınları (kimin kiminle üst üste bindiğini) yeniden hesaplamamız gerekir.
-  matchMap.on('zoomend', ()=>{ renderAllMatchMarkers(matchMapLastCandidates || []); });
+  // Ayrıca açıyı (pitch) da zoom'a göre otomatik ayarlıyoruz: küre/dünya
+  // görünümünde (uzak zoom) düz durmalı — eğik bir küre garip görünüyor.
+  // Sadece şehir/sokak seviyesinde (yakın zoom) 3D açı uygulanıyor.
+  matchMap.on('zoomend', ()=>{
+    renderAllMatchMarkers(matchMapLastCandidates || []);
+    const z = matchMap.getZoom();
+    const wantPitch = (matchMapStyleKey === 'dark' && z >= 4) ? MATCH_MAP_3D_PITCH : 0;
+    if(Math.abs(matchMap.getPitch() - wantPitch) > 1){
+      matchMap.easeTo({ pitch: wantPitch, duration: 400 });
+    }
+  });
   updateMatchMapStyleToggleUI();
 }
 
@@ -454,6 +464,15 @@ const MATCH_MAP_PALETTE = {
   text: '#FFFFFF'
 };
 function applyMatchMapColorPalette(){
+  // NOT: Bu fonksiyon eski klasik "dark-v11" stili için katman katman
+  // elle renk zorlardı. Artık "dark" anahtarı Mapbox'ın yeni Standard
+  // (3D) stiline işaret ediyor — o stil klasik paint-property overrides
+  // ile uyumlu değil, zorlayınca tuhaf/yanlış renkler çıkıyordu. Standard
+  // stilin teması artık applyMatchMap3DTheme() içindeki lightPreset ile
+  // yönetiliyor; bu fonksiyon şimdilik devre dışı bırakıldı.
+  return;
+}
+function applyMatchMapColorPalette_LEGACY_UNUSED(){
   if(!matchMap || matchMapStyleKey !== 'dark') return;
   let layers = [];
   try{ layers = matchMap.getStyle().layers || []; }catch(e){ return; }
