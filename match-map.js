@@ -95,7 +95,7 @@ if(typeof window.haversineKm !== 'function'){
 
   /* Aynı konumdaki birden fazla kişi — yığın (cluster) işaretçisi */
   .snapClusterMarker{display:flex;flex-direction:column;align-items:center;cursor:pointer;user-select:none;}
-  .snapClusterName{font-size:10px;font-weight:700;color:#fff;background:linear-gradient(135deg,#FF4D6D,#FF2A55);padding:2px 7px;border-radius:8px;white-space:nowrap;margin-bottom:3px;}
+  .snapClusterName{font-size:11px;font-weight:700;color:#fff;background:linear-gradient(135deg,#FF4D6D,#FF2A55);padding:4px 12px;border-radius:12px;white-space:nowrap;margin-top:6px;box-shadow:0 2px 8px rgba(255,42,85,.4);}
   .snapClusterStack{display:flex;align-items:center;}
   .snapClusterAvatar{width:38px;height:38px;border-radius:50%;object-fit:cover;border:2.5px solid #0a0a0f;box-shadow:0 0 8px rgba(139,92,246,.5);}
   .snapClusterExtra{width:38px;height:38px;border-radius:50%;background:var(--gradient-vivid);color:#fff;display:flex;align-items:center;justify-content:center;
@@ -354,6 +354,13 @@ function initMatchMapInstance(){
     applyMatchMapColorPalette();
     applyMatchMapHolidayTheme();
     refreshNearbyMatchUsers();
+    // İlk açılışta harita kutusu tam boyutuna henüz oturmamış olabilir
+    // (overlay animasyonu vb.), bu da piksel hesaplarını yanlış çıkarıp
+    // kümelemenin ilk seferde devreye girmemesine yol açabiliyor. Harita
+    // tamamen "idle" (durgun/hazır) olduğunda bir kez daha kesin ölçülerle
+    // yeniden çiziyoruz.
+    matchMap.resize();
+    matchMap.once('idle', ()=>{ renderAllMatchMarkers(matchMapLastCandidates || []); });
   });
   // Zoom seviyesi değişince (yakınlaş/uzaklaş) piksel mesafeleri değişir —
   // yığınları (kimin kiminle üst üste bindiğini) yeniden hesaplamamız gerekir.
@@ -630,7 +637,9 @@ function renderAllMatchMarkers(candidates){
       profile: { username: savedUsername || t('match_you') || 'Sen', photo: savedProfilePhoto } };
     matchMapMarkers['__me__'] = new SnapAvatarMarker(fbAuth.currentUser.uid, meCandidate, true).addTo(matchMap);
   }
-  // Arkadaşlar — ekranda üst üste binenler yığın halinde, tekiler normal işaretçi olarak
+  // Arkadaşlar — ekranda üst üste binenler, referans görseldeki gibi tek
+  // bir "yığın" işaretçisinde (üst üste binen fotoğraflar + altında
+  // "N kişi burada" etiketi) gösteriliyor. Dokununca içindekiler listelenir.
   const clusters = clusterCandidatesByPixelDistance(candidates);
   clusters.forEach((group, idx)=>{
     if(group.length === 1){
@@ -640,6 +649,24 @@ function renderAllMatchMarkers(candidates){
       matchMapMarkers['__cluster_' + idx + '__'] = new SnapClusterMarker(group).addTo(matchMap);
     }
   });
+}
+
+/* Aynı noktadaki N kişiyi, o noktanın merkezi etrafında küçük bir daire
+   üzerine eşit aralıklarla yerleştirir (ekran pikseli cinsinden), böylece
+   hiçbiri birbirinin üstüne binmeden yan yana görünürler. */
+function computeMatchSpreadPositions(centroidLngLat, count){
+  if(count <= 1) return [{ lng: centroidLngLat[0], lat: centroidLngLat[1] }];
+  const centerPt = matchMap.project(centroidLngLat);
+  const radius = 24 + count * 3; // kişi sayısı arttıkça daireyi biraz büyüt
+  const positions = [];
+  for(let i = 0; i < count; i++){
+    const angle = (2 * Math.PI * i) / count - Math.PI / 2; // saat 12 yönünden başla
+    const x = centerPt.x + radius * Math.cos(angle);
+    const y = centerPt.y + radius * Math.sin(angle);
+    const lngLat = matchMap.unproject([x, y]);
+    positions.push({ lng: lngLat.lng, lat: lngLat.lat });
+  }
+  return positions;
 }
 
 /* ============================================================
@@ -666,9 +693,7 @@ class SnapClusterMarker {
       return `<img class="snapClusterAvatar" style="z-index:${shown.length - i};${marginStyle}" src="${photo}" onerror="this.src='https://i.pravatar.cc/100?u=${c.uid}'">`;
     }).join('');
     el.innerHTML = `
-      <div class="snapClusterName">${this.group.length} ${escapeHtml(t('match_people_here'))}</div>
       <div class="snapClusterStack">${stackHtml}${extra > 0 ? `<div class="snapClusterExtra">+${extra}</div>` : ''}</div>
-      <div class="snapMarkerShadow"></div>
     `;
     el.addEventListener('click', ()=> openMatchClusterList(this.group));
     return el;
