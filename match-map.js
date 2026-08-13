@@ -27,9 +27,10 @@ const MAPBOX_ACCESS_TOKEN = 'pk.eyJ1IjoidGFseGFlIiwiYSI6ImNtc2wyNTBidjE1Nm0yeXF6
 const MATCH_MAP_MAX_DISTANCE_KM = 100;
 const MATCH_MAP_MAX_RESULTS = 60;
 const MATCH_MAP_STYLES = {
-  dark: 'mapbox://styles/mapbox/dark-v11',
+  dark: 'mapbox://styles/mapbox/standard',
   satellite: 'mapbox://styles/mapbox/satellite-streets-v12'
 };
+const MATCH_MAP_3D_PITCH = 55; // Standard stildeki 3D binalar için sabit, kontrollü açı
 
 /* ---------- DURUM ---------- */
 let matchMap = null;
@@ -142,6 +143,27 @@ if(typeof window.haversineKm !== 'function'){
   .matchExcludeChip{padding:6px 12px;border-radius:14px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--line);background:var(--surface);color:var(--text);}
   .matchExcludeChip.excluded{background:var(--danger);border-color:var(--danger);color:#fff;}
   .mapboxgl-marker{will-change:transform;}
+
+  /* Ana akıştaki "Yakındakiler" ikonu — yavaşça kalp atışı gibi nabız
+     atarak dikkat çeksin. İnsan nabzına yakın bir ritim: kısa çift vuruş,
+     sonra dinlenme. */
+  @keyframes matchMapHeartbeat{
+    0%   { transform:scale(1);    }
+    14%  { transform:scale(1.16); }
+    28%  { transform:scale(1);    }
+    42%  { transform:scale(1.12); }
+    56%  { transform:scale(1);    }
+    100% { transform:scale(1);    }
+  }
+  @keyframes matchMapHeartbeatGlow{
+    0%   { box-shadow:0 0 0 0 rgba(168,85,247,.55); }
+    28%  { box-shadow:0 0 0 8px rgba(168,85,247,0); }
+    100% { box-shadow:0 0 0 0 rgba(168,85,247,0); }
+  }
+  .matchMapNavPulse{
+    animation: matchMapHeartbeat 2.6s ease-in-out infinite, matchMapHeartbeatGlow 2.6s ease-in-out infinite;
+    border-radius:50%;
+  }
   `;
   const style = document.createElement('style');
   style.id = 'matchMapInjectedStyles';
@@ -341,24 +363,25 @@ function initMatchMapInstance(){
   matchMap = new mapboxgl.Map({
     container: 'matchMapCanvas',
     style: MATCH_MAP_STYLES[matchMapStyleKey] || MATCH_MAP_STYLES.dark,
-    center, zoom: 15, pitch: 0, bearing: 0, attributionControl: false,
+    center, zoom: 15, pitch: MATCH_MAP_3D_PITCH, bearing: 0, attributionControl: false,
     minZoom: 0.9,              // küre görünümü kalsın, ekrana tam sığacak kadar uzaklaşabilsin
-    pitchWithRotate: false,   // iki parmakla sürükleyerek eğme (tilt) kapalı
+    pitchWithRotate: false,   // iki parmakla sürükleyerek eğme (tilt) kapalı — açı SADECE kod tarafından, sabit ve kontrollü
     dragRotate: false,        // sağ tık / iki parmak sürükleyerek döndürme kapalı
     touchPitch: false         // iki parmak dikey kaydırmayla eğme kapalı
   });
   // Ekstra güvence: pinch (sıkıştırma) hareketiyle gelen döndürmeyi de kapat —
-  // Snapchat'teki gibi harita her zaman düz (kuş bakışı) kalsın, kullanıcı
-  // yanlışlıkla eğip "eski haline döndüremem" durumuna hiç düşmesin.
+  // kullanıcı elle eğip/döndürüp "eski haline döndüremem" durumuna hiç
+  // düşmesin; 3D açı sadece BİZİM kodumuzun belirlediği sabit bir değer.
   matchMap.touchZoomRotate.disableRotation();
   matchMap.on('load', ()=>{
+    applyMatchMap3DTheme();
     applyMatchMapColorPalette();
     applyMatchMapHolidayTheme();
     // Konum henüz gelmemişken harita varsayılan (Türkiye ortası) merkezle
     // açılmış olabilir — gerçek konum eldeyse sokak seviyesinde ortalayarak
     // asla geniş/uzak bir dünya görünümünde takılı kalmamasını sağlıyoruz.
     if(matchMapMyLoc){
-      matchMap.jumpTo({ center: [matchMapMyLoc.lng, matchMapMyLoc.lat], zoom: 15, pitch: 0, bearing: 0 });
+      matchMap.jumpTo({ center: [matchMapMyLoc.lng, matchMapMyLoc.lat], zoom: 15, pitch: MATCH_MAP_3D_PITCH, bearing: 0 });
     }
     refreshNearbyMatchUsers();
     // İlk açılışta harita kutusu tam boyutuna henüz oturmamış olabilir
@@ -375,6 +398,18 @@ function initMatchMapInstance(){
   updateMatchMapStyleToggleUI();
 }
 
+/* Mapbox Standard stilinin kendi gece temasını (lightPreset) uygular —
+   klasik dark-v11'deki gibi elle katman katman boyamak yerine, Standard
+   stilin yerleşik "night" ışık ayarını kullanıyoruz. Uydu modunda (raster
+   gerçek görüntü) bu ayarın etkisi yok, güvenle atlanır. */
+function applyMatchMap3DTheme(){
+  if(!matchMap || matchMapStyleKey !== 'dark') return;
+  try{
+    matchMap.setConfigProperty('basemap', 'lightPreset', 'night');
+    matchMap.setConfigProperty('basemap', 'show3dObjects', true);
+  }catch(e){ /* Standard stil henüz desteklemiyorsa sessizce yok say */ }
+}
+
 /* Uydu ⇄ Koyu tek buton üzerinden değişir (Snapchat'teki gibi) — buton her
    zaman GEÇİLECEK modu gösterir: koyu haritadayken "🛰️ Uydu" yazar,
    uyduyken "🌙 Koyu" yazar. */
@@ -383,7 +418,9 @@ function toggleMatchMapStyleMode(){
   updateMatchMapStyleToggleUI();
   if(!matchMap) return;
   matchMap.setStyle(MATCH_MAP_STYLES[matchMapStyleKey]);
+  matchMap.setPitch(matchMapStyleKey === 'dark' ? MATCH_MAP_3D_PITCH : 0);
   matchMap.once('style.load', ()=>{
+    applyMatchMap3DTheme();
     applyMatchMapColorPalette();
     applyMatchMapHolidayTheme();
     renderAllMatchMarkers(matchMapLastCandidates || []);
@@ -398,7 +435,7 @@ function updateMatchMapStyleToggleUI(){
 
 function goToMyMatchLocation(){
   if(!matchMap || !matchMapMyLoc) return;
-  matchMap.flyTo({ center: [matchMapMyLoc.lng, matchMapMyLoc.lat], zoom: 15, pitch: 0, bearing: 0 });
+  matchMap.flyTo({ center: [matchMapMyLoc.lng, matchMapMyLoc.lat], zoom: 15, pitch: matchMapStyleKey === 'dark' ? MATCH_MAP_3D_PITCH : 0, bearing: 0 });
 }
 
 /* ============================================================
@@ -965,6 +1002,13 @@ function matchMessageUser(uid){
 function goToMatchChatSafely(uid){
   setTimeout(()=>{
     try{
+      // startChatWith()/openChatThread() sadece sohbet ekranının İÇ durumunu
+      // (hangi mesajlaşma açık) ayarlıyor — dış "Mesajlar" ana ekranının
+      // AKTİF olduğunu varsayıyor. Haritadan geldiğimizde o ekran hiç
+      // aktive edilmediği için sohbet görünmez bir konteynerin içinde
+      // açılıp kullanıcı akış/ana ekranda kalıyordu. Önce Mesajlar
+      // ekranını gerçekten aktive edip SONRA sohbeti açıyoruz.
+      if(typeof goNav === 'function') goNav('messages', null, true);
       startChatWith(uid);
     }catch(e){
       showToast(t('toast_generic_error') || 'Sohbet açılamadı, tekrar dener misin?');
