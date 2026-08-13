@@ -341,8 +341,15 @@ function initMatchMapInstance(){
   matchMap = new mapboxgl.Map({
     container: 'matchMapCanvas',
     style: MATCH_MAP_STYLES[matchMapStyleKey] || MATCH_MAP_STYLES.dark,
-    center, zoom: 13, pitch: 0, attributionControl: false
+    center, zoom: 13, pitch: 0, bearing: 0, attributionControl: false,
+    pitchWithRotate: false,   // iki parmakla sürükleyerek eğme (tilt) kapalı
+    dragRotate: false,        // sağ tık / iki parmak sürükleyerek döndürme kapalı
+    touchPitch: false         // iki parmak dikey kaydırmayla eğme kapalı
   });
+  // Ekstra güvence: pinch (sıkıştırma) hareketiyle gelen döndürmeyi de kapat —
+  // Snapchat'teki gibi harita her zaman düz (kuş bakışı) kalsın, kullanıcı
+  // yanlışlıkla eğip "eski haline döndüremem" durumuna hiç düşmesin.
+  matchMap.touchZoomRotate.disableRotation();
   matchMap.on('load', ()=>{
     applyMatchMapColorPalette();
     applyMatchMapHolidayTheme();
@@ -377,7 +384,7 @@ function updateMatchMapStyleToggleUI(){
 
 function goToMyMatchLocation(){
   if(!matchMap || !matchMapMyLoc) return;
-  matchMap.flyTo({ center: [matchMapMyLoc.lng, matchMapMyLoc.lat], zoom: 14 });
+  matchMap.flyTo({ center: [matchMapMyLoc.lng, matchMapMyLoc.lat], zoom: 14, pitch: 0, bearing: 0 });
 }
 
 /* ============================================================
