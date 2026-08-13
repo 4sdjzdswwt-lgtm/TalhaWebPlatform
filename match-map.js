@@ -30,7 +30,7 @@ const MATCH_MAP_STYLES = {
   dark: 'mapbox://styles/mapbox/standard',
   satellite: 'mapbox://styles/mapbox/satellite-streets-v12'
 };
-const MATCH_MAP_3D_PITCH = 55; // Standard stildeki 3D binalar için sabit, kontrollü açı
+const MATCH_MAP_3D_PITCH = 0; // Harita her zaman düz kuş bakışı — 3D eğim (tilt) kullanılmıyor
 
 /* ---------- DURUM ---------- */
 let matchMap = null;
@@ -363,7 +363,7 @@ function initMatchMapInstance(){
   matchMap = new mapboxgl.Map({
     container: 'matchMapCanvas',
     style: MATCH_MAP_STYLES[matchMapStyleKey] || MATCH_MAP_STYLES.dark,
-    center, zoom: 15, pitch: matchMapMyLoc ? MATCH_MAP_3D_PITCH : 0, bearing: 0, attributionControl: false,
+    center, zoom: 15, pitch: 0, bearing: 0, attributionControl: false,
     minZoom: 0.9,              // küre görünümü kalsın, ekrana tam sığacak kadar uzaklaşabilsin
     pitchWithRotate: false,   // iki parmakla sürükleyerek eğme (tilt) kapalı — açı SADECE kod tarafından, sabit ve kontrollü
     dragRotate: false,        // sağ tık / iki parmak sürükleyerek döndürme kapalı
@@ -381,7 +381,7 @@ function initMatchMapInstance(){
     // açılmış olabilir — gerçek konum eldeyse sokak seviyesinde ortalayarak
     // asla geniş/uzak bir dünya görünümünde takılı kalmamasını sağlıyoruz.
     if(matchMapMyLoc){
-      matchMap.jumpTo({ center: [matchMapMyLoc.lng, matchMapMyLoc.lat], zoom: 15, pitch: MATCH_MAP_3D_PITCH, bearing: 0 });
+      matchMap.jumpTo({ center: [matchMapMyLoc.lng, matchMapMyLoc.lat], zoom: 15, pitch: 0, bearing: 0 });
     }
     refreshNearbyMatchUsers();
     // İlk açılışta harita kutusu tam boyutuna henüz oturmamış olabilir
@@ -393,17 +393,13 @@ function initMatchMapInstance(){
     matchMap.once('idle', ()=>{ renderAllMatchMarkers(matchMapLastCandidates || []); });
   });
   // Zoom seviyesi değişince (yakınlaş/uzaklaş) piksel mesafeleri değişir —
-  // yığınları (kimin kiminle üst üste bindiğini) yeniden hesaplamamız gerekir.
-  // Ayrıca açıyı (pitch) da zoom'a göre otomatik ayarlıyoruz: küre/dünya
-  // görünümünde (uzak zoom) düz durmalı — eğik bir küre garip görünüyor.
-  // Sadece şehir/sokak seviyesinde (yakın zoom) 3D açı uygulanıyor.
+  // yığınları (kimin kiminle üst üste bindiğini) yeniden hesaplamamız
+  // gerekir. Işık temasını da her seferinde tazeliyoruz çünkü Standard
+  // stili zoom değiştikçe rengi kendi başına biraz kayabiliyor —
+  // bunu sabitleyip tutarlı tutmaya çalışıyoruz.
   matchMap.on('zoomend', ()=>{
     renderAllMatchMarkers(matchMapLastCandidates || []);
-    const z = matchMap.getZoom();
-    const wantPitch = (matchMapStyleKey === 'dark' && z >= 4) ? MATCH_MAP_3D_PITCH : 0;
-    if(Math.abs(matchMap.getPitch() - wantPitch) > 1){
-      matchMap.easeTo({ pitch: wantPitch, duration: 400 });
-    }
+    applyMatchMap3DTheme();
   });
   updateMatchMapStyleToggleUI();
 }
@@ -428,7 +424,6 @@ function toggleMatchMapStyleMode(){
   updateMatchMapStyleToggleUI();
   if(!matchMap) return;
   matchMap.setStyle(MATCH_MAP_STYLES[matchMapStyleKey]);
-  matchMap.setPitch(matchMapStyleKey === 'dark' ? MATCH_MAP_3D_PITCH : 0);
   matchMap.once('style.load', ()=>{
     applyMatchMap3DTheme();
     applyMatchMapColorPalette();
@@ -445,7 +440,7 @@ function updateMatchMapStyleToggleUI(){
 
 function goToMyMatchLocation(){
   if(!matchMap || !matchMapMyLoc) return;
-  matchMap.flyTo({ center: [matchMapMyLoc.lng, matchMapMyLoc.lat], zoom: 15, pitch: matchMapStyleKey === 'dark' ? MATCH_MAP_3D_PITCH : 0, bearing: 0 });
+  matchMap.flyTo({ center: [matchMapMyLoc.lng, matchMapMyLoc.lat], zoom: 15, pitch: 0, bearing: 0 });
 }
 
 /* ============================================================
