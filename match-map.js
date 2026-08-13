@@ -377,6 +377,7 @@ function initMatchMapInstance(){
     applyMatchMap3DTheme();
     applyMatchMapColorPalette();
     applyMatchMapHolidayTheme();
+    ensureMatchGlobeLayer();
     // Konum henüz gelmemişken harita varsayılan (Türkiye ortası) merkezle
     // açılmış olabilir — gerçek konum eldeyse sokak seviyesinde ortalayarak
     // asla geniş/uzak bir dünya görünümünde takılı kalmamasını sağlıyoruz.
@@ -416,6 +417,83 @@ function applyMatchMap3DTheme(){
   }catch(e){ /* Standard stil henüz desteklemiyorsa sessizce yok say */ }
 }
 
+/* ============================================================
+   KÜRE (GLOBE) ZOOM'UNDA HASSAS KONUMLAMA
+   ------------------------------------------------------------
+   Sorun: DOM tabanlı marker'lar (SnapAvatarMarker), harita küre
+   projeksiyonundayken (uzak zoom) ekran konumunu WebGL render'ı kadar
+   hassas hesaplayamıyor — Mapbox'ın bilinen bir sınırlaması. Uzaklaştıkça
+   marker'lar gerçek noktadan gitgide sapıyor.
+   Çözüm: Sadece küre zoom aralığında, kişileri DOM marker yerine
+   haritanın kendi WebGL katmanına (circle layer) çiziyoruz — bu, harita
+   ile TAM AYNI projeksiyon matrisini kullandığı için asla sapmıyor.
+   Yakın (şehir/sokak) zoom'da bu katman boşaltılıp eski, isim/foto/zaman
+   gösteren DOM marker sistemine geri dönülüyor (orada zaten sorun yoktu). */
+const MATCH_GLOBE_SOURCE_ID = 'matchGlobeDotsSrc';
+const MATCH_GLOBE_LAYER_ID = 'matchGlobeDotsLayer';
+
+function ensureMatchGlobeLayer(){
+  if(!matchMap) return;
+  try{
+    if(matchMap.getSource(MATCH_GLOBE_SOURCE_ID)) return; // zaten kurulu
+    matchMap.addSource(MATCH_GLOBE_SOURCE_ID, { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+    matchMap.addLayer({
+      id: MATCH_GLOBE_LAYER_ID,
+      type: 'circle',
+      source: MATCH_GLOBE_SOURCE_ID,
+      paint: {
+        'circle-radius': ['case', ['get', 'isMe'], 9, ['case', ['get', 'isGroup'], 8, 7]],
+        'circle-color': ['case', ['get', 'isMe'], '#ffffff', ['get', 'ringColor']],
+        'circle-stroke-width': 2.5,
+        'circle-stroke-color': '#0a0a0f',
+        'circle-opacity': 0.95
+      }
+    });
+    matchMap.on('click', MATCH_GLOBE_LAYER_ID, (e)=>{
+      const f = e.features && e.features[0];
+      if(!f) return;
+      let uids = [];
+      try{ uids = JSON.parse(f.properties.uids || '[]'); }catch(err){ return; }
+      uids = uids.filter(uid => uid !== (fbAuth.currentUser && fbAuth.currentUser.uid));
+      if(!uids.length) return;
+      if(uids.length === 1){
+        openMatchProfilePreview(uids[0]);
+      } else {
+        const group = uids.map(uid => matchMapLastCandidates.find(c=> c.uid === uid)).filter(Boolean);
+        if(group.length) openMatchClusterList(group);
+      }
+    });
+    matchMap.on('mouseenter', MATCH_GLOBE_LAYER_ID, ()=>{ matchMap.getCanvas().style.cursor = 'pointer'; });
+    matchMap.on('mouseleave', MATCH_GLOBE_LAYER_ID, ()=>{ matchMap.getCanvas().style.cursor = ''; });
+  }catch(e){ /* katman zaten varsa veya stil henüz hazır değilse sessizce geç */ }
+}
+
+function setMatchGlobeLayerData(clusters){
+  const src = matchMap.getSource(MATCH_GLOBE_SOURCE_ID);
+  if(!src) return;
+  const features = clusters.map(group=>{
+    const centroidLng = group.reduce((s,c)=> s + c.loc.lng, 0) / group.length;
+    const centroidLat = group.reduce((s,c)=> s + c.loc.lat, 0) / group.length;
+    const isMeGroup = group.some(c=> c.isMe);
+    return {
+      type: 'Feature',
+      geometry: { type: 'Point', coordinates: [centroidLng, centroidLat] },
+      properties: {
+        uids: JSON.stringify(group.map(c=> c.uid)),
+        isMe: isMeGroup,
+        isGroup: group.length > 1,
+        ringColor: matchGenderColorFor(group[0])
+      }
+    };
+  });
+  src.setData({ type: 'FeatureCollection', features });
+}
+function clearMatchGlobeLayer(){
+  if(!matchMap) return;
+  const src = matchMap.getSource(MATCH_GLOBE_SOURCE_ID);
+  if(src) src.setData({ type: 'FeatureCollection', features: [] });
+}
+
 /* Uydu ⇄ Koyu tek buton üzerinden değişir (Snapchat'teki gibi) — buton her
    zaman GEÇİLECEK modu gösterir: koyu haritadayken "🛰️ Uydu" yazar,
    uyduyken "🌙 Koyu" yazar. */
@@ -428,6 +506,7 @@ function toggleMatchMapStyleMode(){
     applyMatchMap3DTheme();
     applyMatchMapColorPalette();
     applyMatchMapHolidayTheme();
+    ensureMatchGlobeLayer(); // setStyle() önceki özel katmanları silmiş olabilir, yeniden kur
     renderAllMatchMarkers(matchMapLastCandidates || []);
   });
 }
@@ -613,20 +692,24 @@ function fetchProfilesFor(uids){
 /* ============================================================
    SnapAvatarMarker — sabit boyutlu (50×92px), zoom'dan bağımsız
    ============================================================ */
+function matchGenderColorFor(candidate){
+  const g = ((candidate || {}).profile || {}).gender;
+  if(g === 'female') return '#ec4899';
+  if(g === 'male') return '#3b82f6';
+  return '#8b5cf6';
+}
+
 class SnapAvatarMarker {
-  constructor(uid, candidate, isMe){
+  constructor(uid, candidate, isMe, pixelOffset){
     this.uid = uid;
     this.candidate = candidate; // {loc, profile, dist}
     this.isMe = !!isMe;
     this.el = this._buildEl();
-    this.marker = new mapboxgl.Marker({ element: this.el, anchor: 'bottom' })
+    this.marker = new mapboxgl.Marker({ element: this.el, anchor: 'bottom', offset: pixelOffset || [0, 0] })
       .setLngLat([candidate.loc.lng, candidate.loc.lat]);
   }
   _genderColor(){
-    const g = (this.candidate.profile || {}).gender;
-    if(g === 'female') return '#ec4899';
-    if(g === 'male') return '#3b82f6';
-    return '#8b5cf6';
+    return matchGenderColorFor(this.candidate);
   }
   _buildEl(){
     const el = document.createElement('div');
@@ -703,51 +786,61 @@ function renderAllMatchMarkers(candidates){
   }
   candidates.forEach(c=> allEntries.push(Object.assign({ isMe: false }, c)));
 
-  // Ekranda üst üste binenler:
-  // - Yakın (sokak/şehir) zoom'da: her biri isim/foto/zamanıyla YAN YANA
-  //   bir sırada, kimin kim olduğu okunabilir şekilde (mevcut davranış).
-  // - Çok uzak (küre/dünya) zoom'da: Snapchat'teki gibi sıkışık, isimsiz
-  //   bir "kalabalık" grubu olarak — tek tek yayılıp dünyanın öbür ucuna
-  //   taşmasınlar diye.
   const isGlobeZoom = matchMap.getZoom() < 4;
   const clusters = clusterCandidatesByPixelDistance(allEntries);
+
+  if(isGlobeZoom){
+    // Küre (dünya) görünümünde DOM marker KULLANMIYORUZ — DOM marker'lar
+    // küre eğriliğini WebGL render'ı kadar hassas hesaplayamadığı için
+    // uzaklaştıkça gerçek noktadan sapıyordu. Bunun yerine haritanın kendi
+    // WebGL katmanına (circle layer) çiziyoruz; bu asla sapmaz çünkü
+    // haritayla TAM AYNI projeksiyon matrisini kullanıyor.
+    ensureMatchGlobeLayer();
+    setMatchGlobeLayerData(clusters);
+    return;
+  }
+  // Şehir/sokak zoom'undayız — bu aralıkta DOM marker zaten hassas
+  // çalışıyordu, eski sistemle devam. WebGL noktalarını boşalt.
+  clearMatchGlobeLayer();
+
   clusters.forEach((group, idx)=>{
     if(group.length === 1){
       const c = group[0];
       matchMapMarkers[c.isMe ? '__me__' : c.uid] = new SnapAvatarMarker(c.uid, c, c.isMe).addTo(matchMap);
       return;
     }
-    if(isGlobeZoom){
-      matchMapMarkers['__cluster_' + idx + '__'] = new SnapClusterMarker(group).addTo(matchMap);
-      return;
-    }
     const centroidLng = group.reduce((s,c)=> s + c.loc.lng, 0) / group.length;
     const centroidLat = group.reduce((s,c)=> s + c.loc.lat, 0) / group.length;
-    const positions = computeMatchRowPositions([centroidLng, centroidLat], group.length);
+    // ÖNEMLİ: konumu gerçek koordinat (lng/lat) değiştirerek DEĞİL, sabit
+    // PİKSEL kaydırmasıyla (Mapbox marker'ın kendi "offset" özelliği)
+    // ayarlıyoruz. Eskiden her zoom bitişinde yeni bir lng/lat hesaplıyordum
+    // — bu da zoom'a göre farklı gerçek mesafeye denk gelip kişilerin
+    // "kayması/zıplaması"na sebep oluyordu. Piksel offset ise zoom'dan
+    // tamamen bağımsız, hep aynı sabit görsel mesafede kalır.
+    const offsets = computeMatchRowPixelOffsets(group.length);
     group.forEach((c, i)=>{
-      const pos = positions[i];
-      const spreadCandidate = Object.assign({}, c, { loc: Object.assign({}, c.loc, { lng: pos.lng, lat: pos.lat }) });
-      matchMapMarkers[c.isMe ? '__me__' : c.uid] = new SnapAvatarMarker(c.uid, spreadCandidate, c.isMe).addTo(matchMap);
+      // Herkes AYNI merkez koordinatta (grup ortalaması), sadece ekranda
+      // farklı sabit piksel kadar kaydırılıyor.
+      const centeredCandidate = Object.assign({}, c, { loc: Object.assign({}, c.loc, { lng: centroidLng, lat: centroidLat }) });
+      matchMapMarkers[c.isMe ? '__me__' : c.uid] = new SnapAvatarMarker(c.uid, centeredCandidate, c.isMe, offsets[i]).addTo(matchMap);
     });
   });
 }
 
 /* Aynı noktadaki N kişiyi, isim etiketleri birbirine çarpmayacak kadar
-   aralıkla, YATAY BİR SIRA halinde (soldan sağa) dizer. Her kişi kendi
-   ismi/fotoğrafı/zamanıyla, tekli işaretçilerle birebir aynı görünümde kalır. */
-function computeMatchRowPositions(centroidLngLat, count){
-  if(count <= 1) return [{ lng: centroidLngLat[0], lat: centroidLngLat[1] }];
-  const centerPt = matchMap.project(centroidLngLat);
+   aralıkla, YATAY BİR SIRA halinde (soldan sağa) sabit PİKSEL kaydırmasıyla
+   dizer. Zoom değiştikçe yeniden hesaplanmasına gerek yok — Mapbox'ın
+   marker "offset" özelliği zaten zoom'dan bağımsız sabit kalıyor. */
+function computeMatchRowPixelOffsets(count){
+  if(count <= 1) return [[0, 0]];
   const spacing = 58; // px — isim etiketleri çakışmasın diye avatar genişliğinden biraz fazla
   const totalWidth = (count - 1) * spacing;
-  const startX = centerPt.x - totalWidth / 2;
-  const positions = [];
+  const startX = -totalWidth / 2;
+  const offsets = [];
   for(let i = 0; i < count; i++){
-    const x = startX + i * spacing;
-    const lngLat = matchMap.unproject([x, centerPt.y]);
-    positions.push({ lng: lngLat.lng, lat: lngLat.lat });
+    offsets.push([startX + i * spacing, 0]);
   }
-  return positions;
+  return offsets;
 }
 
 /* Aynı noktadaki N kişiyi, o noktanın merkezi etrafında küçük bir daire
