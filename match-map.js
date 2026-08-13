@@ -901,7 +901,13 @@ function openMatchSettings(){
   ];
 
   overlay.innerHTML = `
-    <div class="followListSheet" style="max-height:92vh;">
+    <button id="matchSettingsFixedCloseBtn" style="position:fixed;top:calc(env(safe-area-inset-top,0px) + 14px);right:16px;z-index:99;
+      width:38px;height:38px;border-radius:50%;background:rgba(24,27,38,.92);border:1px solid var(--line);color:#fff;
+      display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.4);"
+      onclick="closeMatchSettings()" title="${escapeHtml(t('match_back'))}">
+      <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M18 6L6 18M6 6l12 12"/></svg>
+    </button>
+    <div class="followListSheet" style="max-height:88vh;">
       <div class="followListHead" style="position:sticky;top:0;z-index:5;background:var(--surface);flex-shrink:0;padding-top:calc(env(safe-area-inset-top,0px) + 16px);">
         <button class="matchMapIconBtn" style="background:var(--surface-2);border:1px solid var(--line);color:var(--text);width:34px;height:34px;" onclick="closeMatchSettings()" title="${escapeHtml(t('match_back'))}">
           <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M18 6L6 18M6 6l12 12"/></svg>
