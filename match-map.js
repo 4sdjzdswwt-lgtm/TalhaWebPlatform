@@ -130,9 +130,10 @@ if(typeof window.haversineKm !== 'function'){
   .matchVisOption:last-child{border-bottom:none;}
   .matchVisOption .lbl{color:var(--text);}
   .matchVisOption .desc{font-size:11.5px;color:var(--muted);margin-top:3px;line-height:1.4;}
-  .matchVisOption .dot{width:20px;height:20px;border-radius:50%;border:2px solid var(--line);flex-shrink:0;position:relative;}
-  .matchVisOption.selected .dot,.matchVisOption .dot.selected-dot{border-color:#d4d4d8;}
-  .matchVisOption.selected .dot::after,.matchVisOption .dot.selected-dot::after{content:'';position:absolute;inset:3px;border-radius:50%;background:#d4d4d8;}
+  .matchVisOption .dot{width:22px;height:22px;border-radius:50%;border:2px solid var(--line);flex-shrink:0;position:relative;display:flex;align-items:center;justify-content:center;transition:background .15s,border-color .15s;}
+  .matchVisOption.selected .dot,.matchVisOption .dot.selected-dot{background:#22C55E;border-color:#22C55E;}
+  .matchVisOption.selected .dot::after,.matchVisOption .dot.selected-dot::after{content:'';width:11px;height:6px;border-left:2.5px solid #fff;border-bottom:2.5px solid #fff;
+    transform:rotate(-45deg) translateY(-1px);}
 
   /* Konum Paylaşımını Kapat — görsel referanstaki gibi çerçeveli/yarı saydam kırmızı */
   .matchStopSharingBtn{width:100%;padding:15px;border-radius:16px;border:1.5px solid var(--danger);background:rgba(237,73,86,.12);
@@ -684,7 +685,7 @@ function openMatchClusterList(group){
 
   overlay.innerHTML = `
     <div class="followListSheet">
-      <div class="followListHead" style="position:sticky;top:0;z-index:5;background:var(--surface);flex-shrink:0;">
+      <div class="followListHead" style="position:sticky;top:0;z-index:5;background:var(--surface);flex-shrink:0;padding-top:calc(env(safe-area-inset-top,0px) + 16px);">
         <h3 style="flex:1;">📍 ${group.length} ${escapeHtml(t('match_people_here'))}</h3>
         <button class="followListClose" onclick="closeMatchClusterList()">✕</button>
       </div>
@@ -721,7 +722,7 @@ function openMatchProfilePreview(uid, candidateArg){
 
   overlay.innerHTML = `
     <div class="followListSheet" style="max-height:88vh;">
-      <div class="followListHead" style="position:sticky;top:0;z-index:5;background:var(--surface);flex-shrink:0;">
+      <div class="followListHead" style="position:sticky;top:0;z-index:5;background:var(--surface);flex-shrink:0;padding-top:calc(env(safe-area-inset-top,0px) + 16px);">
         <button class="matchMapIconBtn" style="background:var(--surface-2);border:1px solid var(--line);color:var(--text);width:34px;height:34px;" onclick="closeMatchProfilePreview()" title="${escapeHtml(t('match_back'))}">
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
         </button>
@@ -901,7 +902,7 @@ function openMatchSettings(){
 
   overlay.innerHTML = `
     <div class="followListSheet" style="max-height:92vh;">
-      <div class="followListHead" style="position:sticky;top:0;z-index:5;background:var(--surface);flex-shrink:0;">
+      <div class="followListHead" style="position:sticky;top:0;z-index:5;background:var(--surface);flex-shrink:0;padding-top:calc(env(safe-area-inset-top,0px) + 16px);">
         <button class="matchMapIconBtn" style="background:var(--surface-2);border:1px solid var(--line);color:var(--text);width:34px;height:34px;" onclick="closeMatchSettings()" title="${escapeHtml(t('match_back'))}">
           <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M18 6L6 18M6 6l12 12"/></svg>
         </button>
@@ -936,10 +937,6 @@ function openMatchSettings(){
             </div>`).join('')}
         </div>
 
-        <div style="padding:22px 4px 8px;font-size:14.5px;font-weight:700;color:var(--text);font-family:'Space Grotesk',sans-serif;">${escapeHtml(t('match_quick_share_title'))}</div>
-        <div style="font-size:11.5px;color:var(--muted);padding:0 4px 8px;">${escapeHtml(t('match_quick_share_desc'))}</div>
-        <div id="matchQuickShareList" style="padding:2px 0 4px;">${escapeHtml(t('toast_loading_generic') || 'Yükleniyor...')}</div>
-
         <div style="padding:22px 4px 8px;font-size:14.5px;font-weight:700;color:var(--text);font-family:'Space Grotesk',sans-serif;">${escapeHtml(t('match_tracking_mode_title'))}</div>
         <div class="matchVisGroupCard" id="matchTrackOptionsWrap">
           ${trackOptions.map(o=>`
@@ -955,7 +952,6 @@ function openMatchSettings(){
       </div>
     </div>`;
   document.body.appendChild(overlay);
-  loadMatchQuickShareList();
 }
 function closeMatchSettings(){
   const ov = document.getElementById('matchSettingsOverlay');
@@ -974,7 +970,7 @@ function openMatchExcludeSubScreen(){
   document.body.classList.add('follow-list-open');
   overlay.innerHTML = `
     <div class="followListSheet" style="max-height:88vh;">
-      <div class="followListHead" style="position:sticky;top:0;z-index:5;background:var(--surface);flex-shrink:0;">
+      <div class="followListHead" style="position:sticky;top:0;z-index:5;background:var(--surface);flex-shrink:0;padding-top:calc(env(safe-area-inset-top,0px) + 16px);">
         <button class="matchMapIconBtn" style="background:var(--surface-2);border:1px solid var(--line);color:var(--text);width:34px;height:34px;" onclick="closeMatchExcludeSubScreen()">
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
         </button>
@@ -1122,7 +1118,10 @@ function quickShareMatchLocationWith(uid, btnEl){
 function setMatchTrackMode(key){
   const myUid = fbAuth.currentUser.uid;
   matchMapMySettings.trackMode = key;
-  document.querySelectorAll('.matchVisOption[data-track]').forEach(el=> el.classList.toggle('selected', el.dataset.track === key));
+  document.querySelectorAll('.matchVisOption[data-track] .dot').forEach(dot=>{
+    const optKey = dot.closest('.matchVisOption').dataset.track;
+    dot.classList.toggle('selected-dot', optKey === key);
+  });
   fbDb.ref('userLocations/' + myUid + '/trackMode').set(key).then(()=>{
     showToast(t('match_track_saved_toast'));
     startMatchLocationWatch(key);
