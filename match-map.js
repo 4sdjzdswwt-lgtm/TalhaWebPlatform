@@ -341,7 +341,8 @@ function initMatchMapInstance(){
   matchMap = new mapboxgl.Map({
     container: 'matchMapCanvas',
     style: MATCH_MAP_STYLES[matchMapStyleKey] || MATCH_MAP_STYLES.dark,
-    center, zoom: 13, pitch: 0, bearing: 0, attributionControl: false,
+    center, zoom: 15, pitch: 0, bearing: 0, attributionControl: false,
+    minZoom: 1.8,             // küre görünümü kalsın ama bundan fazla uzaklaşıp küçülemesin
     pitchWithRotate: false,   // iki parmakla sürükleyerek eğme (tilt) kapalı
     dragRotate: false,        // sağ tık / iki parmak sürükleyerek döndürme kapalı
     touchPitch: false         // iki parmak dikey kaydırmayla eğme kapalı
@@ -353,6 +354,12 @@ function initMatchMapInstance(){
   matchMap.on('load', ()=>{
     applyMatchMapColorPalette();
     applyMatchMapHolidayTheme();
+    // Konum henüz gelmemişken harita varsayılan (Türkiye ortası) merkezle
+    // açılmış olabilir — gerçek konum eldeyse sokak seviyesinde ortalayarak
+    // asla geniş/uzak bir dünya görünümünde takılı kalmamasını sağlıyoruz.
+    if(matchMapMyLoc){
+      matchMap.jumpTo({ center: [matchMapMyLoc.lng, matchMapMyLoc.lat], zoom: 15, pitch: 0, bearing: 0 });
+    }
     refreshNearbyMatchUsers();
     // İlk açılışta harita kutusu tam boyutuna henüz oturmamış olabilir
     // (overlay animasyonu vb.), bu da piksel hesaplarını yanlış çıkarıp
@@ -391,7 +398,7 @@ function updateMatchMapStyleToggleUI(){
 
 function goToMyMatchLocation(){
   if(!matchMap || !matchMapMyLoc) return;
-  matchMap.flyTo({ center: [matchMapMyLoc.lng, matchMapMyLoc.lat], zoom: 14, pitch: 0, bearing: 0 });
+  matchMap.flyTo({ center: [matchMapMyLoc.lng, matchMapMyLoc.lat], zoom: 15, pitch: 0, bearing: 0 });
 }
 
 /* ============================================================
@@ -637,18 +644,44 @@ function renderAllMatchMarkers(candidates){
       profile: { username: savedUsername || t('match_you') || 'Sen', photo: savedProfilePhoto } };
     matchMapMarkers['__me__'] = new SnapAvatarMarker(fbAuth.currentUser.uid, meCandidate, true).addTo(matchMap);
   }
-  // Arkadaşlar — ekranda üst üste binenler, referans görseldeki gibi tek
-  // bir "yığın" işaretçisinde (üst üste binen fotoğraflar + altında
-  // "N kişi burada" etiketi) gösteriliyor. Dokununca içindekiler listelenir.
+  // Arkadaşlar — ekranda üst üste binenler artık isimsiz bir yığında
+  // gizlenmiyor; her biri tekli kişilerle AYNI görünümde (isim üstte,
+  // renkli halka + fotoğraf, altında zaman) yan yana bir sıra halinde
+  // gösteriliyor, böylece kimin kim olduğu doğrudan okunabiliyor.
   const clusters = clusterCandidatesByPixelDistance(candidates);
-  clusters.forEach((group, idx)=>{
+  clusters.forEach(group=>{
     if(group.length === 1){
       const c = group[0];
       matchMapMarkers[c.uid] = new SnapAvatarMarker(c.uid, c, false).addTo(matchMap);
-    } else {
-      matchMapMarkers['__cluster_' + idx + '__'] = new SnapClusterMarker(group).addTo(matchMap);
+      return;
     }
+    const centroidLng = group.reduce((s,c)=> s + c.loc.lng, 0) / group.length;
+    const centroidLat = group.reduce((s,c)=> s + c.loc.lat, 0) / group.length;
+    const positions = computeMatchRowPositions([centroidLng, centroidLat], group.length);
+    group.forEach((c, i)=>{
+      const pos = positions[i];
+      const spreadCandidate = Object.assign({}, c, { loc: Object.assign({}, c.loc, { lng: pos.lng, lat: pos.lat }) });
+      matchMapMarkers[c.uid] = new SnapAvatarMarker(c.uid, spreadCandidate, false).addTo(matchMap);
+    });
   });
+}
+
+/* Aynı noktadaki N kişiyi, isim etiketleri birbirine çarpmayacak kadar
+   aralıkla, YATAY BİR SIRA halinde (soldan sağa) dizer. Her kişi kendi
+   ismi/fotoğrafı/zamanıyla, tekli işaretçilerle birebir aynı görünümde kalır. */
+function computeMatchRowPositions(centroidLngLat, count){
+  if(count <= 1) return [{ lng: centroidLngLat[0], lat: centroidLngLat[1] }];
+  const centerPt = matchMap.project(centroidLngLat);
+  const spacing = 58; // px — isim etiketleri çakışmasın diye avatar genişliğinden biraz fazla
+  const totalWidth = (count - 1) * spacing;
+  const startX = centerPt.x - totalWidth / 2;
+  const positions = [];
+  for(let i = 0; i < count; i++){
+    const x = startX + i * spacing;
+    const lngLat = matchMap.unproject([x, centerPt.y]);
+    positions.push({ lng: lngLat.lng, lat: lngLat.lat });
+  }
+  return positions;
 }
 
 /* Aynı noktadaki N kişiyi, o noktanın merkezi etrafında küçük bir daire
