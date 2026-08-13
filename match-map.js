@@ -652,14 +652,22 @@ function renderAllMatchMarkers(candidates){
   }
   candidates.forEach(c=> allEntries.push(Object.assign({ isMe: false }, c)));
 
-  // Ekranda üst üste binenler artık isimsiz bir yığında gizlenmiyor; her
-  // biri tekli kişilerle AYNI görünümde (isim üstte, renkli halka +
-  // fotoğraf, altında zaman) yan yana bir sıra halinde gösteriliyor.
+  // Ekranda üst üste binenler:
+  // - Yakın (sokak/şehir) zoom'da: her biri isim/foto/zamanıyla YAN YANA
+  //   bir sırada, kimin kim olduğu okunabilir şekilde (mevcut davranış).
+  // - Çok uzak (küre/dünya) zoom'da: Snapchat'teki gibi sıkışık, isimsiz
+  //   bir "kalabalık" grubu olarak — tek tek yayılıp dünyanın öbür ucuna
+  //   taşmasınlar diye.
+  const isGlobeZoom = matchMap.getZoom() < 4;
   const clusters = clusterCandidatesByPixelDistance(allEntries);
-  clusters.forEach(group=>{
+  clusters.forEach((group, idx)=>{
     if(group.length === 1){
       const c = group[0];
       matchMapMarkers[c.isMe ? '__me__' : c.uid] = new SnapAvatarMarker(c.uid, c, c.isMe).addTo(matchMap);
+      return;
+    }
+    if(isGlobeZoom){
+      matchMapMarkers['__cluster_' + idx + '__'] = new SnapClusterMarker(group).addTo(matchMap);
       return;
     }
     const centroidLng = group.reduce((s,c)=> s + c.loc.lng, 0) / group.length;
@@ -818,19 +826,19 @@ function openMatchProfilePreview(uid, candidateArg){
         </div>
         ${profile.bio ? `<div style="font-size:13px;color:var(--text);margin:14px 0 0;line-height:1.5;">${escapeHtml(profile.bio)}</div>` : ''}
 
-        <div class="matchLockOverlayBox" id="matchProfilePostsWrap" style="margin-top:16px;border-radius:16px;overflow:hidden;min-height:90px;background:var(--surface-2);">
+        <div class="matchLockOverlayBox" id="matchProfilePostsWrap" style="margin-top:16px;border-radius:16px;overflow:${hasAccess ? 'hidden' : 'visible'};min-height:${hasAccess ? 90 : 230}px;background:var(--surface-2);">
           <div style="padding:24px 0;text-align:center;color:var(--muted);font-size:12px;">${escapeHtml(t('toast_loading_generic') || 'Yükleniyor...')}</div>
           ${hasAccess ? '' : `
             <div class="matchLockBadge">
               <div style="font-size:30px;">🔒</div>
               <div style="color:#fff;font-size:12.5px;max-width:240px;line-height:1.5;">${escapeHtml(t('match_upgrade_needed'))}</div>
-              <button class="btn btn-primary" style="padding:9px 20px;font-size:12.5px;" onclick="closeMatchProfilePreview();openVerifiedBadgeInfo();">${escapeHtml(t('match_upgrade_btn'))}</button>
+              <button class="btn btn-primary" style="padding:9px 20px;font-size:12.5px;" onclick="closeMatchProfilePreview();openMatchVerifiedBadgeInfo('${uid}');">${escapeHtml(t('match_upgrade_btn'))}</button>
             </div>`}
         </div>
 
         <div style="display:flex;gap:10px;margin-top:18px;">
           <button class="btn" style="flex:1;background:var(--gradient-vivid);color:#fff;border:none;" id="matchFollowBtn" onclick="matchFollowUser('${uid}')">${escapeHtml(t('match_follow_btn'))}</button>
-          <button class="btn ${hasAccess ? '' : 'btn-ghost'}" style="flex:1;${hasAccess ? 'background:var(--surface-2);color:var(--text);border:1px solid var(--line);' : ''}" onclick="${hasAccess ? `matchMessageUser('${uid}')` : `closeMatchProfilePreview();openVerifiedBadgeInfo();`}">
+          <button class="btn ${hasAccess ? '' : 'btn-ghost'}" style="flex:1;${hasAccess ? 'background:var(--surface-2);color:var(--text);border:1px solid var(--line);' : ''}" onclick="${hasAccess ? `matchMessageUser('${uid}')` : `closeMatchProfilePreview();openMatchVerifiedBadgeInfo('${uid}');`}">
             ${hasAccess ? '💬 ' + escapeHtml(t('match_message_btn')) : '🔒 ' + escapeHtml(t('match_message_btn'))}
           </button>
         </div>
@@ -846,6 +854,23 @@ function openMatchProfilePreview(uid, candidateArg){
    (fotoğraflar arka planda yine de bulanık olarak yükleniyor, DOM'dan
    çalınamaz diye değil — sadece görsel amaçlı; asıl erişim kontrolü
    sunucu/Storage kurallarında sağlanmalı). */
+/* Uygulamanın kendi closeVerifiedBadgeInfo() fonksiyonu her zaman Ayarlar
+   paneline dönecek şekilde sabitlenmiş. Haritadan geldiğimizde bunun yerine
+   profil kartına geri dönmesi için kapatma fonksiyonunu GEÇİCİ olarak
+   değiştirip, iş bitince eski haline geri koyuyoruz. */
+function openMatchVerifiedBadgeInfo(uid){
+  if(typeof openVerifiedBadgeInfo !== 'function') return;
+  const originalClose = window.closeVerifiedBadgeInfo;
+  window.closeVerifiedBadgeInfo = function(){
+    const ov = document.getElementById('verifiedBadgeOverlay');
+    if(ov) ov.remove();
+    document.body.classList.remove('follow-list-open');
+    window.closeVerifiedBadgeInfo = originalClose; // uygulamanın normal davranışını geri yükle
+    openMatchProfilePreview(uid);
+  };
+  openVerifiedBadgeInfo();
+}
+
 function loadMatchProfilePosts(uid, hasAccess){
   const wrap = document.getElementById('matchProfilePostsWrap');
   if(!wrap) return;
@@ -926,11 +951,25 @@ function matchMessageUser(uid){
     if(isMutual || !approvalRequired){
       closeMatchProfilePreview();
       closeMatchMapOverlay();
-      startChatWith(uid);
+      goToMatchChatSafely(uid);
       return;
     }
     sendMatchMessageRequest(uid);
   });
+}
+
+/* Overlay'leri kapatıp hemen ardından startChatWith() çağırmak, DOM henüz
+   yeni düzenine oturmadan ekran geçişiyle çakışıp "ada" kaybolup sohbet
+   ekranının açılmaması gibi bir yarış durumuna (race condition) yol
+   açabiliyordu. Bir sonraki "tick"e erteleyip try/catch ile sarmalıyoruz. */
+function goToMatchChatSafely(uid){
+  setTimeout(()=>{
+    try{
+      startChatWith(uid);
+    }catch(e){
+      showToast(t('toast_generic_error') || 'Sohbet açılamadı, tekrar dener misin?');
+    }
+  }, 80);
 }
 
 function sendMatchMessageRequest(uid){
@@ -956,7 +995,7 @@ function sendMatchMessageRequest(uid){
     showToast(t('match_msg_pending_sent'));
     closeMatchProfilePreview();
     closeMatchMapOverlay();
-    startChatWith(uid);
+    goToMatchChatSafely(uid);
   }).catch(()=> showToast(t('toast_generic_error') || 'Mesaj gönderilemedi.'));
 }
 
