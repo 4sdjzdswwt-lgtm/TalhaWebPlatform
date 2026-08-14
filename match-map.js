@@ -90,7 +90,7 @@ if(typeof window.haversineKm !== 'function'){
     width:54px;height:54px;border-radius:50%;
     background:radial-gradient(circle at 33% 27%, #FFF2B8 0%, #FFDE66 30%, #FFC531 62%, #F5A100 100%);
     box-shadow:inset 0 3px 5px rgba(255,255,255,.85), inset 0 -7px 11px rgba(150,80,0,.4), 0 6px 16px rgba(243,167,18,.55);
-    border:none;font-size:22px;display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative;overflow:hidden;}
+    border:none;font-size:22px;display:flex;align-items:center;justify-content:center;cursor:pointer;overflow:hidden;}
   .matchMapDropBoxBtn::before{content:'';position:absolute;top:8%;left:16%;width:38%;height:22%;border-radius:50%;
     background:rgba(255,255,255,.75);filter:blur(3px);pointer-events:none;}
   .matchMapEmptyHint{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:2;color:#fff;text-align:center;
