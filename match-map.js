@@ -79,8 +79,19 @@ if(typeof window.haversineKm !== 'function'){
   .matchMapFloatingLocBtn{position:absolute;bottom:calc(env(safe-area-inset-bottom,0px) + 20px);right:16px;z-index:2;
     width:46px;height:46px;border-radius:50%;background:#7A42A0;box-shadow:0 4px 18px rgba(122,66,160,.55);
     border:none;color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+  .matchMapDropBoxBtn{position:absolute;bottom:calc(env(safe-area-inset-bottom,0px) + 20px);left:16px;z-index:2;
+    width:52px;height:52px;border-radius:50%;background:#F3D053;box-shadow:0 4px 18px rgba(243,208,83,.5);
+    border:none;font-size:22px;display:flex;align-items:center;justify-content:center;cursor:pointer;}
   .matchMapEmptyHint{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:2;color:#fff;text-align:center;
     background:rgba(5,2,15,.6);backdrop-filter:blur(6px);padding:16px 22px;border-radius:16px;font-size:13px;max-width:260px;pointer-events:none;}
+
+  /* Kutu (anı) marker'ı — SpotBox tarzı, küçük Polaroid benzeri kare önizleme */
+  .matchBoxMarker{width:54px;display:flex;flex-direction:column;align-items:center;cursor:pointer;user-select:none;}
+  .matchBoxThumb{width:54px;height:54px;border-radius:10px;background:var(--surface-2) center/cover;border:2.5px solid #F3D053;
+    box-shadow:0 0 10px 2px rgba(243,208,83,.45);position:relative;display:flex;align-items:center;justify-content:center;}
+  .matchBoxVideoIcon{color:#fff;font-size:16px;text-shadow:0 1px 4px rgba(0,0,0,.7);}
+  .matchBoxTitle{max-width:70px;font-size:9.5px;font-weight:700;color:#fff;background:rgba(5,2,15,.6);padding:2px 6px;border-radius:8px;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:4px;}
 
   /* SnapAvatarMarker — sabit piksel boyutu, zoom'dan bağımsız */
   .snapAvatarMarker{width:50px;height:92px;display:flex;flex-direction:column;align-items:center;cursor:pointer;user-select:none;}
@@ -300,6 +311,7 @@ function openMatchMapOverlay(){
       <button class="matchMapFloatingLocBtn" onclick="goToMyMatchLocation()" title="${escapeHtml(t('match_my_location'))}">
         <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12 2L4 21l8-4 8 4z"/></svg>
       </button>
+      <button class="matchMapDropBoxBtn" onclick="openMatchBoxComposer()" title="Kutu Bırak">📦</button>
       <div class="matchMapEmptyHint hidden" id="matchMapEmptyHint">${escapeHtml(t('toast_no_one_nearby'))}</div>
     `;
     document.body.appendChild(overlay);
@@ -684,6 +696,325 @@ function refreshNearbyMatchUsers(){
   }).catch(()=>{ showToast(t('toast_generic_error') || 'Harita yüklenemedi.'); });
 }
 
+function refreshNearbyMatchUsers(){
+  const token = ++matchMapLoadToken;
+  loadNearbyMatchUsers().then(candidates=>{
+    if(token !== matchMapLoadToken) return; // eskimiş istek, yok say
+    matchMapLastCandidates = candidates;
+    const emptyHint = document.getElementById('matchMapEmptyHint');
+    if(emptyHint) emptyHint.classList.toggle('hidden', candidates.length > 0);
+    return fetchProfilesFor(candidates.map(c=>c.uid)).then(profiles=>{
+      candidates.forEach(c=>{ c.profile = profiles[c.uid] || {}; });
+      renderAllMatchMarkers(candidates);
+    });
+  }).catch(()=>{ showToast(t('toast_generic_error') || 'Harita yüklenemedi.'); });
+  refreshNearbyMapBoxes(); // kutu sistemi — arkadaş konum sisteminden AYRI, birlikte çalışır
+}
+
+/* ============================================================
+   KUTU (ANI) SİSTEMİ — SpotBox tarzı
+   ------------------------------------------------------------
+   Konuma fotoğraf/video anı bırakma ve yakındaki kutuları keşfetme.
+   Arkadaş canlı konum sisteminden TAMAMEN AYRI, ikisi birlikte çalışır.
+   Firebase şeması: mapBoxes/{boxId}
+     uid, ts, lat, lng, title,
+     mediaType: 'photo' | 'video', media (fotoğrafta base64, videoda Storage URL),
+     visibility: 'public' | 'mutual' | 'except', excludedUids: {}
+   ============================================================ */
+let matchMapBoxesLastList = [];
+let matchBoxMarkers = {};
+let matchBoxComposerFile = null;
+let matchBoxComposerType = null; // 'photo' | 'video'
+let matchBoxComposerVisibility = 'public';
+
+function loadNearbyMapBoxes(){
+  if(!matchMapMyLoc || !fbAuth.currentUser) return Promise.resolve([]);
+  const myUid = fbAuth.currentUser.uid;
+  return Promise.all([
+    fbDb.ref('mapBoxes').orderByChild('ts').limitToLast(300).once('value'),
+    fbDb.ref('follows/' + myUid).once('value'),
+    fbDb.ref('followers/' + myUid).once('value')
+  ]).then(([boxesSnap, myFollowsSnap, myFollowersSnap])=>{
+    const myFollows = new Set(Object.keys(myFollowsSnap.val() || {}));
+    const myFollowers = new Set(Object.keys(myFollowersSnap.val() || {}));
+    const all = boxesSnap.val() || {};
+    const list = [];
+    Object.keys(all).forEach(boxId=>{
+      const b = all[boxId];
+      if(!b || typeof b.lat !== 'number' || typeof b.lng !== 'number' || !b.media) return;
+      if(b.uid !== myUid && isMutuallyBlocked(b.uid)) return;
+      const isMutual = myFollows.has(b.uid) && myFollowers.has(b.uid);
+      const vis = b.visibility || 'public';
+      if(b.uid !== myUid){
+        if(vis === 'mutual'){ if(!isMutual) return; }
+        else if(vis === 'except'){ if(!isMutual) return; if((b.excludedUids || {})[myUid]) return; }
+        else if(vis !== 'public'){ return; }
+      }
+      const dist = haversineKm(matchMapMyLoc.lat, matchMapMyLoc.lng, b.lat, b.lng);
+      if(dist > 100) return;
+      list.push({ boxId, box: b, dist });
+    });
+    list.sort((a,b)=> a.dist - b.dist);
+    return list.slice(0, 60);
+  });
+}
+
+function refreshNearbyMapBoxes(){
+  loadNearbyMapBoxes().then(list=>{
+    matchMapBoxesLastList = list;
+    renderAllMatchBoxMarkers(list);
+  }).catch(()=>{});
+}
+
+class MatchBoxMarker {
+  constructor(item){
+    this.item = item;
+    this.el = this._buildEl();
+    this.marker = new mapboxgl.Marker({ element: this.el, anchor: 'bottom' })
+      .setLngLat([item.box.lng, item.box.lat]);
+  }
+  _buildEl(){
+    const el = document.createElement('div');
+    el.className = 'matchBoxMarker';
+    const b = this.item.box;
+    const thumb = b.mediaType === 'video' ? (b.coverImage || '') : (b.media || '');
+    el.innerHTML = `
+      <div class="matchBoxThumb" style="${thumb ? `background-image:url('${thumb}');` : ''}">
+        ${b.mediaType === 'video' ? '<span class="matchBoxVideoIcon">▶</span>' : ''}
+      </div>
+      ${b.title ? `<div class="matchBoxTitle">${escapeHtml(b.title)}</div>` : ''}
+    `;
+    el.addEventListener('click', ()=> openMatchBoxPreview(this.item.boxId, this.item));
+    return el;
+  }
+  addTo(map){ this.marker.addTo(map); return this; }
+  remove(){ try{ this.marker.remove(); }catch(e){} }
+}
+
+function renderAllMatchBoxMarkers(list){
+  if(!matchMap) return;
+  Object.values(matchBoxMarkers).forEach(m=> m.remove());
+  matchBoxMarkers = {};
+  list.forEach(item=>{
+    matchBoxMarkers[item.boxId] = new MatchBoxMarker(item).addTo(matchMap);
+  });
+}
+
+/* ---------- Kutu bırakma (composer) ---------- */
+function openMatchBoxComposer(){
+  if(!requireFirebase() || !fbAuth.currentUser) return;
+  if(!matchMapMyLoc){ showToast(t('toast_loc_denied') || 'Önce konumunu paylaşman gerekiyor.'); return; }
+  matchBoxComposerFile = null; matchBoxComposerType = null; matchBoxComposerVisibility = 'public';
+
+  const overlay = document.createElement('div');
+  overlay.className = 'followListOverlay';
+  overlay.id = 'matchBoxComposerOverlay';
+  overlay.style.zIndex = 10250;
+  overlay.onclick = (e)=>{ if(e.target === overlay) closeMatchBoxComposer(); };
+  document.body.classList.add('follow-list-open');
+
+  overlay.innerHTML = `
+    <div class="followListSheet" style="max-height:92vh;">
+      <div class="followListHead" style="position:sticky;top:0;z-index:5;background:var(--surface);flex-shrink:0;padding-top:calc(env(safe-area-inset-top,0px) + 16px);gap:12px;">
+        <button class="matchMapIconBtn" style="background:var(--surface-2);border:1px solid var(--line);color:var(--text);width:34px;height:34px;flex-shrink:0;" onclick="closeMatchBoxComposer()">
+          <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+        <h3 style="flex:1;">📦 Kutu Bırak</h3>
+        <div style="width:34px;flex-shrink:0;"></div>
+      </div>
+      <div class="followListBody" style="padding:16px;">
+        <input type="file" id="matchBoxFileInput" accept="image/*,video/*" style="display:none;" onchange="onMatchBoxFileChosen(this)">
+        <div id="matchBoxPreviewWrap" onclick="document.getElementById('matchBoxFileInput').click()"
+          style="aspect-ratio:1/1;border-radius:16px;background:var(--surface-2);border:2px dashed var(--line);display:flex;align-items:center;justify-content:center;cursor:pointer;overflow:hidden;">
+          <div style="text-align:center;color:var(--muted);">
+            <div style="font-size:32px;">📷</div>
+            <div style="font-size:12.5px;margin-top:6px;">Fotoğraf veya video seç</div>
+          </div>
+        </div>
+
+        <input id="matchBoxTitleInput" type="text" maxlength="60" placeholder="Bu ana bir başlık ver..."
+          style="width:100%;margin-top:14px;padding:12px 14px;border-radius:14px;background:var(--surface-2);border:1px solid var(--line);color:var(--text);font-size:14px;">
+
+        <div style="padding:18px 2px 8px;font-size:13.5px;font-weight:700;color:var(--text);">Kimler Görebilir</div>
+        <div class="matchVisGroupCard" id="matchBoxVisWrap">
+          <div class="matchVisOption selected" data-boxvis="public" onclick="setMatchBoxVisibility('public')">
+            <div style="flex:1;"><div class="lbl" style="font-size:14px;font-weight:700;">Herkese Açık</div><div class="desc">Yakınındaki herkes bulup açabilir</div></div>
+            <div class="dot"></div>
+          </div>
+          <div class="matchVisOption" data-boxvis="mutual" onclick="setMatchBoxVisibility('mutual')">
+            <div style="flex:1;"><div class="lbl" style="font-size:14px;font-weight:700;">Arkadaşlarım</div><div class="desc">Yalnızca karşılıklı takipleştiğin kişiler</div></div>
+            <div class="dot"></div>
+          </div>
+          <div class="matchVisOption" data-boxvis="except" onclick="setMatchBoxVisibility('except')">
+            <div style="flex:1;"><div class="lbl" style="font-size:14px;font-weight:700;">Arkadaşlarım, Şu Kişiler Hariç...</div><div class="desc">Bazı kişileri hariç tutarak paylaş</div></div>
+            <div class="dot"></div>
+          </div>
+        </div>
+
+        <button class="btn" id="matchBoxSubmitBtn" style="width:100%;margin-top:20px;padding:15px;border-radius:16px;border:none;background:var(--gradient-vivid);color:#fff;font-weight:800;font-size:14.5px;" onclick="submitMatchBox()">📦 Kutuyu Bırak</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+}
+function closeMatchBoxComposer(){
+  const ov = document.getElementById('matchBoxComposerOverlay');
+  if(ov) ov.remove();
+  document.body.classList.remove('follow-list-open');
+}
+function setMatchBoxVisibility(key){
+  matchBoxComposerVisibility = key;
+  document.querySelectorAll('.matchVisOption[data-boxvis]').forEach(el=> el.classList.toggle('selected', el.dataset.boxvis === key));
+}
+function onMatchBoxFileChosen(input){
+  const file = input.files && input.files[0];
+  if(!file) return;
+  matchBoxComposerFile = file;
+  matchBoxComposerType = file.type.indexOf('video') === 0 ? 'video' : 'photo';
+  const wrap = document.getElementById('matchBoxPreviewWrap');
+  if(!wrap) return;
+  const url = URL.createObjectURL(file);
+  if(matchBoxComposerType === 'video'){
+    wrap.innerHTML = `<video src="${url}" style="width:100%;height:100%;object-fit:cover;" muted playsinline></video>`;
+    const probe = document.createElement('video');
+    probe.preload = 'metadata';
+    probe.onloadedmetadata = ()=>{
+      if(probe.duration > 20) showToast('İpucu: kısa (≈15 sn) videolar daha iyi görünür.');
+    };
+    probe.src = url;
+  } else {
+    wrap.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:cover;">`;
+  }
+  wrap.style.border = 'none';
+}
+function submitMatchBox(){
+  if(!matchBoxComposerFile){ showToast('Önce bir fotoğraf ya da video seç.'); return; }
+  if(!matchMapMyLoc || !fbAuth.currentUser) return;
+  const titleInput = document.getElementById('matchBoxTitleInput');
+  const title = titleInput ? titleInput.value.trim().slice(0, 60) : '';
+  const btn = document.getElementById('matchBoxSubmitBtn');
+  if(btn){ btn.disabled = true; btn.textContent = 'Bırakılıyor...'; }
+  const myUid = fbAuth.currentUser.uid;
+  const boxId = fbDb.ref('mapBoxes').push().key;
+  const baseData = {
+    uid: myUid, ts: Date.now(), lat: matchMapMyLoc.lat, lng: matchMapMyLoc.lng,
+    title, visibility: matchBoxComposerVisibility, mediaType: matchBoxComposerType
+  };
+  const finish = (mediaUrl)=>{
+    fbDb.ref('mapBoxes/' + boxId).set(Object.assign({}, baseData, { media: mediaUrl })).then(()=>{
+      showToast('Kutu bırakıldı! 📦');
+      closeMatchBoxComposer();
+      refreshNearbyMapBoxes();
+    }).catch(()=>{
+      showToast('Kutu bırakılamadı, tekrar dener misin?');
+      if(btn){ btn.disabled = false; btn.textContent = '📦 Kutuyu Bırak'; }
+    });
+  };
+  if(matchBoxComposerType === 'video'){
+    if(!fbStorage){ showToast('Video için depolama kullanılamıyor.'); if(btn){ btn.disabled = false; btn.textContent = '📦 Kutuyu Bırak'; } return; }
+    const path = 'mapBoxes/' + myUid + '/' + Date.now() + '.mp4';
+    fbStorage.ref().child(path).put(matchBoxComposerFile)
+      .then(s=> s.ref.getDownloadURL()).then(finish)
+      .catch(()=>{ showToast('Video yüklenemedi.'); if(btn){ btn.disabled = false; btn.textContent = '📦 Kutuyu Bırak'; } });
+  } else {
+    const reader = new FileReader();
+    reader.onload = ()=>{
+      (typeof compressForPost === 'function' ? compressForPost(reader.result) : Promise.resolve(reader.result)).then(finish);
+    };
+    reader.onerror = ()=>{ showToast('Fotoğraf okunamadı.'); if(btn){ btn.disabled = false; btn.textContent = '📦 Kutuyu Bırak'; } };
+    reader.readAsDataURL(matchBoxComposerFile);
+  }
+}
+
+/* ---------- Kutuyu açma ("unbox") önizlemesi ---------- */
+function openMatchBoxPreview(boxId, itemArg){
+  const item = itemArg || matchMapBoxesLastList.find(i=> i.boxId === boxId);
+  if(!item) return;
+  const b = item.box;
+  const hasAccess = savedVerifiedTier === 'gold' || savedVerifiedTier === 'purple';
+  const isOwn = fbAuth.currentUser && b.uid === fbAuth.currentUser.uid;
+  const distText = item.dist < 1 ? t('match_m_away').replace('{n}', Math.round(item.dist * 1000)) : t('match_km_away').replace('{n}', item.dist.toFixed(1));
+
+  const overlay = document.createElement('div');
+  overlay.className = 'followListOverlay';
+  overlay.id = 'matchBoxPreviewOverlay';
+  overlay.style.zIndex = 10200;
+  overlay.onclick = (e)=>{ if(e.target === overlay) closeMatchBoxPreview(); };
+  document.body.classList.add('follow-list-open');
+
+  overlay.innerHTML = `
+    <div class="followListSheet" style="max-height:90vh;">
+      <div class="followListHead" style="position:sticky;top:0;z-index:5;background:var(--surface);flex-shrink:0;padding-top:calc(env(safe-area-inset-top,0px) + 16px);justify-content:flex-end;border-bottom:none;">
+        <button class="matchMapIconBtn" style="background:var(--surface-2);border:1px solid var(--line);color:var(--text);width:34px;height:34px;" onclick="closeMatchBoxPreview()">
+          <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="followListBody" style="padding:0 20px 20px;" id="matchBoxOwnerWrap">
+        <div style="display:flex;align-items:center;gap:14px;">
+          <div style="width:60px;height:60px;border-radius:50%;background:var(--surface-2);flex-shrink:0;"></div>
+          <div style="font-size:12.5px;color:var(--muted);">Yükleniyor...</div>
+        </div>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+
+  fbDb.ref('users/' + b.uid).once('value').then(snap=>{
+    const profile = snap.val() || {};
+    const wrap = document.getElementById('matchBoxOwnerWrap');
+    if(!wrap) return;
+    const smallAvatar = profile.photo || ('https://i.pravatar.cc/120?u=' + b.uid);
+    const showFull = hasAccess || isOwn;
+    wrap.innerHTML = `
+      <div style="display:flex;align-items:center;gap:14px;">
+        <img src="${smallAvatar}" onerror="this.src='https://i.pravatar.cc/120?u=${b.uid}'" style="width:60px;height:60px;border-radius:50%;object-fit:cover;flex-shrink:0;border:1px solid var(--glass-border);">
+        <div>
+          <div style="font-size:17px;font-weight:800;color:var(--text);font-family:'Space Grotesk',sans-serif;">${escapeHtml(profile.displayName || profile.username || '@kullanici')} ${typeof verifiedBadgeHtml === 'function' ? verifiedBadgeHtml(profile.verifiedTier, 15) : ''}</div>
+          <div style="font-size:12.5px;color:var(--accent);margin-top:3px;">📍 ${escapeHtml(distText)} · ${escapeHtml(formatPostAge(b.ts))}</div>
+        </div>
+      </div>
+      ${b.title ? `<div style="font-size:14px;color:var(--text);margin:14px 0 0;font-weight:600;">${escapeHtml(b.title)}</div>` : ''}
+
+      <div class="matchLockOverlayBox" id="matchBoxMediaWrap" style="margin-top:16px;border-radius:16px;overflow:${showFull ? 'hidden' : 'visible'};min-height:${showFull ? 90 : 230}px;background:var(--surface-2);">
+        ${showFull ? matchBoxMediaHtml(b) : `<div class="matchLockedBlur">${matchBoxMediaHtml(b)}</div>
+          <div class="matchLockBadge">
+            <div style="font-size:30px;">🔒</div>
+            <div style="color:#fff;font-size:12.5px;max-width:240px;line-height:1.5;">${escapeHtml(t('match_upgrade_needed'))}</div>
+            <button class="btn btn-primary" style="padding:9px 20px;font-size:12.5px;" onclick="closeMatchBoxPreview();openMatchVerifiedBadgeInfoForBox('${boxId}');">${escapeHtml(t('match_upgrade_btn'))}</button>
+          </div>`}
+      </div>
+
+      ${isOwn ? `
+        <button class="btn" style="width:100%;margin-top:18px;padding:14px;border-radius:16px;border:1.5px solid var(--danger);background:rgba(237,73,86,.12);color:var(--danger);font-weight:800;" onclick="deleteMatchBox('${boxId}')">🗑️ Kutuyu Sil</button>
+      ` : `
+        <div style="display:flex;gap:10px;margin-top:18px;">
+          <button class="btn" style="flex:1;background:var(--gradient-vivid);color:#fff;border:none;" onclick="matchFollowUser('${b.uid}')">${escapeHtml(t('match_follow_btn'))}</button>
+          <button class="btn ${hasAccess ? '' : 'btn-ghost'}" style="flex:1;${hasAccess ? 'background:var(--surface-2);color:var(--text);border:1px solid var(--line);' : ''}" onclick="${hasAccess ? `matchMessageUser('${b.uid}')` : `closeMatchBoxPreview();openMatchVerifiedBadgeInfoForBox('${boxId}');`}">
+            ${hasAccess ? '💬 ' + escapeHtml(t('match_message_btn')) : '🔒 ' + escapeHtml(t('match_message_btn'))}
+          </button>
+        </div>
+      `}
+    `;
+  });
+}
+function matchBoxMediaHtml(b){
+  if(b.mediaType === 'video'){
+    return `<video src="${b.media}" controls playsinline style="width:100%;max-height:340px;display:block;background:#000;"></video>`;
+  }
+  return `<img src="${b.media}" style="width:100%;max-height:340px;object-fit:cover;display:block;">`;
+}
+function closeMatchBoxPreview(){
+  const ov = document.getElementById('matchBoxPreviewOverlay');
+  if(ov) ov.remove();
+  document.body.classList.remove('follow-list-open');
+}
+function deleteMatchBox(boxId){
+  if(!confirm('Bu kutuyu silmek istediğine emin misin?')) return;
+  fbDb.ref('mapBoxes/' + boxId).remove().then(()=>{
+    showToast('Kutu silindi.');
+    closeMatchBoxPreview();
+    refreshNearbyMapBoxes();
+  }).catch(()=> showToast(t('toast_generic_error') || 'Silinemedi.'));
+}
+
 function fetchProfilesFor(uids){
   return Promise.all(uids.map(uid=>
     fbDb.ref('users/' + uid).once('value').then(s=> ({ uid, data: s.val() || {} }))
@@ -1005,9 +1336,9 @@ function openMatchProfilePreview(uid, candidateArg){
    sunucu/Storage kurallarında sağlanmalı). */
 /* Uygulamanın kendi closeVerifiedBadgeInfo() fonksiyonu her zaman Ayarlar
    paneline dönecek şekilde sabitlenmiş. Haritadan geldiğimizde bunun yerine
-   profil kartına geri dönmesi için kapatma fonksiyonunu GEÇİCİ olarak
-   değiştirip, iş bitince eski haline geri koyuyoruz. */
-function openMatchVerifiedBadgeInfo(uid){
+   ilgili karta (profil veya kutu) geri dönmesi için kapatma fonksiyonunu
+   GEÇİCİ olarak değiştirip, iş bitince eski haline geri koyuyoruz. */
+function openMatchVerifiedBadgeInfoGeneric(reopenFn){
   if(typeof openVerifiedBadgeInfo !== 'function') return;
   const originalClose = window.closeVerifiedBadgeInfo;
   window.closeVerifiedBadgeInfo = function(){
@@ -1015,9 +1346,15 @@ function openMatchVerifiedBadgeInfo(uid){
     if(ov) ov.remove();
     document.body.classList.remove('follow-list-open');
     window.closeVerifiedBadgeInfo = originalClose; // uygulamanın normal davranışını geri yükle
-    openMatchProfilePreview(uid);
+    reopenFn();
   };
   openVerifiedBadgeInfo();
+}
+function openMatchVerifiedBadgeInfo(uid){
+  openMatchVerifiedBadgeInfoGeneric(()=> openMatchProfilePreview(uid));
+}
+function openMatchVerifiedBadgeInfoForBox(boxId){
+  openMatchVerifiedBadgeInfoGeneric(()=> openMatchBoxPreview(boxId));
 }
 
 function loadMatchProfilePosts(uid, hasAccess){
