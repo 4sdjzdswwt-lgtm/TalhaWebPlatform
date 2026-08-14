@@ -267,7 +267,9 @@ function startMatchLocationWatch(mode){
     const update = { lat: latitude, lng: longitude, updatedAt: Date.now() };
     if(mode === 'car') update.heading = (heading === null || isNaN(heading)) ? 0 : heading;
     fbDb.ref('userLocations/' + myUid).update(update).catch(()=>{});
-    if(matchMap && matchMapMarkers['__me__']) matchMapMarkers['__me__'].updatePosition(longitude, latitude);
+    // Eski DOM marker sistemi kalkınca konumu anlık güncellemek için
+    // WebGL nokta katmanını (cache'lenmiş arkadaş listesiyle) tazeliyoruz.
+    if(matchMap) renderAllMatchMarkers(matchMapLastCandidates || []);
   };
   if(mode === 'car'){
     matchMapWatchId = navigator.geolocation.watchPosition(writeLoc, ()=>{}, { enableHighAccuracy:true, maximumAge:5000 });
@@ -814,44 +816,42 @@ function openMatchBoxComposer(){
   document.body.classList.add('follow-list-open');
 
   overlay.innerHTML = `
-    <div class="followListSheet" style="max-height:92vh;">
+    <div class="followListSheet" style="max-height:88vh;">
       <div class="followListHead" style="position:sticky;top:0;z-index:5;background:var(--surface);flex-shrink:0;padding-top:calc(env(safe-area-inset-top,0px) + 16px);gap:12px;">
         <button class="matchMapIconBtn" style="background:var(--surface-2);border:1px solid var(--line);color:var(--text);width:34px;height:34px;flex-shrink:0;" onclick="closeMatchBoxComposer()">
           <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M18 6L6 18M6 6l12 12"/></svg>
         </button>
-        <h3 style="flex:1;">📦 Kutu Bırak</h3>
+        <h3 style="flex:1;">📦 ${escapeHtml(t('match_box_composer_title'))}</h3>
         <div style="width:34px;flex-shrink:0;"></div>
       </div>
       <div class="followListBody" style="padding:16px;">
         <input type="file" id="matchBoxFileInput" accept="image/*,video/*" style="display:none;" onchange="onMatchBoxFileChosen(this)">
         <div id="matchBoxPreviewWrap" onclick="document.getElementById('matchBoxFileInput').click()"
-          style="aspect-ratio:1/1;border-radius:16px;background:var(--surface-2);border:2px dashed var(--line);display:flex;align-items:center;justify-content:center;cursor:pointer;overflow:hidden;">
-          <div style="text-align:center;color:var(--muted);">
-            <div style="font-size:32px;">📷</div>
-            <div style="font-size:12.5px;margin-top:6px;">Fotoğraf veya video seç</div>
-          </div>
+          style="display:flex;align-items:center;gap:14px;padding:12px;border-radius:16px;background:var(--surface-2);border:1.5px dashed var(--line);cursor:pointer;">
+          <div id="matchBoxThumbBox" style="width:56px;height:56px;border-radius:12px;background:var(--surface);flex-shrink:0;display:flex;align-items:center;justify-content:center;overflow:hidden;font-size:22px;">📷</div>
+          <div style="font-size:13px;color:var(--muted);font-weight:600;">${escapeHtml(t('match_box_choose_media'))}</div>
         </div>
 
-        <input id="matchBoxTitleInput" type="text" maxlength="60" placeholder="Bu ana bir başlık ver..."
+        <input id="matchBoxTitleInput" type="text" maxlength="60" placeholder="${escapeHtml(t('match_box_title_placeholder'))}"
           style="width:100%;margin-top:14px;padding:12px 14px;border-radius:14px;background:var(--surface-2);border:1px solid var(--line);color:var(--text);font-size:14px;">
 
-        <div style="padding:18px 2px 8px;font-size:13.5px;font-weight:700;color:var(--text);">Kimler Görebilir</div>
+        <div style="padding:18px 2px 8px;font-size:13.5px;font-weight:700;color:var(--text);">${escapeHtml(t('match_box_who_sees'))}</div>
         <div class="matchVisGroupCard" id="matchBoxVisWrap">
           <div class="matchVisOption selected" data-boxvis="public" onclick="setMatchBoxVisibility('public')">
-            <div style="flex:1;"><div class="lbl" style="font-size:14px;font-weight:700;">Herkese Açık</div><div class="desc">Yakınındaki herkes bulup açabilir</div></div>
+            <div style="flex:1;"><div class="lbl" style="font-size:14px;font-weight:700;">${escapeHtml(t('match_box_vis_public'))}</div><div class="desc">${escapeHtml(t('match_box_vis_public_desc'))}</div></div>
             <div class="dot"></div>
           </div>
           <div class="matchVisOption" data-boxvis="mutual" onclick="setMatchBoxVisibility('mutual')">
-            <div style="flex:1;"><div class="lbl" style="font-size:14px;font-weight:700;">Arkadaşlarım</div><div class="desc">Yalnızca karşılıklı takipleştiğin kişiler</div></div>
+            <div style="flex:1;"><div class="lbl" style="font-size:14px;font-weight:700;">${escapeHtml(t('match_box_vis_mutual'))}</div><div class="desc">${escapeHtml(t('match_box_vis_mutual_desc'))}</div></div>
             <div class="dot"></div>
           </div>
           <div class="matchVisOption" data-boxvis="except" onclick="setMatchBoxVisibility('except')">
-            <div style="flex:1;"><div class="lbl" style="font-size:14px;font-weight:700;">Arkadaşlarım, Şu Kişiler Hariç...</div><div class="desc">Bazı kişileri hariç tutarak paylaş</div></div>
+            <div style="flex:1;"><div class="lbl" style="font-size:14px;font-weight:700;">${escapeHtml(t('match_box_vis_except'))}</div><div class="desc">${escapeHtml(t('match_box_vis_except_desc'))}</div></div>
             <div class="dot"></div>
           </div>
         </div>
 
-        <button class="btn" id="matchBoxSubmitBtn" style="width:100%;margin-top:20px;padding:15px;border-radius:16px;border:none;background:var(--gradient-vivid);color:#fff;font-weight:800;font-size:14.5px;" onclick="submitMatchBox()">📦 Kutuyu Bırak</button>
+        <button class="btn" id="matchBoxSubmitBtn" style="width:100%;margin-top:20px;padding:15px;border-radius:16px;border:none;background:var(--gradient-vivid);color:#fff;font-weight:800;font-size:14.5px;" onclick="submitMatchBox()">📦 ${escapeHtml(t('match_box_submit'))}</button>
       </div>
     </div>`;
   document.body.appendChild(overlay);
@@ -870,11 +870,11 @@ function onMatchBoxFileChosen(input){
   if(!file) return;
   matchBoxComposerFile = file;
   matchBoxComposerType = file.type.indexOf('video') === 0 ? 'video' : 'photo';
-  const wrap = document.getElementById('matchBoxPreviewWrap');
-  if(!wrap) return;
+  const thumb = document.getElementById('matchBoxThumbBox');
+  if(!thumb) return;
   const url = URL.createObjectURL(file);
   if(matchBoxComposerType === 'video'){
-    wrap.innerHTML = `<video src="${url}" style="width:100%;height:100%;object-fit:cover;" muted playsinline></video>`;
+    thumb.innerHTML = `<video src="${url}" style="width:100%;height:100%;object-fit:cover;" muted playsinline></video>`;
     const probe = document.createElement('video');
     probe.preload = 'metadata';
     probe.onloadedmetadata = ()=>{
@@ -882,17 +882,24 @@ function onMatchBoxFileChosen(input){
     };
     probe.src = url;
   } else {
-    wrap.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:cover;">`;
+    // NOT: ön kamerayla çekilen fotoğraflardaki "ayna" görüntüsü, cihazın
+    // kendi kamera uygulamasından geliyor — dosya seçildikten sonra bizim
+    // tarafımızda bir çevirme/yansıtma işlemi UYGULANMIYOR, yani burada
+    // ekstra bir CSS/transform ekleyip görüntüyü bozmuyoruz. Sorun cihazın
+    // kamerasından kaynaklanıyorsa bu adımda düzeltilemez.
+    thumb.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:cover;">`;
   }
-  wrap.style.border = 'none';
+  const wrap = document.getElementById('matchBoxPreviewWrap');
+  if(wrap) wrap.style.borderStyle = 'solid';
 }
 function submitMatchBox(){
-  if(!matchBoxComposerFile){ showToast('Önce bir fotoğraf ya da video seç.'); return; }
+  if(!matchBoxComposerFile){ showToast(t('match_box_need_media')); return; }
   if(!matchMapMyLoc || !fbAuth.currentUser) return;
   const titleInput = document.getElementById('matchBoxTitleInput');
   const title = titleInput ? titleInput.value.trim().slice(0, 60) : '';
   const btn = document.getElementById('matchBoxSubmitBtn');
-  if(btn){ btn.disabled = true; btn.textContent = 'Bırakılıyor...'; }
+  const resetBtn = ()=>{ if(btn){ btn.disabled = false; btn.textContent = '📦 ' + t('match_box_submit'); } };
+  if(btn){ btn.disabled = true; btn.textContent = t('match_box_submitting'); }
   const myUid = fbAuth.currentUser.uid;
   const boxId = fbDb.ref('mapBoxes').push().key;
   const baseData = {
@@ -901,26 +908,26 @@ function submitMatchBox(){
   };
   const finish = (mediaUrl)=>{
     fbDb.ref('mapBoxes/' + boxId).set(Object.assign({}, baseData, { media: mediaUrl })).then(()=>{
-      showToast('Kutu bırakıldı! 📦');
+      showToast(t('match_box_dropped_toast'));
       closeMatchBoxComposer();
       refreshNearbyMapBoxes();
     }).catch(()=>{
-      showToast('Kutu bırakılamadı, tekrar dener misin?');
-      if(btn){ btn.disabled = false; btn.textContent = '📦 Kutuyu Bırak'; }
+      showToast(t('toast_generic_error') || 'Kutu bırakılamadı, tekrar dener misin?');
+      resetBtn();
     });
   };
   if(matchBoxComposerType === 'video'){
-    if(!fbStorage){ showToast('Video için depolama kullanılamıyor.'); if(btn){ btn.disabled = false; btn.textContent = '📦 Kutuyu Bırak'; } return; }
+    if(!fbStorage){ showToast(t('toast_video_needs_storage2') || 'Video için depolama kullanılamıyor.'); resetBtn(); return; }
     const path = 'mapBoxes/' + myUid + '/' + Date.now() + '.mp4';
     fbStorage.ref().child(path).put(matchBoxComposerFile)
       .then(s=> s.ref.getDownloadURL()).then(finish)
-      .catch(()=>{ showToast('Video yüklenemedi.'); if(btn){ btn.disabled = false; btn.textContent = '📦 Kutuyu Bırak'; } });
+      .catch(()=>{ showToast(t('toast_video_upload_fail') || 'Video yüklenemedi.'); resetBtn(); });
   } else {
     const reader = new FileReader();
     reader.onload = ()=>{
       (typeof compressForPost === 'function' ? compressForPost(reader.result) : Promise.resolve(reader.result)).then(finish);
     };
-    reader.onerror = ()=>{ showToast('Fotoğraf okunamadı.'); if(btn){ btn.disabled = false; btn.textContent = '📦 Kutuyu Bırak'; } };
+    reader.onerror = ()=>{ showToast(t('toast_generic_error') || 'Fotoğraf okunamadı.'); resetBtn(); };
     reader.readAsDataURL(matchBoxComposerFile);
   }
 }
@@ -983,7 +990,7 @@ function openMatchBoxPreview(boxId, itemArg){
       </div>
 
       ${isOwn ? `
-        <button class="btn" style="width:100%;margin-top:18px;padding:14px;border-radius:16px;border:1.5px solid var(--danger);background:rgba(237,73,86,.12);color:var(--danger);font-weight:800;" onclick="deleteMatchBox('${boxId}')">🗑️ Kutuyu Sil</button>
+        <button class="btn" style="width:100%;margin-top:18px;padding:14px;border-radius:16px;border:1.5px solid var(--danger);background:rgba(237,73,86,.12);color:var(--danger);font-weight:800;" onclick="deleteMatchBox('${boxId}')">🗑️ ${escapeHtml(t('match_box_delete'))}</button>
       ` : `
         <div style="display:flex;gap:10px;margin-top:18px;">
           <button class="btn" style="flex:1;background:var(--gradient-vivid);color:#fff;border:none;" onclick="matchFollowUser('${b.uid}')">${escapeHtml(t('match_follow_btn'))}</button>
@@ -1007,9 +1014,9 @@ function closeMatchBoxPreview(){
   document.body.classList.remove('follow-list-open');
 }
 function deleteMatchBox(boxId){
-  if(!confirm('Bu kutuyu silmek istediğine emin misin?')) return;
+  if(!confirm(t('match_box_delete_confirm'))) return;
   fbDb.ref('mapBoxes/' + boxId).remove().then(()=>{
-    showToast('Kutu silindi.');
+    showToast(t('match_box_deleted_toast'));
     closeMatchBoxPreview();
     refreshNearbyMapBoxes();
   }).catch(()=> showToast(t('toast_generic_error') || 'Silinemedi.'));
@@ -1030,9 +1037,9 @@ function fetchProfilesFor(uids){
    ============================================================ */
 function matchGenderColorFor(candidate){
   const g = ((candidate || {}).profile || {}).gender;
-  if(g === 'female') return '#FF3B30'; // canlı kırmızı
-  if(g === 'male') return '#00E676';   // canlı yeşil
-  return '#A872E0';
+  if(g === 'female') return '#FF3B30'; // kırmızı
+  if(g === 'male') return '#3B82F6';   // mavi
+  return '#FFFFFF'; // belirtilmemiş — beyaz
 }
 
 class SnapAvatarMarker {
@@ -1105,13 +1112,11 @@ function clusterCandidatesByPixelDistance(candidates){
 
 function renderAllMatchMarkers(candidates){
   if(!matchMap) return;
-  // Eskileri temizle
-  Object.values(matchMapMarkers).forEach(m=> m.remove());
-  matchMapMarkers = {};
-
-  // Kendimi de arkadaşlarla AYNI kümeleme/dağıtma hesabına dahil ediyoruz —
-  // yoksa bir arkadaşımla tam aynı pikselde çakışırsam kendi işaretçim
-  // onunkinin arkasında tamamen gizlenip kayboluyordu.
+  // Artık TÜM zoom seviyelerinde aynı hassas WebGL nokta sistemi kullanılıyor
+  // — fotoğraflı/isimli DOM marker'lar ve "kaç kişi burada" rozeti kaldırıldı.
+  // Sadece cinsiyete göre renkli küçük noktalar var (bkz. matchGenderColorFor).
+  // Bu aynı zamanda önceki zoom-sırasında-kayma sorununu da tamamen ortadan
+  // kaldırıyor çünkü WebGL katmanı haritayla birebir aynı projeksiyonu kullanıyor.
   const allEntries = [];
   if(matchMapMyLoc && fbAuth.currentUser){
     allEntries.push({
@@ -1122,61 +1127,9 @@ function renderAllMatchMarkers(candidates){
   }
   candidates.forEach(c=> allEntries.push(Object.assign({ isMe: false }, c)));
 
-  const isGlobeZoom = matchMap.getZoom() < 4;
   const clusters = clusterCandidatesByPixelDistance(allEntries);
-
-  if(isGlobeZoom){
-    // Küre (dünya) görünümünde DOM marker KULLANMIYORUZ — DOM marker'lar
-    // küre eğriliğini WebGL render'ı kadar hassas hesaplayamadığı için
-    // uzaklaştıkça gerçek noktadan sapıyordu. Bunun yerine haritanın kendi
-    // WebGL katmanına (circle layer) çiziyoruz; bu asla sapmaz çünkü
-    // haritayla TAM AYNI projeksiyon matrisini kullanıyor.
-    ensureMatchGlobeLayer();
-    setMatchGlobeLayerData(clusters);
-    return;
-  }
-  // Şehir/sokak zoom'undayız — bu aralıkta DOM marker zaten hassas
-  // çalışıyordu, eski sistemle devam. WebGL noktalarını boşalt.
-  clearMatchGlobeLayer();
-
-  clusters.forEach((group, idx)=>{
-    if(group.length === 1){
-      const c = group[0];
-      matchMapMarkers[c.isMe ? '__me__' : c.uid] = new SnapAvatarMarker(c.uid, c, c.isMe).addTo(matchMap);
-      return;
-    }
-    const centroidLng = group.reduce((s,c)=> s + c.loc.lng, 0) / group.length;
-    const centroidLat = group.reduce((s,c)=> s + c.loc.lat, 0) / group.length;
-    // ÖNEMLİ: konumu gerçek koordinat (lng/lat) değiştirerek DEĞİL, sabit
-    // PİKSEL kaydırmasıyla (Mapbox marker'ın kendi "offset" özelliği)
-    // ayarlıyoruz. Eskiden her zoom bitişinde yeni bir lng/lat hesaplıyordum
-    // — bu da zoom'a göre farklı gerçek mesafeye denk gelip kişilerin
-    // "kayması/zıplaması"na sebep oluyordu. Piksel offset ise zoom'dan
-    // tamamen bağımsız, hep aynı sabit görsel mesafede kalır.
-    const offsets = computeMatchRowPixelOffsets(group.length);
-    group.forEach((c, i)=>{
-      // Herkes AYNI merkez koordinatta (grup ortalaması), sadece ekranda
-      // farklı sabit piksel kadar kaydırılıyor.
-      const centeredCandidate = Object.assign({}, c, { loc: Object.assign({}, c.loc, { lng: centroidLng, lat: centroidLat }) });
-      matchMapMarkers[c.isMe ? '__me__' : c.uid] = new SnapAvatarMarker(c.uid, centeredCandidate, c.isMe, offsets[i]).addTo(matchMap);
-    });
-  });
-}
-
-/* Aynı noktadaki N kişiyi, isim etiketleri birbirine çarpmayacak kadar
-   aralıkla, YATAY BİR SIRA halinde (soldan sağa) sabit PİKSEL kaydırmasıyla
-   dizer. Zoom değiştikçe yeniden hesaplanmasına gerek yok — Mapbox'ın
-   marker "offset" özelliği zaten zoom'dan bağımsız sabit kalıyor. */
-function computeMatchRowPixelOffsets(count){
-  if(count <= 1) return [[0, 0]];
-  const spacing = 58; // px — isim etiketleri çakışmasın diye avatar genişliğinden biraz fazla
-  const totalWidth = (count - 1) * spacing;
-  const startX = -totalWidth / 2;
-  const offsets = [];
-  for(let i = 0; i < count; i++){
-    offsets.push([startX + i * spacing, 0]);
-  }
-  return offsets;
+  ensureMatchGlobeLayer();
+  setMatchGlobeLayerData(clusters);
 }
 
 /* Aynı noktadaki N kişiyi, o noktanın merkezi etrafında küçük bir daire
