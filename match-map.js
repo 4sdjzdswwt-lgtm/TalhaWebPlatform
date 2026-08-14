@@ -85,13 +85,10 @@ if(typeof window.haversineKm !== 'function'){
   .matchMapEmptyHint{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:2;color:#fff;text-align:center;
     background:rgba(5,2,15,.6);backdrop-filter:blur(6px);padding:16px 22px;border-radius:16px;font-size:13px;max-width:260px;pointer-events:none;}
 
-  /* Kutu (anı) marker'ı — SpotBox tarzı, küçük Polaroid benzeri kare önizleme */
-  .matchBoxMarker{width:54px;display:flex;flex-direction:column;align-items:center;cursor:pointer;user-select:none;}
-  .matchBoxThumb{width:54px;height:54px;border-radius:10px;background:var(--surface-2) center/cover;border:2.5px solid #F3D053;
-    box-shadow:0 0 10px 2px rgba(243,208,83,.45);position:relative;display:flex;align-items:center;justify-content:center;}
-  .matchBoxVideoIcon{color:#fff;font-size:16px;text-shadow:0 1px 4px rgba(0,0,0,.7);}
-  .matchBoxTitle{max-width:70px;font-size:9.5px;font-weight:700;color:#fff;background:rgba(5,2,15,.6);padding:2px 6px;border-radius:8px;
-    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:4px;}
+  /* Kutu (anı) marker'ı — artık haritada fotoğraf yok, sadece sabit
+     renkli küçük bir nokta. İçerik yalnızca dokununca (unbox) açılıyor. */
+  .matchBoxDot{width:18px;height:18px;border-radius:50%;background:#F3D053;border:2.5px solid #0a0a0f;
+    box-shadow:0 0 9px 2px rgba(243,208,83,.55);cursor:pointer;}
 
   /* SnapAvatarMarker — sabit piksel boyutu, zoom'dan bağımsız */
   .snapAvatarMarker{width:50px;height:92px;display:flex;flex-direction:column;align-items:center;cursor:pointer;user-select:none;}
@@ -313,7 +310,15 @@ function openMatchMapOverlay(){
       <button class="matchMapFloatingLocBtn" onclick="goToMyMatchLocation()" title="${escapeHtml(t('match_my_location'))}">
         <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12 2L4 21l8-4 8 4z"/></svg>
       </button>
-      <button class="matchMapDropBoxBtn" onclick="openMatchBoxComposer()" title="Kutu Bırak">📦</button>
+      <button class="matchMapDropBoxBtn" onclick="openMatchBoxComposer()" title="Kutu Bırak">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#18181C" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2.5" y="4" width="15" height="13" rx="2.3"/>
+          <circle cx="7.3" cy="8.7" r="1.4" fill="#18181C" stroke="none"/>
+          <path d="M2.5 14.5l4.2-4.2a1.5 1.5 0 012.1 0l3.9 3.9"/>
+          <circle cx="18.3" cy="17.3" r="4.6" fill="#18181C" stroke="none"/>
+          <path d="M18.3 19.6v-4.6M16.4 16.9l1.9-1.9 1.9 1.9" stroke="#F3D053" stroke-width="1.6"/>
+        </svg>
+      </button>
       <div class="matchMapEmptyHint hidden" id="matchMapEmptyHint">${escapeHtml(t('toast_no_one_nearby'))}</div>
     `;
     document.body.appendChild(overlay);
@@ -772,20 +777,16 @@ class MatchBoxMarker {
   constructor(item){
     this.item = item;
     this.el = this._buildEl();
-    this.marker = new mapboxgl.Marker({ element: this.el, anchor: 'bottom' })
+    this.marker = new mapboxgl.Marker({ element: this.el, anchor: 'center' })
       .setLngLat([item.box.lng, item.box.lat]);
   }
   _buildEl(){
+    // Haritada fotoğraf/başlık gösterilmiyor — sadece küçük, sabit renkli
+    // bir nokta. Fotoğraf yalnızca noktaya dokunulunca (openMatchBoxPreview)
+    // rozet kuralına göre açılıyor.
     const el = document.createElement('div');
-    el.className = 'matchBoxMarker';
-    const b = this.item.box;
-    const thumb = b.mediaType === 'video' ? (b.coverImage || '') : (b.media || '');
-    el.innerHTML = `
-      <div class="matchBoxThumb" style="${thumb ? `background-image:url('${thumb}');` : ''}">
-        ${b.mediaType === 'video' ? '<span class="matchBoxVideoIcon">▶</span>' : ''}
-      </div>
-      ${b.title ? `<div class="matchBoxTitle">${escapeHtml(b.title)}</div>` : ''}
-    `;
+    el.className = 'matchBoxDot';
+    el.title = 'Kutu';
     el.addEventListener('click', ()=> openMatchBoxPreview(this.item.boxId, this.item));
     return el;
   }
