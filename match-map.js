@@ -37,6 +37,7 @@ const MATCH_MAP_3D_PITCH = 0; // Harita her zaman düz kuş bakışı — 3D eğ
 let matchMap = null;
 let matchMapStyleKey = 'dark';
 let matchMapMarkers = {};              // uid -> SnapAvatarMarker
+let matchDomDotMarkers = {};           // uid -> MatchDotMarker (yakın zoom'da kullanılan sade nokta marker'ları)
 let matchMapMyLoc = null;              // {lat,lng}
 let matchMapWatchId = null;
 let matchMapRefreshTimer = null;
@@ -89,6 +90,13 @@ if(typeof window.haversineKm !== 'function'){
      renkli küçük bir nokta. İçerik yalnızca dokununca (unbox) açılıyor. */
   .matchBoxDot{width:18px;height:18px;border-radius:50%;background:#F3D053;border:2.5px solid #0a0a0f;
     box-shadow:0 0 9px 2px rgba(243,208,83,.55);cursor:pointer;}
+
+  /* Yakın zoom'daki kişi nokta marker'ı (küre'deki WebGL noktasıyla aynı
+     görünüm) — Snapchat'teki gibi, aynı yerdeki kişiler hafifçe yana
+     kaydırılarak (piksel offset, zoom'dan bağımsız) hiçbiri kaybolmadan
+     gösteriliyor. */
+  .matchDomDot{width:18px;height:18px;border-radius:50%;border:2.5px solid #0a0a0f;cursor:pointer;}
+  .matchDomDot.is-me{width:20px;height:20px;background:#fff;box-shadow:0 0 9px 2px rgba(255,255,255,.6);}
 
   /* SnapAvatarMarker — sabit piksel boyutu, zoom'dan bağımsız */
   .snapAvatarMarker{width:50px;height:92px;display:flex;flex-direction:column;align-items:center;cursor:pointer;user-select:none;}
@@ -472,9 +480,12 @@ function ensureMatchGlobeLayer(){
       paint: {
         'circle-radius': ['case', ['get', 'isMe'], 9, 7],
         'circle-color': ['case', ['get', 'isMe'], '#ffffff', ['get', 'ringColor']],
-        'circle-stroke-width': 2.5,
+        'circle-stroke-width': 2,
         'circle-stroke-color': '#0a0a0f',
-        'circle-opacity': 0.95
+        // Hafif saydamlık: tam üst üste binen noktalarda alttaki tamamen
+        // kaybolmuyor, rengi belli belirsiz karışıp "burada birden fazla
+        // kişi var" izlenimi veriyor. Tek başınayken hâlâ gayet net/canlı.
+        'circle-opacity': 0.82
       }
     });
     matchMap.on('click', MATCH_GLOBE_LAYER_ID, (e)=>{
@@ -554,11 +565,28 @@ function updateMatchMapStyleToggleUI(){
 }
 
 function goToMyMatchLocation(){
-  if(!matchMap || !matchMapMyLoc) return;
-  matchMap.flyTo({ center: [matchMapMyLoc.lng, matchMapMyLoc.lat], zoom: 15, pitch: 0, bearing: 0 });
-  // Ekstra güvence: animasyon bitince marker'ların (DOM ↔ WebGL) kesin
-  // olarak doğru konumda yeniden çizildiğinden emin ol.
-  matchMap.once('moveend', ()=>{ renderAllMatchMarkers(matchMapLastCandidates || []); });
+  if(!matchMap) return;
+  // ÖNEMLİ: doğrudan önbellekteki (bayat olabilecek) matchMapMyLoc'a uçmak
+  // yerine önce TAZE bir GPS okuması alıyoruz. Eskiden önce eski konuma
+  // uçup, GPS güncellemesi gelince ikinci kez "düzeltiyorduk" — bu da
+  // "önce yanlış yere gidip sonra kayıyor" hissi veriyordu. Artık tek
+  // seferde, doğru konuma uçuyoruz.
+  const flyToLoc = (lat, lng)=>{
+    matchMap.flyTo({ center: [lng, lat], zoom: 15, pitch: 0, bearing: 0 });
+    matchMap.once('moveend', ()=>{ renderAllMatchMarkers(matchMapLastCandidates || []); });
+  };
+  if(navigator.geolocation){
+    navigator.geolocation.getCurrentPosition(
+      (pos)=>{
+        matchMapMyLoc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        flyToLoc(matchMapMyLoc.lat, matchMapMyLoc.lng);
+      },
+      ()=>{ if(matchMapMyLoc) flyToLoc(matchMapMyLoc.lat, matchMapMyLoc.lng); }, // GPS alınamazsa önbellekteki son bilinen konuma uç
+      { enableHighAccuracy: true, timeout: 6000, maximumAge: 10000 }
+    );
+  } else if(matchMapMyLoc){
+    flyToLoc(matchMapMyLoc.lat, matchMapMyLoc.lng);
+  }
 }
 
 /* ============================================================
@@ -1121,11 +1149,6 @@ function clusterCandidatesByPixelDistance(candidates){
 
 function renderAllMatchMarkers(candidates){
   if(!matchMap) return;
-  // Artık TÜM zoom seviyelerinde aynı hassas WebGL nokta sistemi kullanılıyor
-  // — fotoğraflı/isimli DOM marker'lar ve "kaç kişi burada" rozeti kaldırıldı.
-  // Sadece cinsiyete göre renkli küçük noktalar var (bkz. matchGenderColorFor).
-  // Bu aynı zamanda önceki zoom-sırasında-kayma sorununu da tamamen ortadan
-  // kaldırıyor çünkü WebGL katmanı haritayla birebir aynı projeksiyonu kullanıyor.
   const allEntries = [];
   if(matchMapMyLoc && fbAuth.currentUser){
     allEntries.push({
@@ -1136,9 +1159,74 @@ function renderAllMatchMarkers(candidates){
   }
   candidates.forEach(c=> allEntries.push(Object.assign({ isMe: false }, c)));
 
-  // Kümeleme YOK — her kullanıcı kendi ayrı noktasıyla gösteriliyor.
-  ensureMatchGlobeLayer();
-  setMatchGlobeLayerData(allEntries);
+  // - Uzak (küre) zoom'da: WebGL nokta katmanı — hassas, hiç sapmıyor,
+  //   ama üst üste binenleri ayrı ayrı gösteremiyor (küre görünümünde bu
+  //   zaten çok kritik değil, kimse tek tek ayırt etmeye çalışmıyor).
+  // - Yakın (şehir/sokak) zoom'da: DOM nokta marker'ları, SABİT PİKSEL
+  //   kaydırmasıyla (Mapbox marker'ın "offset" özelliği — zoom'dan
+  //   TAMAMEN bağımsız, o yüzden kayma riski yok, çünkü mercator
+  //   projeksiyonunda piksel hesabı zaten %100 kesin). Aynı yerdeki
+  //   kişiler artık Snapchat'teki gibi hafifçe yana kaydırılarak, HİÇBİRİ
+  //   kimliğini kaybetmeden (tek bir noktaya birleştirilmeden) gösteriliyor.
+  const isGlobeZoom = matchMap.getZoom() < 4;
+
+  if(isGlobeZoom){
+    Object.values(matchDomDotMarkers).forEach(m=> m.remove());
+    matchDomDotMarkers = {};
+    ensureMatchGlobeLayer();
+    setMatchGlobeLayerData(allEntries);
+    return;
+  }
+  clearMatchGlobeLayer();
+  Object.values(matchDomDotMarkers).forEach(m=> m.remove());
+  matchDomDotMarkers = {};
+
+  const clusters = clusterCandidatesByPixelDistance(allEntries);
+  clusters.forEach(group=>{
+    if(group.length === 1){
+      const c = group[0];
+      matchDomDotMarkers[c.isMe ? '__me__' : c.uid] = new MatchDotMarker(c).addTo(matchMap);
+      return;
+    }
+    const centroidLng = group.reduce((s,c)=> s + c.loc.lng, 0) / group.length;
+    const centroidLat = group.reduce((s,c)=> s + c.loc.lat, 0) / group.length;
+    const offsets = computeMatchDotPixelOffsets(group.length);
+    group.forEach((c, i)=>{
+      const centeredCandidate = Object.assign({}, c, { loc: Object.assign({}, c.loc, { lng: centroidLng, lat: centroidLat }) });
+      matchDomDotMarkers[c.isMe ? '__me__' : c.uid] = new MatchDotMarker(centeredCandidate, offsets[i]).addTo(matchMap);
+    });
+  });
+}
+
+/* Aynı noktadaki N kişiyi küçük bir sırada, sabit piksel kaydırmasıyla dizer.
+   Zoom'dan bağımsız olduğu için "kayma/zıplama" riski yok. */
+function computeMatchDotPixelOffsets(count){
+  if(count <= 1) return [[0, 0]];
+  const spacing = 22; // px — küçük noktalar için avatar kartlarından daha az aralık yeterli
+  const totalWidth = (count - 1) * spacing;
+  const startX = -totalWidth / 2;
+  const offsets = [];
+  for(let i = 0; i < count; i++) offsets.push([startX + i * spacing, 0]);
+  return offsets;
+}
+
+/* Yakın zoom'da kullanılan sade DOM nokta marker'ı — fotoğraf/isim yok,
+   sadece cinsiyete göre renkli küçük bir daire (WebGL noktasıyla aynı görünüm). */
+class MatchDotMarker {
+  constructor(candidate, pixelOffset){
+    this.candidate = candidate;
+    this.el = document.createElement('div');
+    this.el.className = 'matchDomDot' + (candidate.isMe ? ' is-me' : '');
+    if(!candidate.isMe){
+      this.el.style.background = matchGenderColorFor(candidate);
+      this.el.style.boxShadow = `0 0 8px 2px ${matchGenderColorFor(candidate)}88`;
+      this.el.addEventListener('click', ()=> openMatchProfilePreview(candidate.uid, candidate));
+    }
+    this.marker = new mapboxgl.Marker({ element: this.el, anchor: 'center', offset: pixelOffset || [0, 0] })
+      .setLngLat([candidate.loc.lng, candidate.loc.lat]);
+  }
+  addTo(map){ this.marker.addTo(map); return this; }
+  remove(){ try{ this.marker.remove(); }catch(e){} }
 }
 
 /* Aynı noktadaki N kişiyi, o noktanın merkezi etrafında küçük bir daire
