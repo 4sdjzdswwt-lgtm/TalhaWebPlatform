@@ -81,12 +81,12 @@ if(typeof window.haversineKm !== 'function'){
   .matchMapRightBtns{display:flex;gap:8px;}
   .matchMapStyleToggleBtn{display:flex;align-items:center;gap:6px;padding:9px 16px 9px 12px;border-radius:22px;background:rgba(24,27,38,.72);
     backdrop-filter:blur(10px);border:1px solid #3A4756;color:#fff;font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap;}
-  .matchMapFloatingLocBtn{position:absolute;bottom:calc(env(safe-area-inset-bottom,0px) + 20px);right:16px;z-index:2;
+  .matchMapFloatingLocBtn{position:fixed!important;bottom:calc(env(safe-area-inset-bottom,0px) + 20px)!important;right:16px!important;top:auto!important;left:auto!important;z-index:9600!important;
     width:46px;height:46px;border-radius:50%;
     background:radial-gradient(circle at 32% 28%, #B478D6 0%, #8A4EB8 38%, #6B2F98 75%, #5A2280 100%);
     box-shadow:inset 0 2px 4px rgba(255,255,255,.55), inset 0 -5px 9px rgba(50,10,80,.5), 0 5px 14px rgba(122,66,160,.6);
     border:none;color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;}
-  .matchMapDropBoxBtn{position:absolute;bottom:calc(env(safe-area-inset-bottom,0px) + 20px);left:16px;z-index:2;
+  .matchMapDropBoxBtn{position:fixed!important;bottom:calc(env(safe-area-inset-bottom,0px) + 20px)!important;left:16px!important;top:auto!important;right:auto!important;z-index:9600!important;
     width:54px;height:54px;border-radius:50%;
     background:radial-gradient(circle at 33% 27%, #FFF2B8 0%, #FFDE66 30%, #FFC531 62%, #F5A100 100%);
     box-shadow:inset 0 3px 5px rgba(255,255,255,.85), inset 0 -7px 11px rgba(150,80,0,.4), 0 6px 16px rgba(243,167,18,.55);
@@ -936,10 +936,10 @@ function refreshNearbyMapBoxes(){
 }
 
 class MatchBoxMarker {
-  constructor(item){
+  constructor(item, pixelOffset){
     this.item = item;
     this.el = this._buildEl();
-    this.marker = new mapboxgl.Marker({ element: this.el, anchor: 'center' })
+    this.marker = new mapboxgl.Marker({ element: this.el, anchor: 'center', offset: pixelOffset || [0, 0] })
       .setLngLat([item.box.lng, item.box.lat]);
   }
   _buildEl(){
@@ -958,12 +958,33 @@ class MatchBoxMarker {
   remove(){ try{ this.marker.remove(); }catch(e){} }
 }
 
+/* Aynı noktadaki N kutuyu küçük bir sırada, sabit piksel kaydırmasıyla
+   dizer — kişi marker'larındaki aynı mantık, üst üste binip birbirini
+   gizlememeleri için. */
+function computeMatchBoxPixelOffsets(count){
+  if(count <= 1) return [[0, 0]];
+  const spacing = 26; // px
+  const totalWidth = (count - 1) * spacing;
+  const startX = -totalWidth / 2;
+  const offsets = [];
+  for(let i = 0; i < count; i++) offsets.push([startX + i * spacing, 0]);
+  return offsets;
+}
+
 function renderAllMatchBoxMarkers(list){
   if(!matchMap) return;
   Object.values(matchBoxMarkers).forEach(m=> m.remove());
   matchBoxMarkers = {};
-  list.forEach(item=>{
-    matchBoxMarkers[item.boxId] = new MatchBoxMarker(item).addTo(matchMap);
+  // Kutu verisini kümeleme fonksiyonunun beklediği {loc:{lat,lng}} biçimine
+  // uyarlayıp, ekranda üst üste binenleri (aynı gruptaki) hafifçe yana
+  // kaydırarak diziyoruz — hiçbiri birbirinin üstüne binip kaybolmuyor.
+  const withLoc = list.map(item=> Object.assign({}, item, { loc: { lat: item.box.lat, lng: item.box.lng } }));
+  const groups = clusterCandidatesByPixelDistance(withLoc);
+  groups.forEach(group=>{
+    const offsets = computeMatchBoxPixelOffsets(group.length);
+    group.forEach((item, i)=>{
+      matchBoxMarkers[item.boxId] = new MatchBoxMarker(item, offsets[i]).addTo(matchMap);
+    });
   });
 }
 
