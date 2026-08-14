@@ -699,8 +699,8 @@ function fetchProfilesFor(uids){
    ============================================================ */
 function matchGenderColorFor(candidate){
   const g = ((candidate || {}).profile || {}).gender;
-  if(g === 'female') return '#ec4899';
-  if(g === 'male') return '#3b82f6';
+  if(g === 'female') return '#FF3B30'; // canlı kırmızı
+  if(g === 'male') return '#00E676';   // canlı yeşil
   return '#A872E0';
 }
 
