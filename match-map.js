@@ -72,16 +72,27 @@ if(typeof window.haversineKm !== 'function'){
   .matchMapTopBar > *{pointer-events:auto;}
   .matchMapIconBtn{width:40px;height:40px;border-radius:50%;background:var(--glass-bg);backdrop-filter:blur(10px);
     border:1px solid var(--glass-border);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:var(--glass-shadow);}
+  .matchMapSettingsBtnGlossy{background:radial-gradient(circle at 32% 28%, #8A4EB8 0%, #6B2F98 55%, #4E1F72 100%)!important;
+    border:none!important;box-shadow:inset 0 2px 4px rgba(255,255,255,.35), inset 0 -4px 8px rgba(30,5,50,.55), 0 4px 12px rgba(90,34,128,.5)!important;
+    position:relative;overflow:hidden;}
+  .matchMapSettingsBtnGlossy::before{content:'';position:absolute;top:10%;left:18%;width:34%;height:20%;border-radius:50%;
+    background:rgba(255,255,255,.55);filter:blur(2.5px);pointer-events:none;}
   .matchMapTitle{color:#fff;font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:15px;text-shadow:0 1px 6px rgba(0,0,0,.5);}
   .matchMapRightBtns{display:flex;gap:8px;}
   .matchMapStyleToggleBtn{display:flex;align-items:center;gap:6px;padding:9px 16px 9px 12px;border-radius:22px;background:rgba(24,27,38,.72);
     backdrop-filter:blur(10px);border:1px solid #3A4756;color:#fff;font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap;}
   .matchMapFloatingLocBtn{position:absolute;bottom:calc(env(safe-area-inset-bottom,0px) + 20px);right:16px;z-index:2;
-    width:46px;height:46px;border-radius:50%;background:#7A42A0;box-shadow:0 4px 18px rgba(122,66,160,.55);
+    width:46px;height:46px;border-radius:50%;
+    background:radial-gradient(circle at 32% 28%, #B478D6 0%, #8A4EB8 38%, #6B2F98 75%, #5A2280 100%);
+    box-shadow:inset 0 2px 4px rgba(255,255,255,.55), inset 0 -5px 9px rgba(50,10,80,.5), 0 5px 14px rgba(122,66,160,.6);
     border:none;color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;}
   .matchMapDropBoxBtn{position:absolute;bottom:calc(env(safe-area-inset-bottom,0px) + 20px);left:16px;z-index:2;
-    width:52px;height:52px;border-radius:50%;background:#F3D053;box-shadow:0 4px 18px rgba(243,208,83,.5);
-    border:none;font-size:22px;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+    width:54px;height:54px;border-radius:50%;
+    background:radial-gradient(circle at 33% 27%, #FFF2B8 0%, #FFDE66 30%, #FFC531 62%, #F5A100 100%);
+    box-shadow:inset 0 3px 5px rgba(255,255,255,.85), inset 0 -7px 11px rgba(150,80,0,.4), 0 6px 16px rgba(243,167,18,.55);
+    border:none;font-size:22px;display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative;overflow:hidden;}
+  .matchMapDropBoxBtn::before{content:'';position:absolute;top:8%;left:16%;width:38%;height:22%;border-radius:50%;
+    background:rgba(255,255,255,.75);filter:blur(3px);pointer-events:none;}
   .matchMapEmptyHint{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:2;color:#fff;text-align:center;
     background:rgba(5,2,15,.6);backdrop-filter:blur(6px);padding:16px 22px;border-radius:16px;font-size:13px;max-width:260px;pointer-events:none;}
 
@@ -309,8 +320,20 @@ function openMatchMapOverlay(){
         <div class="matchMapTitle">${escapeHtml(t('match_nearby_title'))}</div>
         <div class="matchMapRightBtns">
           <button class="matchMapStyleToggleBtn" id="matchMapStyleToggleBtn" onclick="toggleMatchMapStyleMode()"></button>
-          <button class="matchMapIconBtn" onclick="openMatchSettings()" title="${escapeHtml(t('match_settings_title'))}">
-            <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06A1.65 1.65 0 005 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 009 4.6a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06A1.65 1.65 0 0019 9c.14.36.22.75.22 1.15"/></svg>
+          <button class="matchMapIconBtn matchMapSettingsBtnGlossy" onclick="openMatchSettings()" title="${escapeHtml(t('match_settings_title'))}">
+            <svg viewBox="0 0 24 24" width="20" height="20">
+              <defs>
+                <linearGradient id="matchGearGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#fff"/>
+                  <stop offset="55%" stop-color="#E6DCFF"/>
+                  <stop offset="100%" stop-color="#B999F0"/>
+                </linearGradient>
+              </defs>
+              <g fill="none" stroke="url(#matchGearGrad)" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="3.1"/>
+                <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06A1.65 1.65 0 005 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 009 4.6a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06A1.65 1.65 0 0019 9c.14.36.22.75.22 1.15"/>
+              </g>
+            </svg>
           </button>
         </div>
       </div>
@@ -1105,11 +1128,11 @@ function openMatchBoxPreview(boxId, itemArg){
     const profile = snap.val() || {};
     const wrap = document.getElementById('matchBoxOwnerWrap');
     if(!wrap) return;
-    const smallAvatar = profile.photo || ('https://i.pravatar.cc/120?u=' + b.uid);
+    const smallAvatar = profile.deleted ? 'default-avatar.png' : (profile.photo || 'default-avatar.png');
     const showFull = hasAccess || isOwn;
     wrap.innerHTML = `
       <div style="display:flex;align-items:center;gap:14px;">
-        <img src="${smallAvatar}" onerror="this.src='https://i.pravatar.cc/120?u=${b.uid}'" style="width:60px;height:60px;border-radius:50%;object-fit:cover;flex-shrink:0;border:1px solid var(--glass-border);">
+        <img src="${smallAvatar}" onerror="this.src='default-avatar.png'" style="width:60px;height:60px;border-radius:50%;object-fit:cover;flex-shrink:0;border:1px solid var(--glass-border);">
         <div>
           <div style="font-size:17px;font-weight:800;color:var(--text);font-family:'Space Grotesk',sans-serif;">${escapeHtml(profile.displayName || profile.username || '@kullanici')} ${typeof verifiedBadgeHtml === 'function' ? verifiedBadgeHtml(profile.verifiedTier, 15) : ''}</div>
           <div style="font-size:12.5px;color:var(--accent);margin-top:3px;">📍 ${escapeHtml(distText)} · ${escapeHtml(formatPostAge(b.ts))}</div>
@@ -1196,7 +1219,7 @@ class SnapAvatarMarker {
     el.className = 'snapAvatarMarker' + (this.isMe ? ' is-me' : '');
     const profile = this.candidate.profile || {};
     const name = escapeHtml(profile.displayName || profile.username || '@kullanici');
-    const photo = profile.photo || ('https://i.pravatar.cc/100?u=' + this.uid);
+    const photo = profile.photo || 'default-avatar.png';
     const when = formatPostAge(this.candidate.loc.updatedAt);
     const color = this._genderColor();
     const heading = this.candidate.loc.trackMode === 'car' ? (this.candidate.loc.heading || 0) : null;
@@ -1204,7 +1227,7 @@ class SnapAvatarMarker {
       <div class="snapMarkerName">${name}</div>
       <div class="snapMarkerRing" style="--ring-color:${color}">
         ${heading !== null ? `<div class="snapMarkerHeadingArrow" style="transform:translateX(-50%) rotate(${heading}deg)"></div>` : ''}
-        <img src="${photo}" onerror="this.src='https://i.pravatar.cc/100?u=${this.uid}'">
+        <img src="${photo}" onerror="this.src='default-avatar.png'">
       </div>
       <div class="snapMarkerShadow"></div>
       <div class="snapMarkerTime">${when}</div>
@@ -1305,9 +1328,9 @@ class SnapClusterMarker {
     const shown = this.group.slice(0, 3);
     const extra = this.group.length - shown.length;
     const stackHtml = shown.map((c, i)=>{
-      const photo = (c.profile || {}).photo || ('https://i.pravatar.cc/100?u=' + c.uid);
+      const photo = (c.profile || {}).photo || 'default-avatar.png';
       const marginStyle = i === 0 ? '' : 'margin-left:-14px;';
-      return `<img class="snapClusterAvatar" style="z-index:${shown.length - i};${marginStyle}" src="${photo}" onerror="this.src='https://i.pravatar.cc/100?u=${c.uid}'">`;
+      return `<img class="snapClusterAvatar" style="z-index:${shown.length - i};${marginStyle}" src="${photo}" onerror="this.src='default-avatar.png'">`;
     }).join('');
     el.innerHTML = `
       <div class="snapClusterStack">${stackHtml}${extra > 0 ? `<div class="snapClusterExtra">+${extra}</div>` : ''}</div>
@@ -1332,10 +1355,10 @@ function openMatchClusterList(group){
   const rows = group.map(c=>{
     const profile = c.profile || {};
     const name = escapeHtml(profile.displayName || profile.username || '@kullanici');
-    const photo = profile.photo || ('https://i.pravatar.cc/100?u=' + c.uid);
+    const photo = profile.photo || 'default-avatar.png';
     const when = escapeHtml(formatPostAge(c.loc.updatedAt));
     return `<div class="matchClusterRow" onclick="closeMatchClusterList();openMatchProfilePreview('${c.uid}')">
-      <img src="${photo}" onerror="this.src='https://i.pravatar.cc/100?u=${c.uid}'">
+      <img src="${photo}" onerror="this.src='default-avatar.png'">
       <div><div style="font-size:13.5px;font-weight:600;color:var(--text);">${name}</div>
         <div style="font-size:11px;color:var(--muted);">${when}</div></div>
     </div>`;
@@ -1369,7 +1392,7 @@ function openMatchProfilePreview(uid, candidateArg){
   const profile = candidate.profile || {};
   const hasAccess = savedVerifiedTier === 'gold' || savedVerifiedTier === 'purple';
   const distText = candidate.dist < 1 ? t('match_m_away').replace('{n}', Math.round(candidate.dist*1000)) : t('match_km_away').replace('{n}', candidate.dist.toFixed(1));
-  const smallAvatar = profile.photo || ('https://i.pravatar.cc/120?u=' + uid);
+  const smallAvatar = profile.deleted ? 'default-avatar.png' : (profile.photo || 'default-avatar.png');
 
   const overlay = document.createElement('div');
   overlay.className = 'followListOverlay';
@@ -1387,7 +1410,7 @@ function openMatchProfilePreview(uid, candidateArg){
       </div>
       <div class="followListBody" style="padding:0 20px 20px;">
         <div style="display:flex;align-items:center;gap:14px;">
-          <img src="${smallAvatar}" onerror="this.src='https://i.pravatar.cc/120?u=${uid}'" style="width:60px;height:60px;border-radius:50%;object-fit:cover;flex-shrink:0;border:1px solid var(--glass-border);">
+          <img src="${smallAvatar}" onerror="this.src='default-avatar.png'" style="width:60px;height:60px;border-radius:50%;object-fit:cover;flex-shrink:0;border:1px solid var(--glass-border);">
           <div>
             <div style="font-size:17px;font-weight:800;color:var(--text);font-family:'Space Grotesk',sans-serif;">${escapeHtml(profile.displayName || profile.username || '@kullanici')} ${typeof verifiedBadgeHtml==='function' ? verifiedBadgeHtml(profile.verifiedTier, 15) : ''}</div>
             <div style="font-size:12.5px;color:var(--accent);margin-top:3px;">📍 ${escapeHtml(distText)} · ${escapeHtml(formatPostAge(candidate.loc.updatedAt))}</div>
@@ -1824,11 +1847,11 @@ function loadMatchQuickShareList(){
     Promise.all(notYetSharing.slice(0,20).map(uid=> fbDb.ref('users/' + uid).once('value').then(s=>({uid, data:s.val()||{}})))).then(results=>{
       listEl.innerHTML = results.map(r=>{
         const name = escapeHtml(r.data.displayName || r.data.username || '@kullanici');
-        const photo = r.data.photo || ('https://i.pravatar.cc/80?u=' + r.uid);
+        const photo = r.data.photo || 'default-avatar.png';
         return `
         <div class="followListRow" style="justify-content:space-between;">
           <div style="display:flex;align-items:center;gap:12px;">
-            <img src="${photo}" onerror="this.src='https://i.pravatar.cc/80?u=${r.uid}'">
+            <img src="${photo}" onerror="this.src='default-avatar.png'">
             <div><div style="font-size:13.5px;font-weight:600;color:var(--text);">${name}</div></div>
           </div>
           <button class="btn" style="padding:7px 14px;border-radius:16px;border:1px solid var(--glass-border);background:var(--surface-2);color:var(--text);font-size:12px;font-weight:700;flex-shrink:0;"
