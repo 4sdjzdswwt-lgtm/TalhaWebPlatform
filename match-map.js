@@ -365,8 +365,36 @@ function loadMatchMapSettingsThenInit(){
       trackMode: d.trackMode || 'normal',
       msgApprovalOn: d.msgApprovalOn !== false
     };
+    // Önce Firebase'deki (bayat olabilecek) son kayıtlı konumu geçici
+    // olarak kullan ki harita hemen bir yerden açılsın, ama SONRA hemen
+    // taze bir GPS okumasıyla üzerine yaz — hem ekrandaki konumu hem de
+    // Firebase'deki kaydı güncelle. Eskiden harita her açıldığında sadece
+    // bayat DB değerini kullanıyorduk, bu yüzden "eve" dönüyor gibi
+    // görünüyordu; artık her açılışta gerçek anlık konumun alınıyor.
+    // NOT: bunu "sharing" ayarına bağlı bırakmıyoruz — o alan her nedense
+    // true değilse (eski/eksik veri vb.) taze konum sessizce hiç
+    // alınmıyordu. Artık koşulsuz deniyoruz.
     if(typeof d.lat === 'number' && typeof d.lng === 'number') matchMapMyLoc = { lat:d.lat, lng:d.lng };
     initMatchMapInstance();
+    if(navigator.geolocation){
+      navigator.geolocation.getCurrentPosition(
+        (pos)=>{
+          matchMapMyLoc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+          fbDb.ref('userLocations/' + myUid).update({ lat: matchMapMyLoc.lat, lng: matchMapMyLoc.lng, updatedAt: Date.now() }).catch(()=>{});
+          const applyFreshLoc = ()=>{
+            matchMap.jumpTo({ center: [matchMapMyLoc.lng, matchMapMyLoc.lat], zoom: 15, pitch: 0, bearing: 0 });
+            renderAllMatchMarkers(matchMapLastCandidates || []);
+          };
+          if(matchMap && matchMap.isStyleLoaded && matchMap.isStyleLoaded()){
+            applyFreshLoc();
+          } else if(matchMap){
+            matchMap.once('load', applyFreshLoc); // harita henüz tam hazır değilse yüklenmesini bekle
+          }
+        },
+        ()=>{ /* GPS alınamazsa sessizce eski (DB'deki) konumla devam */ },
+        { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+      );
+    }
   });
 }
 
@@ -580,6 +608,13 @@ function goToMyMatchLocation(){
       (pos)=>{
         matchMapMyLoc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
         flyToLoc(matchMapMyLoc.lat, matchMapMyLoc.lng);
+        // Sadece ekranı değil, Firebase'deki kaydı da güncelle — yoksa
+        // haritayı kapatıp tekrar açınca yine eski (bayat) konum gelirdi.
+        if(fbAuth.currentUser){
+          fbDb.ref('userLocations/' + fbAuth.currentUser.uid).update({
+            lat: matchMapMyLoc.lat, lng: matchMapMyLoc.lng, updatedAt: Date.now()
+          }).catch(()=>{});
+        }
       },
       ()=>{ if(matchMapMyLoc) flyToLoc(matchMapMyLoc.lat, matchMapMyLoc.lng); }, // GPS alınamazsa önbellekteki son bilinen konuma uç
       { enableHighAccuracy: true, timeout: 6000, maximumAge: 10000 }
