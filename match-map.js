@@ -27,10 +27,11 @@ const MAPBOX_ACCESS_TOKEN = 'pk.eyJ1IjoidGFseGFlIiwiYSI6ImNtc2wyNTBidjE1Nm0yeXF6
 const MATCH_MAP_MAX_DISTANCE_KM = 100;
 const MATCH_MAP_MAX_RESULTS = 60;
 const MATCH_MAP_STYLES = {
-  dark: 'mapbox://styles/mapbox/standard',
+  dark: 'mapbox://styles/mapbox/dark-v11', // klasik katmanlı stil — hex renk kontrolü sadece bununla mümkün
   satellite: 'mapbox://styles/mapbox/satellite-streets-v12'
 };
 const MATCH_MAP_3D_PITCH = 0; // Harita her zaman düz kuş bakışı — 3D eğim (tilt) kullanılmıyor
+
 
 /* ---------- DURUM ---------- */
 let matchMap = null;
@@ -76,7 +77,7 @@ if(typeof window.haversineKm !== 'function'){
   .matchMapStyleToggleBtn{display:flex;align-items:center;gap:6px;padding:9px 16px 9px 12px;border-radius:22px;background:rgba(24,27,38,.72);
     backdrop-filter:blur(10px);border:1px solid #3A4756;color:#fff;font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap;}
   .matchMapFloatingLocBtn{position:absolute;bottom:calc(env(safe-area-inset-bottom,0px) + 20px);right:16px;z-index:2;
-    width:46px;height:46px;border-radius:50%;background:#A855F7;box-shadow:0 4px 18px rgba(168,85,247,.55);
+    width:46px;height:46px;border-radius:50%;background:#7A42A0;box-shadow:0 4px 18px rgba(122,66,160,.55);
     border:none;color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;}
   .matchMapEmptyHint{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:2;color:#fff;text-align:center;
     background:rgba(5,2,15,.6);backdrop-filter:blur(6px);padding:16px 22px;border-radius:16px;font-size:13px;max-width:260px;pointer-events:none;}
@@ -85,11 +86,11 @@ if(typeof window.haversineKm !== 'function'){
   .snapAvatarMarker{width:50px;height:92px;display:flex;flex-direction:column;align-items:center;cursor:pointer;user-select:none;}
   .snapMarkerName{max-width:70px;font-size:10px;font-weight:700;color:#fff;background:rgba(5,2,15,.55);padding:2px 6px;border-radius:8px;
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:3px;text-align:center;}
-  .snapMarkerRing{width:46px;height:46px;border-radius:50%;padding:2.5px;background:var(--ring-color,#8b5cf6);
-    box-shadow:0 0 10px 2px var(--ring-color,#8b5cf6), 0 0 0 2px rgba(0,0,0,.35);position:relative;}
+  .snapMarkerRing{width:46px;height:46px;border-radius:50%;padding:2.5px;background:var(--ring-color,#A872E0);
+    box-shadow:0 0 10px 2px var(--ring-color,#A872E0), 0 0 0 2px rgba(0,0,0,.35);position:relative;}
   .snapMarkerRing img{width:100%;height:100%;border-radius:50%;object-fit:cover;display:block;border:2px solid #0a0a0f;}
   .snapMarkerHeadingArrow{position:absolute;top:-9px;left:50%;width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;
-    border-bottom:9px solid var(--ring-color,#8b5cf6);transform-origin:50% 28px;filter:drop-shadow(0 0 3px rgba(0,0,0,.5));}
+    border-bottom:9px solid var(--ring-color,#F3D053);transform-origin:50% 28px;filter:drop-shadow(0 0 3px rgba(0,0,0,.5));}
   .snapMarkerShadow{width:22px;height:6px;border-radius:50%;background:rgba(0,0,0,.45);filter:blur(1.5px);margin-top:3px;}
   .snapMarkerTime{font-size:9px;color:#d8d3ee;margin-top:2px;text-shadow:0 1px 3px rgba(0,0,0,.7);white-space:nowrap;}
   .snapAvatarMarker.is-me .snapMarkerRing{box-shadow:0 0 14px 3px #fff, 0 0 0 2px rgba(0,0,0,.35);}
@@ -402,6 +403,14 @@ function initMatchMapInstance(){
     renderAllMatchMarkers(matchMapLastCandidates || []);
     applyMatchMap3DTheme();
   });
+  // 'zoomend' elle (parmakla) yakınlaştırıp uzaklaştırmada güvenilir
+  // tetikleniyor, ama flyTo() gibi ANİMASYONLU/programatik kamera
+  // hareketlerinde (ör. "Konuma Git" butonu) her zaman tetiklenmeyebiliyor
+  // — bu da marker'ların (DOM ↔ WebGL) yeniden çizilmeden eski/yanlış
+  // konumda kalmasına yol açıyordu. 'moveend' HER kamera hareketinin
+  // (flyTo, easeTo, jumpTo, elle sürükleme/zoom — hepsi) bitişinde
+  // güvenilir şekilde tetiklendiği için ek bir güvence olarak kullanıyoruz.
+  matchMap.on('moveend', ()=>{ renderAllMatchMarkers(matchMapLastCandidates || []); });
   updateMatchMapStyleToggleUI();
 }
 
@@ -520,33 +529,28 @@ function updateMatchMapStyleToggleUI(){
 function goToMyMatchLocation(){
   if(!matchMap || !matchMapMyLoc) return;
   matchMap.flyTo({ center: [matchMapMyLoc.lng, matchMapMyLoc.lat], zoom: 15, pitch: 0, bearing: 0 });
+  // Ekstra güvence: animasyon bitince marker'ların (DOM ↔ WebGL) kesin
+  // olarak doğru konumda yeniden çizildiğinden emin ol.
+  matchMap.once('moveend', ()=>{ renderAllMatchMarkers(matchMapLastCandidates || []); });
 }
 
 /* ============================================================
-   ÖZEL RENK PALETİ — Deep Midnight Blue / neon mor-pembe tema
+   ÖZEL RENK PALETİ — verilen HEX kodlarıyla
    Mapbox'ın hazır "dark-v11" stilini, verilen HEX paletine göre
    katman katman yeniden renklendirir (Mapbox Studio'ya ihtiyaç
    duymadan, istemci tarafında setPaintProperty ile). Uydu modunda
    (raster gerçek görüntü) renk override edilmez, olduğu gibi kalır. */
 const MATCH_MAP_PALETTE = {
-  bg: '#181B26',
-  bgAlt: '#12151E',
-  land: '#232B35',
-  water: '#2C3540',
-  roadThin: '#3A4756',
-  roadMain: '#4B596B',
-  text: '#FFFFFF'
+  bg: '#1E2536',       // Koyu Lacivert / Gece Mavisi — ana zemin
+  bgAlt: '#18181C',     // Koyu Duman Gri — binalar
+  land: '#2A3B37',      // Koyu Zeytin Yeşili — orman/yeşil alan
+  landLight: '#3A4F48', // Açık Zeytin Yeşili — aydınlık yeşil bölgeler (park vb.)
+  water: '#0A0A0C',     // Siyah — su
+  roadThin: '#3D495B',  // Gri-Mavi — ince sokak/yol hatları
+  roadMain: '#3D495B',  // Gri-Mavi — ana yollar da aynı ton (istenen palette ayrı ana yol rengi yok)
+  text: '#FFFFFF'       // Beyaz — metinler
 };
 function applyMatchMapColorPalette(){
-  // NOT: Bu fonksiyon eski klasik "dark-v11" stili için katman katman
-  // elle renk zorlardı. Artık "dark" anahtarı Mapbox'ın yeni Standard
-  // (3D) stiline işaret ediyor — o stil klasik paint-property overrides
-  // ile uyumlu değil, zorlayınca tuhaf/yanlış renkler çıkıyordu. Standard
-  // stilin teması artık applyMatchMap3DTheme() içindeki lightPreset ile
-  // yönetiliyor; bu fonksiyon şimdilik devre dışı bırakıldı.
-  return;
-}
-function applyMatchMapColorPalette_LEGACY_UNUSED(){
   if(!matchMap || matchMapStyleKey !== 'dark') return;
   let layers = [];
   try{ layers = matchMap.getStyle().layers || []; }catch(e){ return; }
@@ -560,12 +564,13 @@ function applyMatchMapColorPalette_LEGACY_UNUSED(){
       } else if(layer.type === 'fill'){
         if(key.includes('water')) matchMap.setPaintProperty(layer.id, 'fill-color', MATCH_MAP_PALETTE.water);
         else if(key.includes('building')) matchMap.setPaintProperty(layer.id, 'fill-color', MATCH_MAP_PALETTE.bgAlt);
-        else if(key.includes('land') || key.includes('park') || key.includes('landuse') || key.includes('wood') || key.includes('vegetation') || key.includes('grass'))
+        else if(key.includes('park') || key.includes('grass'))
+          matchMap.setPaintProperty(layer.id, 'fill-color', MATCH_MAP_PALETTE.landLight);
+        else if(key.includes('land') || key.includes('landuse') || key.includes('wood') || key.includes('vegetation'))
           matchMap.setPaintProperty(layer.id, 'fill-color', MATCH_MAP_PALETTE.land);
       } else if(layer.type === 'line'){
         if(key.includes('road') || key.includes('bridge') || key.includes('tunnel')){
-          const isMajor = key.includes('motorway') || key.includes('trunk') || key.includes('primary');
-          matchMap.setPaintProperty(layer.id, 'line-color', isMajor ? MATCH_MAP_PALETTE.roadMain : MATCH_MAP_PALETTE.roadThin);
+          matchMap.setPaintProperty(layer.id, 'line-color', MATCH_MAP_PALETTE.roadThin);
         } else if(key.includes('water') || key.includes('river') || key.includes('stream')){
           matchMap.setPaintProperty(layer.id, 'line-color', MATCH_MAP_PALETTE.water);
         }
@@ -696,7 +701,7 @@ function matchGenderColorFor(candidate){
   const g = ((candidate || {}).profile || {}).gender;
   if(g === 'female') return '#ec4899';
   if(g === 'male') return '#3b82f6';
-  return '#8b5cf6';
+  return '#A872E0';
 }
 
 class SnapAvatarMarker {
