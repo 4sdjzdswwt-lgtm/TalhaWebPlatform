@@ -470,7 +470,7 @@ function ensureMatchGlobeLayer(){
       type: 'circle',
       source: MATCH_GLOBE_SOURCE_ID,
       paint: {
-        'circle-radius': ['case', ['get', 'isMe'], 9, ['case', ['get', 'isGroup'], 8, 7]],
+        'circle-radius': ['case', ['get', 'isMe'], 9, 7],
         'circle-color': ['case', ['get', 'isMe'], '#ffffff', ['get', 'ringColor']],
         'circle-stroke-width': 2.5,
         'circle-stroke-color': '#0a0a0f',
@@ -478,11 +478,17 @@ function ensureMatchGlobeLayer(){
       }
     });
     matchMap.on('click', MATCH_GLOBE_LAYER_ID, (e)=>{
-      const f = e.features && e.features[0];
-      if(!f) return;
-      let uids = [];
-      try{ uids = JSON.parse(f.properties.uids || '[]'); }catch(err){ return; }
-      uids = uids.filter(uid => uid !== (fbAuth.currentUser && fbAuth.currentUser.uid));
+      // Her kullanıcının kendi ayrı feature'ı olduğu için, e.features
+      // burada tıklanan pikselde üst üste binen TÜM noktaları döndürebilir
+      // (görsel olarak çok yakın/aynı pikseldeyse). Kendi noktamı listeden
+      // çıkarıp, geriye kaç kişi kaldıysa ona göre profil ya da liste açıyoruz.
+      const myUid = fbAuth.currentUser && fbAuth.currentUser.uid;
+      const seen = new Set();
+      const uids = [];
+      (e.features || []).forEach(f=>{
+        const uid = f.properties && f.properties.uid;
+        if(uid && uid !== myUid && !seen.has(uid)){ seen.add(uid); uids.push(uid); }
+      });
       if(!uids.length) return;
       if(uids.length === 1){
         openMatchProfilePreview(uids[0]);
@@ -496,21 +502,23 @@ function ensureMatchGlobeLayer(){
   }catch(e){ /* katman zaten varsa veya stil henüz hazır değilse sessizce geç */ }
 }
 
-function setMatchGlobeLayerData(clusters){
+function setMatchGlobeLayerData(entries){
   const src = matchMap.getSource(MATCH_GLOBE_SOURCE_ID);
   if(!src) return;
-  const features = clusters.map(group=>{
-    const centroidLng = group.reduce((s,c)=> s + c.loc.lng, 0) / group.length;
-    const centroidLat = group.reduce((s,c)=> s + c.loc.lat, 0) / group.length;
-    const isMeGroup = group.some(c=> c.isMe);
+  // ÖNEMLİ: artık HİÇBİR kümeleme/birleştirme yapmıyoruz — her kullanıcı
+  // için AYRI bir nokta (feature) oluşturuluyor. Eskiden yakın konumdaki
+  // kişiler tek bir noktaya birleştiriliyordu, bu da örneğin "ben" başka
+  // biriyle aynı yığına girince kimliğimin tamamen kaybolmasına (yanlış
+  // renk/kişiye ait tek nokta göstermesine) yol açıyordu. Artık harita ne
+  // kadar uzaklaşılırsa uzaklaşılsın, herkesin kendi noktası ayrı ayrı var.
+  const features = entries.map(c=>{
     return {
       type: 'Feature',
-      geometry: { type: 'Point', coordinates: [centroidLng, centroidLat] },
+      geometry: { type: 'Point', coordinates: [c.loc.lng, c.loc.lat] },
       properties: {
-        uids: JSON.stringify(group.map(c=> c.uid)),
-        isMe: isMeGroup,
-        isGroup: group.length > 1,
-        ringColor: matchGenderColorFor(group[0])
+        uid: c.uid,
+        isMe: !!c.isMe,
+        ringColor: matchGenderColorFor(c)
       }
     };
   });
@@ -1128,9 +1136,9 @@ function renderAllMatchMarkers(candidates){
   }
   candidates.forEach(c=> allEntries.push(Object.assign({ isMe: false }, c)));
 
-  const clusters = clusterCandidatesByPixelDistance(allEntries);
+  // Kümeleme YOK — her kullanıcı kendi ayrı noktasıyla gösteriliyor.
   ensureMatchGlobeLayer();
-  setMatchGlobeLayerData(clusters);
+  setMatchGlobeLayerData(allEntries);
 }
 
 /* Aynı noktadaki N kişiyi, o noktanın merkezi etrafında küçük bir daire
