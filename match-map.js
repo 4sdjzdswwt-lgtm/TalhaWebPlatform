@@ -452,8 +452,7 @@ function initMatchMapInstance(){
   matchMap.touchZoomRotate.disableRotation();
   matchMap.on('load', ()=>{
     applyMatchMap3DTheme();
-    applyMatchMapColorPalette();
-    applyMatchMapHolidayTheme();
+    applyMatchMapHolidayTheme(); // hem temayı tespit eder hem doğru paleti uygular
     ensureMatchGlobeLayer();
     // Konum henüz gelmemişken harita varsayılan (Türkiye ortası) merkezle
     // açılmış olabilir — gerçek konum eldeyse sokak seviyesinde ortalayarak
@@ -666,8 +665,7 @@ function toggleMatchMapStyleMode(){
   matchMap.setStyle(MATCH_MAP_STYLES[matchMapStyleKey]);
   matchMap.once('style.load', ()=>{
     applyMatchMap3DTheme();
-    applyMatchMapColorPalette();
-    applyMatchMapHolidayTheme();
+    applyMatchMapHolidayTheme(); // hem temayı tespit eder hem doğru paleti uygular
     ensureMatchGlobeLayer(); // setStyle() önceki özel katmanları/görselleri silmiş olabilir, yeniden kur
     renderAllMatchMarkers(matchMapLastCandidates || []);
   });
@@ -725,10 +723,75 @@ const MATCH_MAP_PALETTE = {
   water: '#0A0A0C',     // Siyah — su
   roadThin: '#3D495B',  // Gri-Mavi — ince sokak/yol hatları
   roadMain: '#3D495B',  // Gri-Mavi — ana yollar da aynı ton (istenen palette ayrı ana yol rengi yok)
-  text: '#FFFFFF'       // Beyaz — metinler
+  text: '#FFFFFF',      // Beyaz — metinler
+  textHalo: '#18181C',
+  skipBuilding: false
 };
-function applyMatchMapColorPalette(){
+/* Yıl başı teması — verilen hex kodlarıyla. Evler (binalar) BİLEREK
+   dokunulmuyor, stilin kendi orijinal rengiyle kalıyor. */
+const MATCH_MAP_PALETTE_NEWYEAR = {
+  bg: '#0B1638',        // Gece laciverti — ana zemin
+  water: '#8ED8FF',      // Buz mavisi — denizler / soğuk kış hissi
+  roadThin: '#FFD66B',   // Altın — küçük yollar / önemli noktalar ✨
+  roadMain: '#E63946',   // Kırmızı — tüm yol rotaları
+  land: '#F8FAFF',       // Beyaz — çimen/yeşil alanlar (kar örtüsü hissi)
+  landLight: '#F8FAFF',  // Beyaz — parklar da aynı
+  text: '#FFFFFF',
+  textHalo: '#7657D9',   // Az miktarda mor — büyülü bir parıltı hissi (yazı çevresinde)
+  skipBuilding: true      // Evler orijinal renginde kalsın
+};
+/* Ramazan Bayramı — "Gece Bayramı Haritası": gece modu + bayram ışıkları hissi. */
+const MATCH_MAP_PALETTE_RAMADAN = {
+  bg: '#0A1628',
+  water: '#061428',
+  roadThin: '#8B7355',   // tali yollar
+  roadMain: '#C9A66B',   // ana yollar — mat altın
+  land: '#132A3E',
+  landLight: '#132A3E',
+  text: '#E8E6E1',
+  textHalo: '#0A1628',
+  pin: '#E8C547',         // pin/marker rengi — hafif glow ile
+  skipBuilding: false
+};
+/* Paskalya (Ostern) — açık, canlı, bahar temalı. */
+const MATCH_MAP_PALETTE_EASTER = {
+  bg: '#0A1628',
+  water: '#81D4FA',
+  roadThin: '#F48FB1',   // tali yollar — canlı pembe
+  roadMain: '#7E57C2',   // ana yollar — orta mor
+  land: '#F0F7E6',
+  landLight: '#F0F7E6',
+  text: '#37474F',
+  textHalo: '#F0F7E6',
+  pin: '#FFD54F',         // parlak sarı + turkuaz vurgu (#4DD0E1)
+  pinAccent: '#4DD0E1',
+  skipBuilding: false
+};
+/* Cadılar Bayramı — koyu, ürkütücü, turuncu vurgulu. */
+const MATCH_MAP_PALETTE_HALLOWEEN = {
+  bg: '#1A0F1F',
+  water: '#0F1A2E',
+  roadThin: '#E07A3D',   // tali yollar — mat turuncu
+  roadMain: '#FF6B00',   // ana yollar — canlı turuncu
+  land: '#2A1F2D',
+  landLight: '#2A1F2D',
+  text: '#F5E8C7',
+  textHalo: '#1A0F1F',
+  pin: '#FF8C00',         // pin/marker — parlak turuncu + siyah
+  selectedRoute: '#39FF14', // seçili rota — zehirli yeşil
+  skipBuilding: false
+};
+
+const MATCH_MAP_HOLIDAY_PALETTES = {
+  newyear: MATCH_MAP_PALETTE_NEWYEAR,
+  ramadan: MATCH_MAP_PALETTE_RAMADAN,
+  easter: MATCH_MAP_PALETTE_EASTER,
+  halloween: MATCH_MAP_PALETTE_HALLOWEEN
+};
+
+function applyMatchMapColorPalette(themeId){
   if(!matchMap || matchMapStyleKey !== 'dark') return;
+  const palette = MATCH_MAP_HOLIDAY_PALETTES[themeId] || MATCH_MAP_PALETTE;
   let layers = [];
   try{ layers = matchMap.getStyle().layers || []; }catch(e){ return; }
   layers.forEach(layer=>{
@@ -737,33 +800,38 @@ function applyMatchMapColorPalette(){
     const key = id + ' ' + src;
     try{
       if(layer.type === 'background'){
-        matchMap.setPaintProperty(layer.id, 'background-color', MATCH_MAP_PALETTE.bg);
+        matchMap.setPaintProperty(layer.id, 'background-color', palette.bg);
       } else if(layer.type === 'fill'){
-        if(key.includes('water')) matchMap.setPaintProperty(layer.id, 'fill-color', MATCH_MAP_PALETTE.water);
-        else if(key.includes('building')) matchMap.setPaintProperty(layer.id, 'fill-color', MATCH_MAP_PALETTE.bgAlt);
+        if(key.includes('water')) matchMap.setPaintProperty(layer.id, 'fill-color', palette.water);
+        else if(key.includes('building')){
+          if(!palette.skipBuilding) matchMap.setPaintProperty(layer.id, 'fill-color', palette.bgAlt);
+        }
         else if(key.includes('park') || key.includes('grass'))
-          matchMap.setPaintProperty(layer.id, 'fill-color', MATCH_MAP_PALETTE.landLight);
+          matchMap.setPaintProperty(layer.id, 'fill-color', palette.landLight);
         else if(key.includes('land') || key.includes('landuse') || key.includes('wood') || key.includes('vegetation'))
-          matchMap.setPaintProperty(layer.id, 'fill-color', MATCH_MAP_PALETTE.land);
+          matchMap.setPaintProperty(layer.id, 'fill-color', palette.land);
       } else if(layer.type === 'line'){
         if(key.includes('road') || key.includes('bridge') || key.includes('tunnel')){
-          matchMap.setPaintProperty(layer.id, 'line-color', MATCH_MAP_PALETTE.roadThin);
+          const isMajor = key.includes('motorway') || key.includes('trunk') || key.includes('primary') || key.includes('secondary');
+          matchMap.setPaintProperty(layer.id, 'line-color', isMajor ? palette.roadMain : palette.roadThin);
         } else if(key.includes('water') || key.includes('river') || key.includes('stream')){
-          matchMap.setPaintProperty(layer.id, 'line-color', MATCH_MAP_PALETTE.water);
+          matchMap.setPaintProperty(layer.id, 'line-color', palette.water);
         }
       } else if(layer.type === 'symbol'){
-        matchMap.setPaintProperty(layer.id, 'text-color', MATCH_MAP_PALETTE.text);
-        matchMap.setPaintProperty(layer.id, 'text-halo-color', MATCH_MAP_PALETTE.bgAlt);
+        matchMap.setPaintProperty(layer.id, 'text-color', palette.text);
+        matchMap.setPaintProperty(layer.id, 'text-halo-color', palette.textHalo || palette.bgAlt || '#000');
       }
     }catch(e){ /* bu katman ilgili boya özelliğini desteklemiyor olabilir — yok say */ }
   });
 }
 
-/* ---------- Bayram teması (appConfig/mapTheme) — hafif dekoratif filtre ---------- */
+/* ---------- Bayram teması (appConfig/mapTheme) ----------
+   Hangi bayram/tema aktifse (yıl başı, ramazan, cadılar bayramı, paskalya)
+   tespit edip artık HEPSİ için gerçek katman renklendirmesi uyguluyor
+   (eskiden sadece yıl başında vardı, diğerleri kaba bir CSS filtresiyle
+   idare ediyordu). */
 function applyMatchMapHolidayTheme(){
   const canvas = document.getElementById('matchMapCanvas');
-  if(!canvas) return;
-  canvas.style.filter = '';
   fbDb.ref('appConfig/mapTheme').once('value').then(snap=>{
     const cfg = snap.val() || {};
     let themeId = '';
@@ -772,13 +840,11 @@ function applyMatchMapHolidayTheme(){
     } else {
       themeId = detectAutoHolidayTheme();
     }
-    const filters = {
-      newyear: 'hue-rotate(190deg) saturate(1.15)',
-      ramadan: 'sepia(.25) saturate(1.1)',
-      halloween: 'hue-rotate(-40deg) saturate(1.3) brightness(.92)',
-      easter: 'saturate(1.2) brightness(1.05)'
-    };
-    if(filters[themeId]) canvas.style.filter = filters[themeId];
+    // Artık dört bayram/tema için de (yıl başı, ramazan, cadılar bayramı,
+    // paskalya) gerçek katman renklendirmesi var — kaba CSS filtresine
+    // hiç gerek kalmadı.
+    applyMatchMapColorPalette(themeId);
+    if(canvas) canvas.style.filter = '';
   }).catch(()=>{});
 }
 function detectAutoHolidayTheme(){
