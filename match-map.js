@@ -734,8 +734,8 @@ const MATCH_MAP_PALETTE_NEWYEAR = {
   water: '#8ED8FF',      // Buz mavisi — denizler / soğuk kış hissi
   roadThin: '#FFD66B',   // Altın — küçük yollar / önemli noktalar ✨
   roadMain: '#E63946',   // Kırmızı — tüm yol rotaları
-  land: '#F8FAFF',       // Beyaz — çimen/yeşil alanlar (kar örtüsü hissi)
-  landLight: '#F8FAFF',  // Beyaz — parklar da aynı
+  land: '#182348',       // Genel arazi/kara — zemine yakın, koyu (baskın olmasın diye)
+  landLight: '#F8FAFF',  // Beyaz — SADECE gerçek park/çimen alanları (kar örtüsü hissi)
   text: '#FFFFFF',
   textHalo: '#7657D9',   // Az miktarda mor — büyülü bir parıltı hissi (yazı çevresinde)
   skipBuilding: true      // Evler orijinal renginde kalsın
@@ -759,10 +759,10 @@ const MATCH_MAP_PALETTE_EASTER = {
   water: '#81D4FA',
   roadThin: '#F48FB1',   // tali yollar — canlı pembe
   roadMain: '#7E57C2',   // ana yollar — orta mor
-  land: '#F0F7E6',
-  landLight: '#F0F7E6',
+  land: '#C8DCC0',       // Genel arazi — yumuşak adaçayı yeşili (baskın beyaz olmasın diye)
+  landLight: '#FDE7A8',  // SADECE gerçek park/çimen alanları — pastel sarı (nergis/bahar güneşi hissi)
   text: '#37474F',
-  textHalo: '#F0F7E6',
+  textHalo: '#FDE7A8',
   pin: '#FFD54F',         // parlak sarı + turkuaz vurgu (#4DD0E1)
   pinAccent: '#4DD0E1',
   skipBuilding: false
