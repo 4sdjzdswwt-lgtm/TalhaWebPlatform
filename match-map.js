@@ -96,10 +96,12 @@ if(typeof window.haversineKm !== 'function'){
   .matchMapEmptyHint{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:2;color:#fff;text-align:center;
     background:rgba(5,2,15,.6);backdrop-filter:blur(6px);padding:16px 22px;border-radius:16px;font-size:13px;max-width:260px;pointer-events:none;}
 
-  /* Kutu (anı) marker'ı — artık haritada fotoğraf yok, sadece sabit
-     renkli küçük bir nokta. İçerik yalnızca dokununca (unbox) açılıyor. */
-  .matchBoxDot{width:18px;height:18px;border-radius:50%;background:#F3D053;border:2.5px solid #0a0a0f;
-    box-shadow:0 0 9px 2px rgba(243,208,83,.55);cursor:pointer;}
+  /* Kutu (anı) marker'ı — hediye kutusu ikonu, sahibinin cinsiyetine göre
+     renk tonu değişiyor (hue-rotate filtresiyle). İçerik yalnızca
+     dokununca (unbox) açılıyor. */
+  .matchBoxDot{width:34px;height:34px;background-image:url('gift-box.png');background-size:contain;
+    background-repeat:no-repeat;background-position:center;cursor:pointer;
+    filter:drop-shadow(0 0 5px rgba(243,208,83,.55));}
 
   /* Yakın zoom'daki kişi nokta marker'ı (küre'deki WebGL noktasıyla aynı
      görünüm) — Snapchat'teki gibi, aynı yerdeki kişiler hafifçe yana
@@ -924,8 +926,12 @@ function loadNearbyMapBoxes(){
 
 function refreshNearbyMapBoxes(){
   loadNearbyMapBoxes().then(list=>{
-    matchMapBoxesLastList = list;
-    renderAllMatchBoxMarkers(list);
+    const ownerUids = [...new Set(list.map(item=> item.box.uid))];
+    return fetchProfilesFor(ownerUids).then(profiles=>{
+      list.forEach(item=>{ item.ownerProfile = profiles[item.box.uid] || {}; });
+      matchMapBoxesLastList = list;
+      renderAllMatchBoxMarkers(list);
+    });
   }).catch(()=>{});
 }
 
@@ -937,11 +943,13 @@ class MatchBoxMarker {
       .setLngLat([item.box.lng, item.box.lat]);
   }
   _buildEl(){
-    // Haritada fotoğraf/başlık gösterilmiyor — sadece küçük, sabit renkli
-    // bir nokta. Fotoğraf yalnızca noktaya dokunulunca (openMatchBoxPreview)
-    // rozet kuralına göre açılıyor.
+    // Haritada tıklanabilir küçük bir "hediye kutusu" ikonu — sahibinin
+    // cinsiyetine göre renk tonu değişiyor (kız: orijinal kırmızı/altın,
+    // erkek: maviye çevrilmiş). İçerik yalnızca dokununca (unbox) açılıyor.
     const el = document.createElement('div');
     el.className = 'matchBoxDot';
+    const gender = (this.item.ownerProfile || {}).gender;
+    if(gender === 'male') el.style.filter = 'hue-rotate(190deg) saturate(1.15) drop-shadow(0 0 5px rgba(59,130,246,.55))';
     el.title = 'Kutu';
     el.addEventListener('click', ()=> openMatchBoxPreview(this.item.boxId, this.item));
     return el;
