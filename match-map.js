@@ -357,6 +357,7 @@ function openMatchMapOverlay(){
       </button>
       <div class="matchMapEmptyHint hidden" id="matchMapEmptyHint">${escapeHtml(t('toast_no_one_nearby'))}</div>
       <div class="matchMapWeatherPill" id="matchMapWeatherPill"></div>
+      <canvas id="matchMapWeatherFxCanvas" style="position:absolute;inset:0;z-index:1;pointer-events:none;"></canvas>
     `;
     document.body.appendChild(overlay);
     Object.assign(overlay.style, { position:'fixed', inset:'0', zIndex:9500, background:'#000', display:'flex', flexDirection:'column' });
@@ -372,6 +373,9 @@ function closeMatchMapOverlay(){
   const overlay = document.getElementById('matchMapOverlay');
   if(overlay){ overlay.style.display = 'none'; }
   document.getElementById('island')?.classList.remove('hidden');
+  // Harita görünmüyorken animasyon boşuna CPU/pil tüketmesin diye durduruyoruz.
+  if(typeof stopMatchWeatherFx === 'function') stopMatchWeatherFx();
+  matchWeatherLastFetchKey = ''; // tekrar açılışta hava durumu/efekt yeniden değerlendirilsin
   // Not: harita kapansa da, "Normal" mod dışında konum takibi arka planda
   // devam eder (Tasarruf/Araba modu kasıtlı olarak böyle çalışır).
 }
@@ -400,23 +404,124 @@ const MATCH_WEATHER_CODE_MAP = {
 };
 let matchWeatherLastFetchKey = '';
 function refreshMatchMapWeather(){
-  if(!matchMapMyLoc) return;
+  // Artık SADECE kendi konumum değil, haritanın o an gösterdiği merkez
+  // noktanın hava durumu gösteriliyor — harita nereye kaydırılırsa
+  // oranın havası görünüyor.
+  if(!matchMap) return;
+  const center = matchMap.getCenter();
+  const lat = center.lat, lng = center.lng;
   const pill = document.getElementById('matchMapWeatherPill');
   if(!pill) return;
-  // Aynı konum için (yaklaşık ~1km hassasiyetle) kısa sürede tekrar tekrar
+  // Aynı bölge için (yaklaşık ~1km hassasiyetle) kısa sürede tekrar tekrar
   // istek atmayalım diye basit bir önbellek anahtarı.
-  const fetchKey = matchMapMyLoc.lat.toFixed(2) + ',' + matchMapMyLoc.lng.toFixed(2);
+  const fetchKey = lat.toFixed(2) + ',' + lng.toFixed(2);
   if(fetchKey === matchWeatherLastFetchKey) return;
   matchWeatherLastFetchKey = fetchKey;
-  const url = `https://api.open-meteo.com/v1/forecast?latitude=${matchMapMyLoc.lat}&longitude=${matchMapMyLoc.lng}&current_weather=true`;
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current_weather=true`;
   fetch(url).then(r=> r.json()).then(data=>{
     const cw = data && data.current_weather;
     if(!cw) return;
+    // Yanıt hâlâ geçerli mi kontrol et — kullanıcı bu sırada başka bir
+    // bölgeye kaymışsa eski (artık geçersiz) sonucu göstermeyelim.
+    const nowCenter = matchMap.getCenter();
+    if(nowCenter.lat.toFixed(2) + ',' + nowCenter.lng.toFixed(2) !== fetchKey) return;
     const info = MATCH_WEATHER_CODE_MAP[cw.weathercode] || ['🌡️', ''];
     const temp = Math.round(cw.temperature);
     pill.innerHTML = `<span style="font-size:15px;">${info[0]}</span> ${temp}° ${escapeHtml(info[1])}`;
     pill.classList.add('visible');
+    startMatchWeatherFx(matchWeatherEffectTypeFor(cw.weathercode));
   }).catch(()=>{ /* hava durumu alınamadı — sessizce yok say, harita için kritik değil */ });
+}
+
+/* ============================================================
+   HAVA DURUMU ANİMASYONU — haritanın üzerine yağmur/kar efekti
+   Hafif bir canvas parçacık animasyonu; haritayla etkileşimi
+   ENGELLEMİYOR (pointer-events:none), sadece görsel bir katman.
+   ============================================================ */
+function matchWeatherEffectTypeFor(code){
+  if([51,53,55,56,57,61,63,65,66,67,80,81,82].includes(code)) return 'rain';
+  if([71,73,75,77,85,86].includes(code)) return 'snow';
+  if([95,96,99].includes(code)) return 'storm';
+  return 'none';
+}
+let matchWeatherFxState = { type: 'none', raf: null, particles: [], resizeHandler: null };
+function startMatchWeatherFx(type){
+  const canvas = document.getElementById('matchMapWeatherFxCanvas');
+  if(!canvas) return;
+  if(matchWeatherFxState.type === type) return; // zaten aynı efekt çalışıyor
+  stopMatchWeatherFx();
+  matchWeatherFxState.type = type;
+  if(type === 'none') return;
+
+  const ctx = canvas.getContext('2d');
+  const resize = ()=>{ canvas.width = canvas.clientWidth; canvas.height = canvas.clientHeight; };
+  resize();
+  matchWeatherFxState.resizeHandler = resize;
+  window.addEventListener('resize', resize);
+
+  const isSnow = type === 'snow';
+  const count = isSnow ? 70 : 140;
+  const particles = [];
+  for(let i = 0; i < count; i++){
+    particles.push(isSnow ? {
+      x: Math.random() * canvas.width, y: Math.random() * canvas.height,
+      r: 1.5 + Math.random() * 2.5, speed: 0.5 + Math.random() * 1.2,
+      drift: Math.random() * 1 - 0.5, sway: Math.random() * Math.PI * 2
+    } : {
+      x: Math.random() * canvas.width, y: Math.random() * canvas.height,
+      len: 10 + Math.random() * 14, speed: 7 + Math.random() * 6,
+      opacity: 0.25 + Math.random() * 0.35
+    });
+  }
+  matchWeatherFxState.particles = particles;
+
+  let lastFlash = 0;
+  const draw = (ts)=>{
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // Fırtınada ara sıra hafif bir beyaz flaş (şimşek hissi)
+    if(type === 'storm' && ts - lastFlash > (3000 + Math.random() * 4000)){
+      lastFlash = ts;
+      ctx.fillStyle = 'rgba(255,255,255,.18)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+    if(isSnow){
+      ctx.fillStyle = 'rgba(255,255,255,.85)';
+      particles.forEach(p=>{
+        p.sway += 0.02;
+        p.y += p.speed;
+        p.x += p.drift + Math.sin(p.sway) * 0.4;
+        if(p.y > canvas.height){ p.y = -5; p.x = Math.random() * canvas.width; }
+        if(p.x > canvas.width) p.x = 0; else if(p.x < 0) p.x = canvas.width;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    } else {
+      ctx.strokeStyle = 'rgba(180,210,255,.5)';
+      ctx.lineWidth = 1.3;
+      particles.forEach(p=>{
+        p.y += p.speed;
+        p.x -= p.speed * 0.28; // hafif eğik yağmur
+        if(p.y > canvas.height){ p.y = -20; p.x = Math.random() * canvas.width; }
+        if(p.x < 0) p.x = canvas.width;
+        ctx.globalAlpha = p.opacity;
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y);
+        ctx.lineTo(p.x + p.len * 0.28, p.y + p.len);
+        ctx.stroke();
+      });
+      ctx.globalAlpha = 1;
+    }
+    matchWeatherFxState.raf = requestAnimationFrame(draw);
+  };
+  matchWeatherFxState.raf = requestAnimationFrame(draw);
+}
+function stopMatchWeatherFx(){
+  if(matchWeatherFxState.raf) cancelAnimationFrame(matchWeatherFxState.raf);
+  if(matchWeatherFxState.resizeHandler) window.removeEventListener('resize', matchWeatherFxState.resizeHandler);
+  const canvas = document.getElementById('matchMapWeatherFxCanvas');
+  if(canvas){ const ctx = canvas.getContext('2d'); ctx && ctx.clearRect(0, 0, canvas.width, canvas.height); }
+  matchWeatherFxState = { type: 'none', raf: null, particles: [], resizeHandler: null };
 }
 
 function loadMatchMapSettingsThenInit(){
@@ -533,7 +638,7 @@ function initMatchMapInstance(){
   // konumda kalmasına yol açıyordu. 'moveend' HER kamera hareketinin
   // (flyTo, easeTo, jumpTo, elle sürükleme/zoom — hepsi) bitişinde
   // güvenilir şekilde tetiklendiği için ek bir güvence olarak kullanıyoruz.
-  matchMap.on('moveend', ()=>{ renderAllMatchMarkers(matchMapLastCandidates || []); });
+  matchMap.on('moveend', ()=>{ renderAllMatchMarkers(matchMapLastCandidates || []); refreshMatchMapWeather(); });
   updateMatchMapStyleToggleUI();
 }
 
