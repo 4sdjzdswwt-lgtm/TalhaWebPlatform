@@ -24,8 +24,8 @@
 /* ---------- AYARLAR ---------- */
 // KENDİ Mapbox erişim token'ını buraya yaz: https://account.mapbox.com/access-tokens/
 const MAPBOX_ACCESS_TOKEN = 'pk.eyJ1IjoidGFseGFlIiwiYSI6ImNtc2wyNTBidjE1Nm0yeXF6Z2h5d2plMzUifQ.qqsum3zJ-Swis6YN8LMOkA';
-const MATCH_MAP_MAX_DISTANCE_KM = 100;
-const MATCH_MAP_MAX_RESULTS = 60;
+const MATCH_MAP_MAX_DISTANCE_KM = Infinity; // mesafe sınırı kaldırıldı — artık ne kadar uzak olursa olsun herkes gösteriliyor
+const MATCH_MAP_MAX_RESULTS = Infinity; // sonuç sayısı sınırı kaldırıldı — artık kaç kişi olursa olsun hepsi gösteriliyor
 const MATCH_MAP_STYLES = {
   dark: 'mapbox://styles/mapbox/dark-v11', // klasik katmanlı stil — hex renk kontrolü sadece bununla mümkün
   satellite: 'mapbox://styles/mapbox/satellite-streets-v12'
@@ -1175,7 +1175,7 @@ function loadNearbyMapBoxes(){
         else if(vis !== 'public'){ return; }
       }
       const dist = haversineKm(matchMapMyLoc.lat, matchMapMyLoc.lng, b.lat, b.lng);
-      if(dist > 100) return;
+      if(dist > MATCH_MAP_MAX_DISTANCE_KM) return; // mesafe sınırı kaldırıldı — kişi listesindeki sınırla tutarlı
       list.push({ boxId, box: b, dist });
     });
     // Kendi süresi dolmuş kutularımı Firebase'den de gerçekten siliyorum
