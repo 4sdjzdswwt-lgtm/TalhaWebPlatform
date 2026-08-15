@@ -30,7 +30,7 @@ const MATCH_MAP_STYLES = {
   dark: 'mapbox://styles/mapbox/dark-v11', // klasik katmanlı stil — hex renk kontrolü sadece bununla mümkün
   satellite: 'mapbox://styles/mapbox/satellite-streets-v12'
 };
-const MATCH_MAP_3D_PITCH = 0; // Harita her zaman düz kuş bakışı — 3D eğim (tilt) kullanılmıyor
+const MATCH_MAP_3D_PITCH = 50; // Koyu haritada sabit 3D açı — dokunarak değiştirilemez (touchPitch:false), sadece kod tarafından ayarlanır
 
 
 /* ---------- DURUM ---------- */
@@ -554,7 +554,7 @@ function loadMatchMapSettingsThenInit(){
           matchMapMyLoc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
           fbDb.ref('userLocations/' + myUid).update({ lat: matchMapMyLoc.lat, lng: matchMapMyLoc.lng, updatedAt: Date.now() }).catch(()=>{});
           const applyFreshLoc = ()=>{
-            matchMap.jumpTo({ center: [matchMapMyLoc.lng, matchMapMyLoc.lat], zoom: 15, pitch: 0, bearing: 0 });
+            matchMap.jumpTo({ center: [matchMapMyLoc.lng, matchMapMyLoc.lat], zoom: 13.5, pitch: (matchMapStyleKey === 'dark' ? MATCH_MAP_3D_PITCH : 0), bearing: 0 });
             renderAllMatchMarkers(matchMapLastCandidates || []);
             refreshMatchMapWeather();
           };
@@ -592,7 +592,7 @@ function initMatchMapInstance(){
   matchMap = new mapboxgl.Map({
     container: 'matchMapCanvas',
     style: MATCH_MAP_STYLES[matchMapStyleKey] || MATCH_MAP_STYLES.dark,
-    center, zoom: 15, pitch: 0, bearing: 0, attributionControl: false,
+    center, zoom: 13.5, pitch: (matchMapStyleKey === 'dark' ? MATCH_MAP_3D_PITCH : 0), bearing: 0, attributionControl: false,
     minZoom: 0.9,              // küre görünümü kalsın, ekrana tam sığacak kadar uzaklaşabilsin
     pitchWithRotate: false,   // iki parmakla sürükleyerek eğme (tilt) kapalı — açı SADECE kod tarafından, sabit ve kontrollü
     dragRotate: false,        // sağ tık / iki parmak sürükleyerek döndürme kapalı
@@ -610,7 +610,7 @@ function initMatchMapInstance(){
     // açılmış olabilir — gerçek konum eldeyse sokak seviyesinde ortalayarak
     // asla geniş/uzak bir dünya görünümünde takılı kalmamasını sağlıyoruz.
     if(matchMapMyLoc){
-      matchMap.jumpTo({ center: [matchMapMyLoc.lng, matchMapMyLoc.lat], zoom: 15, pitch: 0, bearing: 0 });
+      matchMap.jumpTo({ center: [matchMapMyLoc.lng, matchMapMyLoc.lat], zoom: 13.5, pitch: (matchMapStyleKey === 'dark' ? MATCH_MAP_3D_PITCH : 0), bearing: 0 });
     }
     refreshNearbyMatchUsers();
     refreshMatchMapWeather();
@@ -649,9 +649,32 @@ function initMatchMapInstance(){
 function applyMatchMap3DTheme(){
   if(!matchMap || matchMapStyleKey !== 'dark') return;
   try{
-    matchMap.setConfigProperty('basemap', 'lightPreset', 'night');
-    matchMap.setConfigProperty('basemap', 'show3dObjects', true);
-  }catch(e){ /* Standard stil henüz desteklemiyorsa sessizce yok say */ }
+    // dark-v11 klasik bir stil — "Standard" stilin setConfigProperty API'sini
+    // desteklemiyor. Onun yerine binalara gerçek bir fill-extrusion (3D
+    // yükseklik) katmanı ekliyoruz; harita zaten sabit bir açıyla (pitch)
+    // açıldığı için bu yükseklik gerçekten görünür oluyor.
+    if(!matchMap.getLayer('match-3d-buildings')){
+      // Katmanı, sembol/etiket katmanlarının ALTINA (ilk sembol katmanının
+      // hemen öncesine) ekliyoruz ki bina hacimleri yol/yer isimlerini
+      // örtüp okunmaz hale getirmesin.
+      let firstSymbolId;
+      const layers = matchMap.getStyle().layers || [];
+      for(const l of layers){ if(l.type === 'symbol'){ firstSymbolId = l.id; break; } }
+      matchMap.addLayer({
+        id: 'match-3d-buildings',
+        source: 'composite',
+        'source-layer': 'building',
+        type: 'fill-extrusion',
+        minzoom: 13,
+        paint: {
+          'fill-extrusion-color': '#2A3550',
+          'fill-extrusion-height': ['coalesce', ['get', 'height'], 12],
+          'fill-extrusion-base': ['coalesce', ['get', 'min_height'], 0],
+          'fill-extrusion-opacity': 0.85
+        }
+      }, firstSymbolId);
+    }
+  }catch(e){ /* stil henüz tam hazır değilse veya 'building' kaynağı yoksa sessizce geç */ }
 }
 
 /* ============================================================
@@ -844,7 +867,7 @@ function goToMyMatchLocation(){
   // "önce yanlış yere gidip sonra kayıyor" hissi veriyordu. Artık tek
   // seferde, doğru konuma uçuyoruz.
   const flyToLoc = (lat, lng)=>{
-    matchMap.flyTo({ center: [lng, lat], zoom: 15, pitch: 0, bearing: 0 });
+    matchMap.flyTo({ center: [lng, lat], zoom: 13.5, pitch: (matchMapStyleKey === 'dark' ? MATCH_MAP_3D_PITCH : 0), bearing: 0 });
     matchMap.once('moveend', ()=>{ renderAllMatchMarkers(matchMapLastCandidates || []); });
     refreshMatchMapWeather();
   };
@@ -1085,20 +1108,6 @@ function refreshNearbyMatchUsers(){
       renderAllMatchMarkers(candidates);
     });
   }).catch(()=>{ showToast(t('toast_generic_error') || 'Harita yüklenemedi.'); });
-}
-
-function refreshNearbyMatchUsers(){
-  const token = ++matchMapLoadToken;
-  loadNearbyMatchUsers().then(candidates=>{
-    if(token !== matchMapLoadToken) return; // eskimiş istek, yok say
-    matchMapLastCandidates = candidates;
-    const emptyHint = document.getElementById('matchMapEmptyHint');
-    if(emptyHint) emptyHint.classList.toggle('hidden', candidates.length > 0);
-    return fetchProfilesFor(candidates.map(c=>c.uid)).then(profiles=>{
-      candidates.forEach(c=>{ c.profile = profiles[c.uid] || {}; });
-      renderAllMatchMarkers(candidates);
-    });
-  }).catch(()=>{ showToast(t('toast_generic_error') || 'Harita yüklenemedi.'); });
   refreshNearbyMapBoxes(); // kutu sistemi — arkadaş konum sisteminden AYRI, birlikte çalışır
 }
 
@@ -1221,10 +1230,36 @@ function renderAllMatchBoxMarkers(list){
   // kaydırarak diziyoruz — hiçbiri birbirinin üstüne binip kaybolmuyor.
   const withLoc = list.map(item=> Object.assign({}, item, { loc: { lat: item.box.lat, lng: item.box.lng } }));
   const groups = clusterCandidatesByPixelDistance(withLoc);
+
+  // ÖNEMLİ: kutular sadece kendi aralarında değil, KİŞİ noktalarıyla da
+  // çakışabiliyor (biri kutunun tam üstünde duruyorsa sadece birine
+  // dokunulabiliyordu). Şu an ekranda gösterilen tüm kişilerin piksel
+  // konumlarını çıkarıp, bir kutu onlardan birine çok yakınsa kutuyu sabit
+  // bir miktar kaydırıyoruz — kişinin konumuna DOKUNMUYORUZ (o gerçek GPS
+  // konumunu göstermeye devam etmeli), sadece kutu kenara çekiliyor.
+  const personScreenPoints = [];
+  if(matchMapMyLoc){
+    try{ personScreenPoints.push(matchMap.project([matchMapMyLoc.lng, matchMapMyLoc.lat])); }catch(e){}
+  }
+  (matchMapLastCandidates || []).forEach(c=>{
+    try{ personScreenPoints.push(matchMap.project([c.loc.lng, c.loc.lat])); }catch(e){}
+  });
+  const PERSON_COLLISION_PX = 26;
+
   groups.forEach(group=>{
     const offsets = computeMatchBoxPixelOffsets(group.length);
     group.forEach((item, i)=>{
-      matchBoxMarkers[item.boxId] = new MatchBoxMarker(item, offsets[i]).addTo(matchMap);
+      let offset = offsets[i];
+      try{
+        const boxScreenPt = matchMap.project([item.box.lng, item.box.lat]);
+        const collidesWithPerson = personScreenPoints.some(p=>{
+          const dx = (boxScreenPt.x + offset[0]) - p.x;
+          const dy = (boxScreenPt.y + offset[1]) - p.y;
+          return Math.sqrt(dx*dx + dy*dy) < PERSON_COLLISION_PX;
+        });
+        if(collidesWithPerson) offset = [offset[0] + 24, offset[1] - 24]; // sağ-üste kaydır
+      }catch(e){}
+      matchBoxMarkers[item.boxId] = new MatchBoxMarker(item, offset).addTo(matchMap);
     });
   });
 }
@@ -1322,6 +1357,62 @@ function onMatchBoxFileChosen(input){
   const wrap = document.getElementById('matchBoxPreviewWrap');
   if(wrap) wrap.style.borderStyle = 'solid';
 }
+/* ============================================================
+   +18 İÇERİK TESPİTİ — NSFWJS (ücretsiz, tarayıcı içinde çalışır,
+   API anahtarı GEREKMEZ, hiçbir fotoğraf dışarıya gönderilmez).
+   ============================================================ */
+let matchNsfwModelPromise = null;
+let matchNsfwScriptsPromise = null;
+function ensureNsfwScriptsLoaded(){
+  if(matchNsfwScriptsPromise) return matchNsfwScriptsPromise;
+  const loadScript = (src)=> new Promise((resolve, reject)=>{
+    if(document.querySelector(`script[src="${src}"]`)){ resolve(); return; }
+    const s = document.createElement('script');
+    s.src = src; s.onload = resolve; s.onerror = reject;
+    document.head.appendChild(s);
+  });
+  matchNsfwScriptsPromise = loadScript('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.21.0/dist/tf.min.js')
+    .then(()=> loadScript('https://cdn.jsdelivr.net/npm/nsfwjs@2.4.2/dist/nsfwjs.min.js'));
+  return matchNsfwScriptsPromise;
+}
+function ensureNsfwModel(){
+  if(matchNsfwModelPromise) return matchNsfwModelPromise;
+  matchNsfwModelPromise = ensureNsfwScriptsLoaded().then(()=> window.nsfwjs.load());
+  return matchNsfwModelPromise;
+}
+/* dataUrlOrObjectUrl: bir <img> ile açılabilecek herhangi bir görsel kaynağı.
+   Sonuç: { flagged: bool, reason: 'Porn'|'Hentai'|null } */
+function checkImageForNsfw(imgSrc){
+  return ensureNsfwModel().then(model=>{
+    return new Promise((resolve)=>{
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = ()=>{
+        model.classify(img).then(predictions=>{
+          const bad = predictions.find(p=> (p.className === 'Porn' || p.className === 'Hentai') && p.probability > 0.72);
+          resolve({ flagged: !!bad, reason: bad ? bad.className : null });
+        }).catch(()=> resolve({ flagged: false, reason: null }));
+      };
+      img.onerror = ()=> resolve({ flagged: false, reason: null });
+      img.src = imgSrc;
+    });
+  }).catch(()=> ({ flagged: false, reason: null })); // model yüklenemezse engellemeden geç (kritik değil)
+}
+/* +18 içerik tespit edilince: uyarı sayacını artır, 3'e ulaşınca hesabı kilitle. */
+function reportNsfwViolationAndCheckLock(){
+  if(!fbAuth.currentUser) return Promise.resolve(false);
+  const uid = fbAuth.currentUser.uid;
+  const ref = fbDb.ref('users/' + uid + '/nsfwWarnings');
+  return ref.transaction(cur=> (cur || 0) + 1).then(res=>{
+    const count = (res.snapshot && res.snapshot.val()) || 1;
+    if(count >= 3){
+      fbDb.ref('users/' + uid + '/blocked').set(true).catch(()=>{});
+      return true; // hesap kilitlendi
+    }
+    return false;
+  }).catch(()=> false);
+}
+
 function submitMatchBox(){
   if(!matchBoxComposerFile){ showToast(t('match_box_need_media')); return; }
   if(!matchMapMyLoc || !fbAuth.currentUser) return;
@@ -1346,7 +1437,20 @@ function submitMatchBox(){
       resetBtn();
     });
   };
+  const rejectAsNsfw = ()=>{
+    reportNsfwViolationAndCheckLock().then(lockedNow=>{
+      if(lockedNow){
+        showToast('⚠️ 3. uygunsuz içerik uyarısını aldın, hesabın kilitlendi.');
+        setTimeout(()=>{ closeMatchBoxComposer(); closeMatchMapOverlay(); fbAuth.signOut(); }, 1800);
+      } else {
+        showToast('⚠️ Bu fotoğraf uygunsuz (+18) içerik içeriyor, paylaşılamaz.');
+        resetBtn();
+      }
+    });
+  };
   if(matchBoxComposerType === 'video'){
+    // Video için kare-kare NSFW taraması yapmıyoruz (maliyetli); şimdilik
+    // sadece fotoğraflar taranıyor.
     if(!fbStorage){ showToast(t('toast_video_needs_storage2') || 'Video için depolama kullanılamıyor.'); resetBtn(); return; }
     const path = 'mapBoxes/' + myUid + '/' + Date.now() + '.mp4';
     fbStorage.ref().child(path).put(matchBoxComposerFile)
@@ -1355,7 +1459,11 @@ function submitMatchBox(){
   } else {
     const reader = new FileReader();
     reader.onload = ()=>{
-      (typeof compressForPost === 'function' ? compressForPost(reader.result) : Promise.resolve(reader.result)).then(finish);
+      const dataUrl = reader.result;
+      checkImageForNsfw(dataUrl).then(result=>{
+        if(result.flagged){ rejectAsNsfw(); return; }
+        (typeof compressForPost === 'function' ? compressForPost(dataUrl) : Promise.resolve(dataUrl)).then(finish);
+      });
     };
     reader.onerror = ()=>{ showToast(t('toast_generic_error') || 'Fotoğraf okunamadı.'); resetBtn(); };
     reader.readAsDataURL(matchBoxComposerFile);
