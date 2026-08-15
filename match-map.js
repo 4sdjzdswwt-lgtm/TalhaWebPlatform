@@ -1318,8 +1318,8 @@ function openMatchBoxPreview(boxId, itemArg){
         <button class="btn" style="width:100%;margin-top:18px;padding:14px;border-radius:16px;border:1.5px solid var(--danger);background:rgba(237,73,86,.12);color:var(--danger);font-weight:800;" onclick="deleteMatchBox('${boxId}')">🗑️ ${escapeHtml(t('match_box_delete'))}</button>
       ` : `
         <div style="display:flex;gap:10px;margin-top:18px;">
-          <button class="btn" id="matchFollowBtn" style="flex:1;background:var(--gradient-vivid);color:#fff;border:none;" onclick="matchFollowUser('${b.uid}')">${escapeHtml(t('match_follow_btn'))}</button>
-          <button class="btn ${hasAccess ? '' : 'btn-ghost'}" style="flex:1;${hasAccess ? 'background:var(--surface-2);color:var(--text);border:1px solid var(--line);' : ''}" onclick="${hasAccess ? `matchMessageUser('${b.uid}')` : `closeMatchBoxPreview();openMatchVerifiedBadgeInfoForBox('${boxId}');`}">
+          <button class="btn" id="matchFollowBtn" style="flex:1;background:var(--gradient-vivid);color:#fff;border:none;" onclick="matchFollowUser('${b.uid}', true)">${escapeHtml(t('match_follow_btn'))}</button>
+          <button class="btn ${hasAccess ? '' : 'btn-ghost'}" style="flex:1;${hasAccess ? 'background:var(--surface-2);color:var(--text);border:1px solid var(--line);' : ''}" onclick="${hasAccess ? `matchMessageUser('${b.uid}', '${boxId}')` : `closeMatchBoxPreview();openMatchVerifiedBadgeInfoForBox('${boxId}');`}">
             ${hasAccess ? '💬 ' + escapeHtml(t('match_message_btn')) : '🔒 ' + escapeHtml(t('match_message_btn'))}
           </button>
         </div>
@@ -1678,7 +1678,7 @@ function refreshMatchFollowButtonState(uid){
 /* ============================================================
    TAKİP ET / MESAJ YAZ
    ============================================================ */
-function matchFollowUser(uid){
+function matchFollowUser(uid, boxCtx){
   if(!fbAuth.currentUser) return;
   const myUid = fbAuth.currentUser.uid;
   const followRef = fbDb.ref('follows/' + myUid + '/' + uid);
@@ -1693,7 +1693,9 @@ function matchFollowUser(uid){
       Promise.all([followRef.set(true), followerRef.set(true)]).then(()=>{
         showToast(t('toast_following_check'));
         refreshMatchFollowButtonState(uid);
-        if(typeof sendFollowNotification === 'function') sendFollowNotification(uid);
+        // Kutudan takip edildiyse bildirimde bunu belirt ("kutundan seni
+        // takip etti" gibi) — normal haritadan takipse standart metin.
+        if(typeof sendFollowNotification === 'function') sendFollowNotification(uid, boxCtx ? 'box' : undefined);
       });
     }
   });
@@ -1701,10 +1703,19 @@ function matchFollowUser(uid){
 
 /* Haritadan mesaj gönderme: karşılıklı takipse doğrudan sohbete gir;
    değilse (ve karşı taraf mesaj onayını kapatmadıysa) "onay bekliyor"
-   durumunda bir sohbet isteği oluşturur. */
-function matchMessageUser(uid){
+   durumunda bir sohbet isteği oluşturur.
+   boxCtx verilmişse (kutu önizlemesinden gelindiyse), sohbete GİRMEDEN
+   önce "📦 Kutuna yanıt verdi" tarzı bir ilk mesaj gönderiyoruz — böylece
+   konuşmanın o kutu paylaşımına cevap olarak başladığı sohbet ekranında
+   belli oluyor (hikaye yanıtlarındaki aynı mantık). */
+function matchMessageUser(uid, boxId){
   if(!fbAuth.currentUser) return;
   const myUid = fbAuth.currentUser.uid;
+  // Inline onclick'ten güvenli olsun diye sadece boxId (düz metin) alıyoruz;
+  // başlık gibi özel karakter içerebilecek veriyi burada, hafızadaki güncel
+  // listeden buluyoruz (HTML attribute'una gömüp kaçış sorunu yaşamamak için).
+  const boxItem = boxId ? matchMapBoxesLastList.find(i=> i.boxId === boxId) : null;
+  const boxCtx = boxId ? { boxId, title: boxItem && boxItem.box ? boxItem.box.title : '' } : null;
   Promise.all([
     fbDb.ref('follows/' + myUid + '/' + uid).once('value'),
     fbDb.ref('followers/' + myUid + '/' + uid).once('value'),
@@ -1716,11 +1727,31 @@ function matchMessageUser(uid){
       closeMatchProfilePreview();
       closeMatchBoxPreview();
       closeMatchMapOverlay();
-      goToMatchChatSafely(uid);
+      if(boxCtx){
+        sendMatchBoxReplyOpener(uid, myUid, boxCtx).then(()=> goToMatchChatSafely(uid));
+      } else {
+        goToMatchChatSafely(uid);
+      }
       return;
     }
     sendMatchMessageRequest(uid);
   });
+}
+
+/* Kutuya "cevap" niteliğinde otomatik açılış mesajı — sendStoryReply ile
+   aynı desende (chats/{chatId}/messages + chatMeta güncellemesi). */
+function sendMatchBoxReplyOpener(ownerUid, myUid, boxCtx){
+  const chatId = [myUid, ownerUid].sort().join('_');
+  const msgRef = fbDb.ref('chats/' + chatId + '/messages').push();
+  const ts = Date.now();
+  const label = '📦 ' + (boxCtx.title ? ('"' + boxCtx.title + '"') : t('match_box_composer_title')) + ' kutusuna yanıt verdi';
+  return (typeof ensureChatMeta === 'function' ? ensureChatMeta(chatId, ownerUid) : Promise.resolve()).then(()=>{
+    return msgRef.set({ from: myUid, text: label, ts, boxReply: true, boxId: boxCtx.boxId || null });
+  }).then(()=>{
+    const update = { lastMsg: label, lastTs: ts, lastSenderUid: myUid };
+    update['unreadFor/' + ownerUid] = true;
+    return fbDb.ref('chatMeta/' + chatId).update(update);
+  }).catch(()=>{});
 }
 
 /* Overlay'leri kapatıp hemen ardından startChatWith() çağırmak, DOM henüz
