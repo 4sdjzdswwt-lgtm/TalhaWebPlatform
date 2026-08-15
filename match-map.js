@@ -606,6 +606,7 @@ function initMatchMapInstance(){
     applyMatchMap3DTheme();
     applyMatchMapHolidayTheme(); // hem temayı tespit eder hem doğru paleti uygular
     ensureMatchGlobeLayer();
+    updateMatchMapPitchForZoom();
     // Konum henüz gelmemişken harita varsayılan (Türkiye ortası) merkezle
     // açılmış olabilir — gerçek konum eldeyse sokak seviyesinde ortalayarak
     // asla geniş/uzak bir dünya görünümünde takılı kalmamasını sağlıyoruz.
@@ -630,6 +631,7 @@ function initMatchMapInstance(){
   matchMap.on('zoomend', ()=>{
     renderAllMatchMarkers(matchMapLastCandidates || []);
     applyMatchMap3DTheme();
+    updateMatchMapPitchForZoom();
   });
   // 'zoomend' elle (parmakla) yakınlaştırıp uzaklaştırmada güvenilir
   // tetikleniyor, ama flyTo() gibi ANİMASYONLU/programatik kamera
@@ -675,6 +677,20 @@ function applyMatchMap3DTheme(){
       }, firstSymbolId);
     }
   }catch(e){ /* stil henüz tam hazır değilse veya 'building' kaynağı yoksa sessizce geç */ }
+}
+
+/* Küre (dünya) görünümündeyken 3D açı (pitch) uygulanırsa küre çarpık/
+   yamuk görünüyor — bu yüzden SADECE yakın (şehir/sokak) zoom'da 3D açı
+   kullanılmalı, küre zoom'unda harita düz (pitch:0) kalmalı. Zoom eşiğini
+   geçince aralarında yumuşak bir geçiş yapıyoruz. */
+const MATCH_MAP_GLOBE_ZOOM_THRESHOLD = 4;
+function updateMatchMapPitchForZoom(){
+  if(!matchMap || matchMapStyleKey !== 'dark') return;
+  const zoom = matchMap.getZoom();
+  const wantPitch = zoom < MATCH_MAP_GLOBE_ZOOM_THRESHOLD ? 0 : MATCH_MAP_3D_PITCH;
+  if(Math.abs(matchMap.getPitch() - wantPitch) > 1){
+    matchMap.easeTo({ pitch: wantPitch, duration: 400 });
+  }
 }
 
 /* ============================================================
