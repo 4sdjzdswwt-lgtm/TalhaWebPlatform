@@ -31,6 +31,7 @@ const MATCH_MAP_STYLES = {
   satellite: 'mapbox://styles/mapbox/satellite-streets-v12'
 };
 const MATCH_MAP_3D_PITCH = 50; // Koyu haritada sabit 3D açı — dokunarak değiştirilemez (touchPitch:false), sadece kod tarafından ayarlanır
+const MATCH_MAP_DRIVING_SPEED_KMH = 20; // Bu hızın (km/sa) üzerindeyse "araba/araç içinde" kabul edilir ve marker 🚗 ikonuna döner
 
 
 /* ---------- DURUM ---------- */
@@ -38,6 +39,8 @@ let matchMap = null;
 let matchMapStyleKey = 'dark';
 let matchMapMarkers = {};              // uid -> SnapAvatarMarker
 let matchMapMyLoc = null;              // {lat,lng}
+let matchMapMyHeading = null;          // kendi anlık yönümüz (derece) — varsa
+let matchMapMyIsDriving = false;       // kendi anlık "araç içinde" durumumuz (hıza göre otomatik)
 let matchMapWatchId = null;
 let matchMapRefreshTimer = null;
 let matchMapMySettings = { sharing:false, ghostMode:false, visibility:'public', excludedUids:{}, onlyUids:{}, trackMode:'normal', msgApprovalOn:true };
@@ -253,6 +256,27 @@ function acceptMatchConsent(){
   enableMatchLocationSharing();
 }
 
+/* Bir GPS okumasından (coords) Firebase'e yazılacak alanları üretir.
+   Hız (speed, m/s) km/sa'ya çevrilir; eşiği aşarsa "araba içinde" kabul
+   edilip isDriving:true yazılır — marker bunu görünce 🚗 ikonuna döner.
+   heading da (varsa) yazılır ki yön oku her modda çalışsın, sadece
+   Araba Modu'na özel olmasın (artık Normal de sürekli takip ediyor). */
+function buildMatchLocUpdate(coords){
+  const { latitude, longitude, heading, speed } = coords;
+  const speedKmh = (typeof speed === 'number' && !isNaN(speed) && speed >= 0) ? speed * 3.6 : 0;
+  const update = {
+    lat: latitude, lng: longitude, updatedAt: Date.now(),
+    speedKmh: Math.round(speedKmh),
+    isDriving: speedKmh >= MATCH_MAP_DRIVING_SPEED_KMH
+  };
+  if(typeof heading === 'number' && !isNaN(heading)) update.heading = heading;
+  // Kendi marker'ımızı (isMe) da aynı bilgiyle çizebilmek için yerel
+  // değişkenlere de yansıtıyoruz — renderAllMatchMarkers bunu okuyor.
+  matchMapMyIsDriving = update.isDriving;
+  matchMapMyHeading = (typeof update.heading === 'number') ? update.heading : matchMapMyHeading;
+  return update;
+}
+
 /* ---------- Konum paylaşımını aç ve haritayı başlat ---------- */
 function enableMatchLocationSharing(){
   if(!navigator.geolocation){ showToast(t('toast_no_geo')); return; }
@@ -260,17 +284,14 @@ function enableMatchLocationSharing(){
   showToast(t('toast_loc_loading'));
   navigator.geolocation.getCurrentPosition(
     (pos)=>{
-      const { latitude, longitude, heading } = pos.coords;
+      const { latitude, longitude } = pos.coords;
       matchMapMyLoc = { lat: latitude, lng: longitude };
       matchMapMySettings.sharing = true;
-      fbDb.ref('userLocations/' + myUid).update({
-        lat: latitude, lng: longitude,
-        heading: heading || 0,
+      fbDb.ref('userLocations/' + myUid).update(Object.assign(buildMatchLocUpdate(pos.coords), {
         sharing: true, ghostMode: false,
         visibility: matchMapMySettings.visibility || 'public',
-        trackMode: matchMapMySettings.trackMode || 'normal',
-        updatedAt: Date.now()
-      }).then(()=>{
+        trackMode: matchMapMySettings.trackMode || 'normal'
+      })).then(()=>{
         startMatchLocationWatch(matchMapMySettings.trackMode || 'normal');
         openMatchMapOverlay();
       }).catch(()=> showToast(t('toast_generic_error') || 'Konum kaydedilemedi.'));
@@ -280,36 +301,39 @@ function enableMatchLocationSharing(){
   );
 }
 
-/* ---------- Konum takibi: Normal (bir kez) / Tasarruf (seyrek) / Araba (sürekli) ---------- */
+/* ---------- Konum takibi: Normal ve Araba artık AYNI şekilde çalışır —
+   ikisi de sürekli/anlık takip yapar (watchPosition), aradaki tek fark
+   Araba Modu'nun kullanıcının BİLİNÇLİ tercihi olması; Normal modda da
+   artık hareketler anlık haritaya yansır. Araç içinde olup olmadığı
+   (🚗 ikonu) ise moddan bağımsız, gerçek hıza göre OTOMATİK algılanır.
+   Tasarruf Modu tek farklı davranan mod: seyrek + düşük hassasiyet. ---------- */
 function startMatchLocationWatch(mode){
   stopMatchLocationWatch();
   if(!navigator.geolocation || !fbAuth.currentUser) return;
   const myUid = fbAuth.currentUser.uid;
   const writeLoc = (pos)=>{
-    const { latitude, longitude, heading } = pos.coords;
-    matchMapMyLoc = { lat: latitude, lng: longitude };
-    const update = { lat: latitude, lng: longitude, updatedAt: Date.now() };
-    if(mode === 'car') update.heading = (heading === null || isNaN(heading)) ? 0 : heading;
-    fbDb.ref('userLocations/' + myUid).update(update).catch(()=>{});
+    matchMapMyLoc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+    fbDb.ref('userLocations/' + myUid).update(buildMatchLocUpdate(pos.coords)).catch(()=>{});
     // Eski DOM marker sistemi kalkınca konumu anlık güncellemek için
     // WebGL nokta katmanını (cache'lenmiş arkadaş listesiyle) tazeliyoruz.
     if(matchMap) renderAllMatchMarkers(matchMapLastCandidates || []);
   };
-  if(mode === 'car'){
-    matchMapWatchId = navigator.geolocation.watchPosition(writeLoc, ()=>{}, { enableHighAccuracy:true, maximumAge:5000 });
-  } else if(mode === 'battery'){
-    writeLoc({ coords: { latitude: matchMapMyLoc ? matchMapMyLoc.lat : 0, longitude: matchMapMyLoc ? matchMapMyLoc.lng : 0 } });
+  if(mode === 'battery'){
+    writeLoc({ coords: { latitude: matchMapMyLoc ? matchMapMyLoc.lat : 0, longitude: matchMapMyLoc ? matchMapMyLoc.lng : 0, heading:null, speed:null } });
     matchMapRefreshTimer = setInterval(()=>{
       navigator.geolocation.getCurrentPosition(writeLoc, ()=>{}, { enableHighAccuracy:false, timeout:15000, maximumAge:120000 });
     }, 5 * 60000); // 5 dakikada bir
   } else {
-    // normal: haritayı her açtığında bir kez alınır (zaten enableMatchLocationSharing/openMatchMapOverlay içinde alınıyor)
+    // normal & car: ikisi de sürekli, anlık takip — konum değiştikçe
+    // (GPS izin verdiği en yüksek sıklıkla) doğrudan Firebase'e yazılır.
+    matchMapWatchId = navigator.geolocation.watchPosition(writeLoc, ()=>{}, { enableHighAccuracy:true, maximumAge:5000 });
   }
 }
 function stopMatchLocationWatch(){
   if(matchMapWatchId !== null){ navigator.geolocation.clearWatch(matchMapWatchId); matchMapWatchId = null; }
   if(matchMapRefreshTimer){ clearInterval(matchMapRefreshTimer); matchMapRefreshTimer = null; }
 }
+
 
 /* ============================================================
    HARİTA ÜST KATMANI (overlay) — açma / kapama
@@ -376,8 +400,9 @@ function closeMatchMapOverlay(){
   // Harita görünmüyorken animasyon boşuna CPU/pil tüketmesin diye durduruyoruz.
   if(typeof stopMatchWeatherFx === 'function') stopMatchWeatherFx();
   matchWeatherLastFetchKey = ''; // tekrar açılışta hava durumu/efekt yeniden değerlendirilsin
-  // Not: harita kapansa da, "Normal" mod dışında konum takibi arka planda
-  // devam eder (Tasarruf/Araba modu kasıtlı olarak böyle çalışır).
+  // Not: harita kapansa da konum takibi arka planda devam eder — Normal ve
+  // Araba modu artık AYNI şekilde sürekli takip yapıyor (Tasarruf modu
+  // kasıtlı olarak seyrek/düşük hassasiyetli çalışmaya devam ediyor).
 }
 
 /* closeTopmostOverlay() listesine elle kaydolmadan da kapanabilsin diye
@@ -547,12 +572,20 @@ function loadMatchMapSettingsThenInit(){
     // true değilse (eski/eksik veri vb.) taze konum sessizce hiç
     // alınmıyordu. Artık koşulsuz deniyoruz.
     if(typeof d.lat === 'number' && typeof d.lng === 'number') matchMapMyLoc = { lat:d.lat, lng:d.lng };
+    // Sürekli takip (Normal/Araba) veya Tasarruf Modu'nun arka plan
+    // zamanlayıcısı, sayfa yenilenince/tekrar açılınca JS hafızasından
+    // silinmiş olabilir (watchId/timer sadece o oturuma özeldi). Harita
+    // her açıldığında, paylaşım açıksa takibi burada YENİDEN başlatıyoruz
+    // ki "hep takip etsin" beklentisi sayfa yenilense bile bozulmasın.
+    if(matchMapMySettings.sharing && matchMapWatchId === null && !matchMapRefreshTimer){
+      startMatchLocationWatch(matchMapMySettings.trackMode || 'normal');
+    }
     initMatchMapInstance();
     if(navigator.geolocation){
       navigator.geolocation.getCurrentPosition(
         (pos)=>{
           matchMapMyLoc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-          fbDb.ref('userLocations/' + myUid).update({ lat: matchMapMyLoc.lat, lng: matchMapMyLoc.lng, updatedAt: Date.now() }).catch(()=>{});
+          fbDb.ref('userLocations/' + myUid).update(buildMatchLocUpdate(pos.coords)).catch(()=>{});
           const applyFreshLoc = ()=>{
             matchMap.jumpTo({ center: [matchMapMyLoc.lng, matchMapMyLoc.lat], zoom: 13.5, pitch: (matchMapStyleKey === 'dark' ? MATCH_MAP_3D_PITCH : 0), bearing: 0 });
             renderAllMatchMarkers(matchMapLastCandidates || []);
@@ -748,11 +781,41 @@ function generateMatchDotImageData(hexColor, isMe){
   ctx.stroke();
   return ctx.getImageData(0, 0, MATCH_DOT_IMAGE_SIZE, MATCH_DOT_IMAGE_SIZE);
 }
+/* Araç içinde (isDriving) olan kullanıcılar için: aynı renkli daire
+   zemininin üzerine 🚗 emoji'si çizilmiş ayrı bir doku — moddan bağımsız,
+   sadece gerçek anlık hıza göre otomatik seçiliyor (bkz. setMatchGlobeLayerData). */
+function matchCarImageIdFor(hexColor){
+  return 'matchcar-' + hexColor.replace('#', '');
+}
+function generateMatchCarImageData(hexColor, isMe){
+  const canvas = document.createElement('canvas');
+  canvas.width = MATCH_DOT_IMAGE_SIZE; canvas.height = MATCH_DOT_IMAGE_SIZE;
+  const ctx = canvas.getContext('2d');
+  const cx = MATCH_DOT_IMAGE_SIZE / 2, cy = MATCH_DOT_IMAGE_SIZE / 2;
+  const r = MATCH_DOT_IMAGE_SIZE / 2 - 4;
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.fillStyle = hexColor;
+  ctx.shadowColor = hexColor;
+  ctx.shadowBlur = isMe ? 10 : 8;
+  ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.lineWidth = 4;
+  ctx.strokeStyle = '#0a0a0f';
+  ctx.stroke();
+  ctx.font = Math.round(MATCH_DOT_IMAGE_SIZE * 0.56) + 'px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('🚗', cx, cy + 1);
+  return ctx.getImageData(0, 0, MATCH_DOT_IMAGE_SIZE, MATCH_DOT_IMAGE_SIZE);
+}
 function ensureMatchDotImages(){
   if(!matchMap || matchDotImagesReady) return;
   ['#FF3B30', '#3B82F6', '#FFFFFF'].forEach(color=>{
     const id = matchDotImageIdFor(color);
     if(!matchMap.hasImage(id)) matchMap.addImage(id, generateMatchDotImageData(color, color === '#FFFFFF'));
+    const carId = matchCarImageIdFor(color);
+    if(!matchMap.hasImage(carId)) matchMap.addImage(carId, generateMatchCarImageData(color, color === '#FFFFFF'));
   });
   matchDotImagesReady = true;
 }
@@ -771,6 +834,8 @@ function ensureMatchGlobeLayer(){
         'icon-image': ['get', 'iconId'],
         'icon-size': MATCH_DOT_DISPLAY_SIZE / MATCH_DOT_IMAGE_SIZE,
         'icon-offset': ['get', 'offset'],  // [x,y] piksel — icon-size ile ölçekleniyor
+        'icon-rotate': ['coalesce', ['get', 'heading'], 0], // araç ikonu, varsa gerçek harekete göre döner
+        'icon-rotation-alignment': 'map',
         'icon-allow-overlap': true,
         'icon-ignore-placement': true
       }
@@ -816,13 +881,16 @@ function setMatchGlobeLayerData(entries){
     const offsets = computeMatchDotIconOffsets(group.length);
     group.forEach((c, i)=>{
       const color = c.isMe ? '#FFFFFF' : matchGenderColorFor(c);
+      const isDriving = !!(c.loc && c.loc.isDriving === true);
+      const heading = (c.loc && typeof c.loc.heading === 'number') ? c.loc.heading : 0;
       features.push({
         type: 'Feature',
         geometry: { type: 'Point', coordinates: [c.loc.lng, c.loc.lat] },
         properties: {
           uid: c.uid,
           isMe: !!c.isMe,
-          iconId: matchDotImageIdFor(color),
+          iconId: isDriving ? matchCarImageIdFor(color) : matchDotImageIdFor(color),
+          heading,
           offset: offsets[i]
         }
       });
@@ -1617,12 +1685,21 @@ class SnapAvatarMarker {
     const photo = profile.photo || 'default-avatar.png';
     const when = formatPostAge(this.candidate.loc.updatedAt);
     const color = this._genderColor();
-    const heading = this.candidate.loc.trackMode === 'car' ? (this.candidate.loc.heading || 0) : null;
+    // Yön oku: heading değeri geldiyse (artık Normal modda da sürekli
+    // takip olduğu için her modda gelebilir) göster — artık sadece
+    // Araba Modu'na özel değil.
+    const heading = (typeof this.candidate.loc.heading === 'number') ? this.candidate.loc.heading : null;
+    // Araç içinde mi? Moddan bağımsız, gerçek anlık hıza göre sunucu
+    // tarafında (buildMatchLocUpdate) otomatik hesaplanan bayrak — eşiği
+    // aşan herkes moddan bağımsız 🚗 ikonuyla gösterilir.
+    const isDriving = this.candidate.loc.isDriving === true;
     el.innerHTML = `
       <div class="snapMarkerName">${name}</div>
       <div class="snapMarkerRing" style="--ring-color:${color}">
         ${heading !== null ? `<div class="snapMarkerHeadingArrow" style="transform:translateX(-50%) rotate(${heading}deg)"></div>` : ''}
-        <img src="${photo}" onerror="this.src='default-avatar.png'">
+        ${isDriving
+          ? `<div class="snapMarkerCarIcon">🚗</div>`
+          : `<img src="${photo}" onerror="this.src='default-avatar.png'">`}
       </div>
       <div class="snapMarkerShadow"></div>
       <div class="snapMarkerTime">${when}</div>
@@ -1671,7 +1748,10 @@ function renderAllMatchMarkers(candidates){
   if(matchMapMyLoc && fbAuth.currentUser){
     allEntries.push({
       uid: fbAuth.currentUser.uid, isMe: true,
-      loc: { lng: matchMapMyLoc.lng, lat: matchMapMyLoc.lat, updatedAt: Date.now() },
+      loc: {
+        lng: matchMapMyLoc.lng, lat: matchMapMyLoc.lat, updatedAt: Date.now(),
+        heading: matchMapMyHeading, isDriving: matchMapMyIsDriving
+      },
       profile: { username: savedUsername || t('match_you') || 'Sen', photo: savedProfilePhoto }
     });
   }
