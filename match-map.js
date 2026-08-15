@@ -96,6 +96,13 @@ if(typeof window.haversineKm !== 'function'){
   .matchMapEmptyHint{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:2;color:#fff;text-align:center;
     background:rgba(5,2,15,.6);backdrop-filter:blur(6px);padding:16px 22px;border-radius:16px;font-size:13px;max-width:260px;pointer-events:none;}
 
+  /* Canlı hava durumu kutucuğu — üst çubuğun hemen altında, ortada */
+  .matchMapWeatherPill{position:absolute;top:calc(env(safe-area-inset-top,0px) + 62px);left:50%;transform:translateX(-50%);z-index:2;
+    display:flex;align-items:center;gap:7px;padding:8px 16px;border-radius:20px;background:rgba(24,27,38,.72);
+    backdrop-filter:blur(10px);border:1px solid #3A4756;color:#fff;font-size:13px;font-weight:700;white-space:nowrap;
+    opacity:0;transition:opacity .3s;pointer-events:none;}
+  .matchMapWeatherPill.visible{opacity:1;}
+
   /* Kutu (anı) marker'ı — hediye kutusu ikonu, sahibinin cinsiyetine göre
      renk tonu değişiyor (hue-rotate filtresiyle). İçerik yalnızca
      dokununca (unbox) açılıyor. */
@@ -349,6 +356,7 @@ function openMatchMapOverlay(){
         </svg>
       </button>
       <div class="matchMapEmptyHint hidden" id="matchMapEmptyHint">${escapeHtml(t('toast_no_one_nearby'))}</div>
+      <div class="matchMapWeatherPill" id="matchMapWeatherPill"></div>
     `;
     document.body.appendChild(overlay);
     Object.assign(overlay.style, { position:'fixed', inset:'0', zIndex:9500, background:'#000', display:'flex', flexDirection:'column' });
@@ -373,6 +381,44 @@ function closeMatchMapOverlay(){
    listesine `['matchMapOverlay', ()=>closeMatchMapOverlay()]` eklenmiştir. */
 
 /* ---------- Ayarları oku, sonra haritayı kur ---------- */
+/* ============================================================
+   CANLI HAVA DURUMU — Open-Meteo (ücretsiz, API anahtarı GEREKMEZ)
+   Konumun için anlık sıcaklık + hava durumu ikonunu üst çubuğun
+   altında küçük bir kutucukta gösterir.
+   ============================================================ */
+const MATCH_WEATHER_CODE_MAP = {
+  0: ['☀️', 'Açık'], 1: ['🌤️', 'Az Bulutlu'], 2: ['⛅', 'Parçalı Bulutlu'], 3: ['☁️', 'Kapalı'],
+  45: ['🌫️', 'Sisli'], 48: ['🌫️', 'Kırağı Sisi'],
+  51: ['🌦️', 'Hafif Çisenti'], 53: ['🌦️', 'Çisenti'], 55: ['🌧️', 'Yoğun Çisenti'],
+  56: ['🌧️', 'Dondurucu Çisenti'], 57: ['🌧️', 'Dondurucu Çisenti'],
+  61: ['🌦️', 'Hafif Yağmur'], 63: ['🌧️', 'Yağmur'], 65: ['🌧️', 'Şiddetli Yağmur'],
+  66: ['🌧️', 'Dondurucu Yağmur'], 67: ['🌧️', 'Dondurucu Yağmur'],
+  71: ['🌨️', 'Hafif Kar'], 73: ['❄️', 'Kar'], 75: ['❄️', 'Yoğun Kar'], 77: ['❄️', 'Kar Taneleri'],
+  80: ['🌦️', 'Sağanak'], 81: ['🌧️', 'Sağanak'], 82: ['⛈️', 'Şiddetli Sağanak'],
+  85: ['🌨️', 'Kar Sağanağı'], 86: ['❄️', 'Yoğun Kar Sağanağı'],
+  95: ['⛈️', 'Gök Gürültülü Fırtına'], 96: ['⛈️', 'Dolulu Fırtına'], 99: ['⛈️', 'Şiddetli Dolulu Fırtına']
+};
+let matchWeatherLastFetchKey = '';
+function refreshMatchMapWeather(){
+  if(!matchMapMyLoc) return;
+  const pill = document.getElementById('matchMapWeatherPill');
+  if(!pill) return;
+  // Aynı konum için (yaklaşık ~1km hassasiyetle) kısa sürede tekrar tekrar
+  // istek atmayalım diye basit bir önbellek anahtarı.
+  const fetchKey = matchMapMyLoc.lat.toFixed(2) + ',' + matchMapMyLoc.lng.toFixed(2);
+  if(fetchKey === matchWeatherLastFetchKey) return;
+  matchWeatherLastFetchKey = fetchKey;
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${matchMapMyLoc.lat}&longitude=${matchMapMyLoc.lng}&current_weather=true`;
+  fetch(url).then(r=> r.json()).then(data=>{
+    const cw = data && data.current_weather;
+    if(!cw) return;
+    const info = MATCH_WEATHER_CODE_MAP[cw.weathercode] || ['🌡️', ''];
+    const temp = Math.round(cw.temperature);
+    pill.innerHTML = `<span style="font-size:15px;">${info[0]}</span> ${temp}° ${escapeHtml(info[1])}`;
+    pill.classList.add('visible');
+  }).catch(()=>{ /* hava durumu alınamadı — sessizce yok say, harita için kritik değil */ });
+}
+
 function loadMatchMapSettingsThenInit(){
   const myUid = fbAuth.currentUser.uid;
   fbDb.ref('userLocations/' + myUid).once('value').then(snap=>{
@@ -405,6 +451,7 @@ function loadMatchMapSettingsThenInit(){
           const applyFreshLoc = ()=>{
             matchMap.jumpTo({ center: [matchMapMyLoc.lng, matchMapMyLoc.lat], zoom: 15, pitch: 0, bearing: 0 });
             renderAllMatchMarkers(matchMapLastCandidates || []);
+            refreshMatchMapWeather();
           };
           if(matchMap && matchMap.isStyleLoaded && matchMap.isStyleLoaded()){
             applyFreshLoc();
@@ -461,6 +508,7 @@ function initMatchMapInstance(){
       matchMap.jumpTo({ center: [matchMapMyLoc.lng, matchMapMyLoc.lat], zoom: 15, pitch: 0, bearing: 0 });
     }
     refreshNearbyMatchUsers();
+    refreshMatchMapWeather();
     // İlk açılışta harita kutusu tam boyutuna henüz oturmamış olabilir
     // (overlay animasyonu vb.), bu da piksel hesaplarını yanlış çıkarıp
     // kümelemenin ilk seferde devreye girmemesine yol açabiliyor. Harita
@@ -584,6 +632,12 @@ function ensureMatchGlobeLayer(){
       }
     });
     matchMap.on('click', MATCH_GLOBE_LAYER_ID, (e)=>{
+      // Aynı pikselde tam üstüne binen bir kutu (hediye) marker'ı varsa,
+      // kişi profilini AÇMA — kutu zaten kendi tıklamasını yönetiyor
+      // (stopPropagation ile). Bu ikisinin aynı anda açılıp üst üste
+      // binmesini önlüyor.
+      const clickedEl = e.originalEvent && e.originalEvent.target;
+      if(clickedEl && clickedEl.closest && clickedEl.closest('.matchBoxDot')) return;
       const myUid = fbAuth.currentUser && fbAuth.currentUser.uid;
       const seen = new Set();
       const uids = [];
@@ -687,6 +741,7 @@ function goToMyMatchLocation(){
   const flyToLoc = (lat, lng)=>{
     matchMap.flyTo({ center: [lng, lat], zoom: 15, pitch: 0, bearing: 0 });
     matchMap.once('moveend', ()=>{ renderAllMatchMarkers(matchMapLastCandidates || []); });
+    refreshMatchMapWeather();
   };
   if(navigator.geolocation){
     navigator.geolocation.getCurrentPosition(
@@ -958,6 +1013,7 @@ let matchBoxComposerFile = null;
 let matchBoxComposerType = null; // 'photo' | 'video'
 let matchBoxComposerVisibility = 'public';
 
+const MATCH_BOX_LIFETIME_MS = 24 * 60 * 60 * 1000; // Kutular 24 saat sonra kaybolur
 function loadNearbyMapBoxes(){
   if(!matchMapMyLoc || !fbAuth.currentUser) return Promise.resolve([]);
   const myUid = fbAuth.currentUser.uid;
@@ -970,9 +1026,16 @@ function loadNearbyMapBoxes(){
     const myFollowers = new Set(Object.keys(myFollowersSnap.val() || {}));
     const all = boxesSnap.val() || {};
     const list = [];
+    const myExpiredBoxIds = []; // kendi kutularımdan süresi dolmuş olanlar — gerçekten sileceğiz
+    const now = Date.now();
     Object.keys(all).forEach(boxId=>{
       const b = all[boxId];
       if(!b || typeof b.lat !== 'number' || typeof b.lng !== 'number' || !b.media) return;
+      // 24 saatten eski kutular artık kimseye gösterilmiyor (fotoğraf "kaybolmuş" olur).
+      if(!b.ts || (now - b.ts) > MATCH_BOX_LIFETIME_MS){
+        if(b.uid === myUid) myExpiredBoxIds.push(boxId);
+        return;
+      }
       if(b.uid !== myUid && isMutuallyBlocked(b.uid)) return;
       const isMutual = myFollows.has(b.uid) && myFollowers.has(b.uid);
       const vis = b.visibility || 'public';
@@ -985,6 +1048,10 @@ function loadNearbyMapBoxes(){
       if(dist > 100) return;
       list.push({ boxId, box: b, dist });
     });
+    // Kendi süresi dolmuş kutularımı Firebase'den de gerçekten siliyorum
+    // (sadece kutu sahibinin cihazı silme izni var — güvenlik kuralı bunu
+    // gerektirir). Böylece zamanla veritabanında da yer tutmaz.
+    myExpiredBoxIds.forEach(boxId=>{ fbDb.ref('mapBoxes/' + boxId).remove().catch(()=>{}); });
     list.sort((a,b)=> a.dist - b.dist);
     return list.slice(0, 60);
   });
@@ -1017,7 +1084,10 @@ class MatchBoxMarker {
     const gender = (this.item.ownerProfile || {}).gender;
     if(gender === 'male') el.style.filter = 'hue-rotate(190deg) saturate(1.15) drop-shadow(0 0 5px rgba(59,130,246,.55))';
     el.title = 'Kutu';
-    el.addEventListener('click', ()=> openMatchBoxPreview(this.item.boxId, this.item));
+    el.addEventListener('click', (e)=>{
+      e.stopPropagation(); // alttaki kişi noktası katmanına tıklamanın sızmasını engelle
+      openMatchBoxPreview(this.item.boxId, this.item);
+    });
     return el;
   }
   addTo(map){ this.marker.addTo(map); return this; }
@@ -1103,7 +1173,10 @@ function openMatchBoxComposer(){
           </div>
         </div>
 
-        <button class="btn" id="matchBoxSubmitBtn" style="width:100%;margin-top:20px;padding:15px;border-radius:16px;border:none;background:var(--gradient-vivid);color:#fff;font-weight:800;font-size:14.5px;" onclick="submitMatchBox()">📦 ${escapeHtml(t('match_box_submit'))}</button>
+        <div style="display:flex;align-items:center;gap:6px;margin-top:14px;padding:0 2px;font-size:11.5px;color:var(--muted);">
+          <span>⏱️</span><span>${escapeHtml(t('match_box_expires_notice'))}</span>
+        </div>
+        <button class="btn" id="matchBoxSubmitBtn" style="width:100%;margin-top:12px;padding:15px;border-radius:16px;border:none;background:var(--gradient-vivid);color:#fff;font-weight:800;font-size:14.5px;" onclick="submitMatchBox()">📦 ${escapeHtml(t('match_box_submit'))}</button>
       </div>
     </div>`;
   document.body.appendChild(overlay);
@@ -1245,13 +1318,14 @@ function openMatchBoxPreview(boxId, itemArg){
         <button class="btn" style="width:100%;margin-top:18px;padding:14px;border-radius:16px;border:1.5px solid var(--danger);background:rgba(237,73,86,.12);color:var(--danger);font-weight:800;" onclick="deleteMatchBox('${boxId}')">🗑️ ${escapeHtml(t('match_box_delete'))}</button>
       ` : `
         <div style="display:flex;gap:10px;margin-top:18px;">
-          <button class="btn" style="flex:1;background:var(--gradient-vivid);color:#fff;border:none;" onclick="matchFollowUser('${b.uid}')">${escapeHtml(t('match_follow_btn'))}</button>
+          <button class="btn" id="matchFollowBtn" style="flex:1;background:var(--gradient-vivid);color:#fff;border:none;" onclick="matchFollowUser('${b.uid}')">${escapeHtml(t('match_follow_btn'))}</button>
           <button class="btn ${hasAccess ? '' : 'btn-ghost'}" style="flex:1;${hasAccess ? 'background:var(--surface-2);color:var(--text);border:1px solid var(--line);' : ''}" onclick="${hasAccess ? `matchMessageUser('${b.uid}')` : `closeMatchBoxPreview();openMatchVerifiedBadgeInfoForBox('${boxId}');`}">
             ${hasAccess ? '💬 ' + escapeHtml(t('match_message_btn')) : '🔒 ' + escapeHtml(t('match_message_btn'))}
           </button>
         </div>
       `}
     `;
+    if(!isOwn) refreshMatchFollowButtonState(b.uid);
   });
 }
 function matchBoxMediaHtml(b){
@@ -1640,6 +1714,7 @@ function matchMessageUser(uid){
     const approvalRequired = approvalSnap.val() !== false; // varsayılan: açık
     if(isMutual || !approvalRequired){
       closeMatchProfilePreview();
+      closeMatchBoxPreview();
       closeMatchMapOverlay();
       goToMatchChatSafely(uid);
       return;
