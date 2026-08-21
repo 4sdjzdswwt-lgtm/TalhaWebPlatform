@@ -307,6 +307,35 @@ function enableMatchLocationSharing(){
    artık hareketler anlık haritaya yansır. Araç içinde olup olmadığı
    (🚗 ikonu) ise moddan bağımsız, gerçek hıza göre OTOMATİK algılanır.
    Tasarruf Modu tek farklı davranan mod: seyrek + düşük hassasiyet. ---------- */
+/* Uygulamaya giriş yapar yapmaz (harita ekranını hiç açmadan) çağrılır.
+   Kullanıcı daha önce "Konumumu Paylaş"ı açtıysa (sharing:true), bunu
+   burada okuyup takibi HEMEN başlatıyoruz — böylece "bir kere izin
+   verdiysem kapatana kadar hep görünsün" beklentisi, harita ekranına
+   girip girmediğinden bağımsız çalışır. Harita ekranı zaten açıksa veya
+   takip zaten çalışıyorsa (matchMapWatchId/matchMapRefreshTimer dolu)
+   tekrar başlatmaz — loadMatchMapSettingsThenInit ile çakışmaz. */
+function resumeMatchLocationSharingIfEnabled(){
+  if(!fbAuth || !fbAuth.currentUser || !fbDb) return;
+  const myUid = fbAuth.currentUser.uid;
+  fbDb.ref('userLocations/' + myUid).once('value').then(snap=>{
+    const d = snap.val() || {};
+    matchMapMySettings = {
+      sharing: d.sharing === true,
+      ghostMode: d.ghostMode === true,
+      visibility: d.visibility || 'public',
+      excludedUids: d.excludedUids || {},
+      onlyUids: d.onlyUids || {},
+      trackMode: d.trackMode === 'battery' ? 'battery' : 'normal',
+      msgApprovalOn: d.msgApprovalOn !== false
+    };
+    if(typeof d.lat === 'number' && typeof d.lng === 'number' && !matchMapMyLoc){
+      matchMapMyLoc = { lat: d.lat, lng: d.lng };
+    }
+    if(matchMapMySettings.sharing && matchMapWatchId === null && !matchMapRefreshTimer){
+      startMatchLocationWatch(matchMapMySettings.trackMode || 'normal');
+    }
+  }).catch(()=>{});
+}
 function startMatchLocationWatch(mode){
   stopMatchLocationWatch();
   if(!navigator.geolocation || !fbAuth.currentUser) return;
@@ -781,8 +810,8 @@ const MATCH_GLOBE_LAYER_ID = 'matchGlobeDotsLayer';
    eğriliğinde de, "Konuma Git" gibi animasyonlu hareketlerde de asla
    sapmıyor; ve üst üste binen kişiler sayı rozeti ("+2") yerine gerçek
    renkli noktalarının hafifçe kaydırılmasıyla ayrı ayrı okunabiliyor. */
-const MATCH_DOT_IMAGE_SIZE = 56; // px, retina netliği için (ekranda daha küçük gösterilecek) — 3D top efekti için biraz büyütüldü
-const MATCH_DOT_DISPLAY_SIZE = 22; // ekranda görünecek gerçek piksel boyutu
+const MATCH_DOT_IMAGE_SIZE = 76; // px, retina netliği için — sarı ışık halesine yer açmak için büyütüldü
+const MATCH_DOT_DISPLAY_SIZE = 30; // ekranda görünecek gerçek piksel boyutu — belirginlik için büyütüldü (eskiden 22)
 let matchDotImagesReady = false;
 
 function matchDotImageIdFor(hexColor){
@@ -858,20 +887,34 @@ function generateMatchDotImageData(hexColor, isMe){
   const canvas = document.createElement('canvas');
   canvas.width = MATCH_DOT_IMAGE_SIZE; canvas.height = MATCH_DOT_IMAGE_SIZE;
   const ctx = canvas.getContext('2d');
-  const cx = MATCH_DOT_IMAGE_SIZE / 2, cy = MATCH_DOT_IMAGE_SIZE * 0.44;
-  const r = MATCH_DOT_IMAGE_SIZE * 0.31;
+  const cx = MATCH_DOT_IMAGE_SIZE / 2, cy = MATCH_DOT_IMAGE_SIZE * 0.42;
+  const r = MATCH_DOT_IMAGE_SIZE * 0.34; // top daha büyük/belirgin görünsün diye büyütüldü (eskiden 0.31)
 
-  // Zemine düşen gölge — hem gerçek foto hem yer tutucu modda aynı
+  // Snapchat'teki gibi: topun altında/zemininde sarı bir IŞIK HALESİ —
+  // geniş, yumuşak radial-gradient sarı parıltı, üstüne düz koyu gölge
+  // biner (derinlik hissi için), en üstte de top çizilir.
+  const glowCy = cy + r * 1.15;
+  const glow = ctx.createRadialGradient(cx, glowCy, 0, cx, glowCy, r * 1.9);
+  glow.addColorStop(0, 'rgba(255,214,10,.85)');
+  glow.addColorStop(0.35, 'rgba(255,196,0,.55)');
+  glow.addColorStop(0.7, 'rgba(255,183,0,.18)');
+  glow.addColorStop(1, 'rgba(255,183,0,0)');
   ctx.beginPath();
-  ctx.ellipse(cx, cy + r * 1.2, r * 0.92, r * 0.32, 0, 0, Math.PI * 2);
-  ctx.fillStyle = 'rgba(0,0,0,.4)';
+  ctx.ellipse(cx, glowCy, r * 1.9, r * 0.95, 0, 0, Math.PI * 2);
+  ctx.fillStyle = glow;
+  ctx.fill();
+
+  // Zemine düşen koyu gölge — sarı halenin üstüne, topun tam altına
+  ctx.beginPath();
+  ctx.ellipse(cx, cy + r * 1.05, r * 0.85, r * 0.28, 0, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(0,0,0,.35)';
   ctx.fill();
 
   const ballKey = matchDotBallKeyForColor(hexColor);
   if(matchDotBallReady[ballKey] && matchDotBallImgs[ballKey]){
     // GERÇEK FOTOĞRAF hazır — doğrudan onu çiziyoruz
-    if(isMe){ ctx.shadowColor = hexColor; ctx.shadowBlur = 9; }
-    const d = r * 2.08; // kenarda boşluk kalmasın diye hafif taşırılıyor
+    if(isMe){ ctx.shadowColor = hexColor; ctx.shadowBlur = 10; }
+    const d = r * 2.22; // top daha büyük/belirgin dursun diye taşırma artırıldı (eskiden 2.08)
     ctx.drawImage(matchDotBallImgs[ballKey], cx - d / 2, cy - d / 2, d, d);
     ctx.shadowBlur = 0;
     return ctx.getImageData(0, 0, MATCH_DOT_IMAGE_SIZE, MATCH_DOT_IMAGE_SIZE);
